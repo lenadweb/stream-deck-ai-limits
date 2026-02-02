@@ -9,7 +9,7 @@ export class ProgressBars extends SingletonAction<ProgressBarSettings> {
     private readonly usageService = new ClaudeUsageService();
     private readonly renderer = new ProgressBarRenderer();
     private refreshInterval: NodeJS.Timeout | null = null;
-    private readonly REFRESH_RATE_MS = 2000;
+    private readonly REFRESH_RATE_MS = 60000;
 
     override async onWillAppear(ev: WillAppearEvent<ProgressBarSettings>): Promise<void> {
         this.startMonitoring(ev);
