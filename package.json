@@ -17,6 +17,7 @@
         "typescript": "^5.2.2"
     },
     "dependencies": {
-        "@elgato/streamdeck": "^2.0.0"
+        "@elgato/streamdeck": "^2.0.0",
+        "strip-ansi": "^7.1.2"
     }
 }
