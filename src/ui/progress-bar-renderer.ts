@@ -30,6 +30,19 @@ export class ProgressBarRenderer {
         `;
     }
 
+    renderLoader(angle: number): string {
+        return `
+        <svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144">
+            <rect width="144" height="144" fill="#141414" />
+            <text x="72" y="115" font-family="sans-serif" font-size="18" fill="#888" text-anchor="middle">Loading...</text>
+            <circle cx="72" cy="65" r="25" stroke="#333" stroke-width="5" fill="none" />
+            <g transform="rotate(${angle} 72 65)">
+                <path d="M72 40 A25 25 0 0 1 97 65" stroke="#00AAFF" stroke-width="5" fill="none" stroke-linecap="round" />
+            </g>
+        </svg>
+        `;
+    }
+
     private renderBarGroup(textX: number, textY: number, rectX: number, rectY: number, value: number, color: string, label: string): string {
         return `
             <text x="${textX}" y="${textY}" font-family="sans-serif" font-size="20" fill="white" text-anchor="middle">${value}% ${label}</text>
