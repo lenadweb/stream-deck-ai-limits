@@ -2,13 +2,10 @@ import { spawn } from 'child_process';
 import * as https from 'https';
 import streamDeck from "@elgato/streamdeck";
 
+import { ConnectionDetails } from "../interfaces/connection";
+
 interface ProcessInfo {
     pid: number;
-    token: string;
-}
-
-export interface ConnectionDetails {
-    port: number;
     token: string;
 }
 

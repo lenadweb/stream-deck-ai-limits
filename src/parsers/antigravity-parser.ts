@@ -1,7 +1,4 @@
-export interface AntigravityUsage {
-    gemini: { used: number; resetAt: string | null; } | null;
-    claude: { used: number; resetAt: string | null; } | null;
-}
+import { AntigravityUsage } from "../interfaces/usage";
 
 export class AntigravityParser {
     parse(data: any): AntigravityUsage {

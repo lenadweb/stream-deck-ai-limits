@@ -1,7 +1,8 @@
 import * as https from 'https';
 import streamDeck from "@elgato/streamdeck";
 import { AntigravityConnectionService } from "./antigravity-connection-service";
-import { AntigravityParser, AntigravityUsage } from "../parsers/antigravity-parser";
+import { AntigravityUsage } from "../interfaces/usage";
+import { AntigravityParser } from "../parsers/antigravity-parser";
 
 export { AntigravityUsage };
 

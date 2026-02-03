@@ -1,14 +1,4 @@
-export type ServiceTheme = 'claude' | 'codex' | 'antigravity';
-
-interface ThemeColors {
-    primary: string;
-    secondary: string;
-    background: string;
-    text: string;
-    label: string;
-    barBg: string;
-    barFill?: string;
-}
+import { ServiceTheme, ThemeColors } from "../interfaces/theme";
 
 export class ProgressBarRenderer {
     private themes: Record<ServiceTheme, ThemeColors> = {

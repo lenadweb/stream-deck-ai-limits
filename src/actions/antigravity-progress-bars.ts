@@ -1,5 +1,6 @@
 import streamDeck, { action, SingletonAction } from "@elgato/streamdeck";
-import { AntigravityUsage, AntigravityUsageService } from "../services/antigravity-usage-service";
+import { AntigravityUsageService } from "../services/antigravity-usage-service";
+import { AntigravityUsage } from "../interfaces/usage";
 import { ProgressBarRenderer } from "../ui/progress-bar-renderer";
 import { BaseMonitoringAction } from "./base-monitoring-action";
 

@@ -1,9 +1,9 @@
 import { action } from "@elgato/streamdeck";
-import { ClaudeUsageService, ClaudeUsage } from "../services/claude-usage-service";
+import { ClaudeUsage } from "../interfaces/usage";
+import { ProgressBarSettings } from "../interfaces/settings";
+import { ClaudeUsageService } from "../services/claude-usage-service";
 import { ProgressBarRenderer } from "../ui/progress-bar-renderer";
 import { BaseMonitoringAction } from "./base-monitoring-action";
-
-type ProgressBarSettings = Record<string, any>;
 
 @action({ UUID: "com.len.limits.progress" })
 export class ProgressBars extends BaseMonitoringAction<ProgressBarSettings> {

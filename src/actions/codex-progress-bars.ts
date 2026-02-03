@@ -1,9 +1,9 @@
 import { action } from "@elgato/streamdeck";
-import { CodexUsageService, CodexUsage } from "../services/codex-usage-service";
+import { CodexUsage } from "../interfaces/usage";
+import { ProgressBarSettings } from "../interfaces/settings";
+import { CodexUsageService } from "../services/codex-usage-service";
 import { ProgressBarRenderer } from "../ui/progress-bar-renderer";
 import { BaseMonitoringAction } from "./base-monitoring-action";
-
-type ProgressBarSettings = Record<string, any>;
 
 @action({ UUID: "com.len.limits.codex.progress" })
 export class CodexProgressBars extends BaseMonitoringAction<ProgressBarSettings> {
