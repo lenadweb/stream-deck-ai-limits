@@ -106,12 +106,12 @@ export class ProgressBarRenderer {
 
         return `
             <text x="${textX}" y="${textY}" font-family="system-ui, -apple-system, sans-serif" text-anchor="middle">
-                <tspan font-size="14" font-weight="600" fill="${colors.text}">${value}%</tspan>
-                <tspan font-size="14" fill="#999">  ${label}</tspan>
+                <tspan font-size="15" font-weight="600" fill="${colors.text}">${value}%</tspan>
+                <tspan font-size="15" fill="#999">  ${label}</tspan>
             </text>
             <rect x="${rectX}" y="${rectY}" width="100" height="24" fill="${colors.barBg}" rx="6" />
             <rect x="${rectX}" y="${rectY}" width="${value}" height="24" fill="${color}" rx="6" />
-            ${timeText ? `<text x="72" y="${rectY + 17}" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="500" fill="#AAA" text-anchor="middle">${timeText}</text>` : ''}
+            ${timeText ? `<text x="72" y="${rectY + 17}" font-family="system-ui, -apple-system, sans-serif" font-size="15" font-weight="500" fill="#AAA" text-anchor="middle">${timeText}</text>` : ''}
         `;
     }
 
