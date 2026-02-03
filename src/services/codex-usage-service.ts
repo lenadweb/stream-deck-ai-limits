@@ -29,6 +29,8 @@ interface CodexApiResponse {
 export interface CodexUsage {
     sessionUsed: number | null;
     weekUsed: number | null;
+    sessionResetsAt: number | null;
+    weekResetsAt: number | null;
 }
 
 export class CodexUsageService {
@@ -119,6 +121,8 @@ export class CodexUsageService {
             const usage: CodexUsage = {
                 sessionUsed: data.rate_limit.primary_window?.used_percent ?? null,
                 weekUsed: data.rate_limit.secondary_window?.used_percent ?? null,
+                sessionResetsAt: data.rate_limit.primary_window?.reset_at ?? null,
+                weekResetsAt: data.rate_limit.secondary_window?.reset_at ?? null,
             };
 
             streamDeck.logger.info(`[Codex] Fetched usage - Session: ${usage.sessionUsed}%, Week: ${usage.weekUsed}%`);

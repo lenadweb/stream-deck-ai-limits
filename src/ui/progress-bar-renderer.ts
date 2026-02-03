@@ -29,12 +29,18 @@ export class ProgressBarRenderer {
         }
     };
 
-    render(session: number, week: number, theme: ServiceTheme = 'claude'): string {
+    render(
+        session: number,
+        week: number,
+        theme: ServiceTheme = 'claude',
+        sessionResetTime?: string | number | null,
+        weekResetTime?: string | number | null
+    ): string {
         const colors = this.themes[theme];
         const sessionColor = this.getBarColor(session, theme);
         const weekColor = this.getBarColor(week, theme);
 
-        return this.buildSvg(session, sessionColor, week, weekColor, colors, theme);
+        return this.buildSvg(session, sessionColor, week, weekColor, colors, theme, sessionResetTime, weekResetTime);
     }
 
     private getBarColor(value: number, theme: ServiceTheme): string {
@@ -52,7 +58,9 @@ export class ProgressBarRenderer {
         weekVal: number,
         weekColor: string,
         colors: ThemeColors,
-        theme: ServiceTheme
+        theme: ServiceTheme,
+        sessionResetTime?: string | number | null,
+        weekResetTime?: string | number | null
     ): string {
         const serviceName = theme === 'claude' ? 'Claude' : 'Codex';
 
@@ -62,8 +70,8 @@ export class ProgressBarRenderer {
             
             <text x="72" y="22" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="600" fill="${colors.label}" text-anchor="middle">${serviceName}</text>
             
-            ${this.renderBarGroup(72, 50, 22, 57, sessionVal, sessionColor, colors, "Session")}
-            ${this.renderBarGroup(72, 95, 22, 102, weekVal, weekColor, colors, "Week")}
+            ${this.renderBarGroup(72, 50, 22, 57, sessionVal, sessionColor, colors, "Session", sessionResetTime)}
+            ${this.renderBarGroup(72, 95, 22, 102, weekVal, weekColor, colors, "Week", weekResetTime)}
         </svg>
         `;
     }
@@ -91,15 +99,50 @@ export class ProgressBarRenderer {
         value: number,
         color: string,
         colors: ThemeColors,
-        label: string
+        label: string,
+        resetTime?: string | number | null
     ): string {
+        const timeText = resetTime ? this.formatResetTime(resetTime) : "";
+
         return `
             <text x="${textX}" y="${textY}" font-family="system-ui, -apple-system, sans-serif" text-anchor="middle">
                 <tspan font-size="16" font-weight="600" fill="${colors.text}">${value}%</tspan>
-                <tspan font-size="14" fill="${colors.text}" opacity="0.7">  ${label}</tspan>
+                <tspan font-size="14" fill="#999">  ${label}</tspan>
             </text>
             <rect x="${rectX}" y="${rectY}" width="100" height="12" fill="${colors.barBg}" rx="6" />
             <rect x="${rectX}" y="${rectY}" width="${value}" height="12" fill="${color}" rx="6" />
+            ${timeText ? `<text x="72" y="${rectY + 9}" font-family="system-ui, -apple-system, sans-serif" font-size="9" fill="#666" text-anchor="middle">${timeText}</text>` : ''}
         `;
+    }
+
+    private formatResetTime(resetTime: string | number): string {
+        let resetDate: Date;
+
+        if (typeof resetTime === 'number') {
+            resetDate = new Date(resetTime * 1000);
+        } else {
+            resetDate = new Date(resetTime);
+        }
+
+        const now = new Date();
+        const diffMs = resetDate.getTime() - now.getTime();
+
+        if (diffMs <= 0) return "now";
+
+        const diffMinutes = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMinutes / 60);
+        const diffDays = Math.floor(diffHours / 24);
+
+        if (diffDays > 0) {
+            const hours = diffHours % 24;
+            return hours > 0 ? `${diffDays}d ${hours}h` : `${diffDays}d`;
+        }
+
+        if (diffHours > 0) {
+            const minutes = diffMinutes % 60;
+            return minutes > 0 ? `${diffHours}h ${minutes}m` : `${diffHours}h`;
+        }
+
+        return `${diffMinutes}m`;
     }
 }

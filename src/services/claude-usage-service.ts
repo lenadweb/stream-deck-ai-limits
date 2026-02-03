@@ -28,6 +28,8 @@ interface ClaudeApiResponse {
 export interface ClaudeUsage {
     sessionUsed: number | null;
     weekUsed: number | null;
+    sessionResetsAt: string | null;
+    weekResetsAt: string | null;
 }
 
 export class ClaudeUsageService {
@@ -148,6 +150,8 @@ export class ClaudeUsageService {
             const usage: ClaudeUsage = {
                 sessionUsed: data.five_hour?.utilization ?? null,
                 weekUsed: data.seven_day?.utilization ?? null,
+                sessionResetsAt: data.five_hour?.resets_at ?? null,
+                weekResetsAt: data.seven_day?.resets_at ?? null,
             };
 
             streamDeck.logger.info(`[Claude] Fetched usage - Session: ${usage.sessionUsed}%, Week: ${usage.weekUsed}%`);

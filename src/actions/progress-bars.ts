@@ -68,7 +68,13 @@ export class ProgressBars extends SingletonAction<ProgressBarSettings> {
     private async draw(ev: any, usage: ClaudeUsage) {
         const sessionPercent = usage.sessionUsed ?? 0;
         const weekPercent = usage.weekUsed ?? 0;
-        const svg = this.renderer.render(sessionPercent, weekPercent, 'claude');
+        const svg = this.renderer.render(
+            sessionPercent,
+            weekPercent,
+            'claude',
+            usage.sessionResetsAt,
+            usage.weekResetsAt
+        );
         const image = `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
         await ev.action.setImage(image);
     }
