@@ -43,7 +43,7 @@ export abstract class BaseMonitoringAction<T extends Record<string, any>> extend
             if (this.isMonitoring) {
                 this.refresh(ev);
             }
-        }, 300000);
+        }, 900000);
     }
 
     protected stopMonitoring() {
