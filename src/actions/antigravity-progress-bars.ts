@@ -35,6 +35,14 @@ export class AntigravityProgressBars extends SingletonAction<any> {
         await this.updateUsage(ev);
     }
 
+    override async onDialRotate(ev: any): Promise<void> {
+        await this.updateUsage(ev);
+    }
+
+    override async onTouchTap(ev: any): Promise<void> {
+        await this.updateUsage(ev);
+    }
+
     private startMonitoring(ev: any) {
         this.updateUsage(ev);
 

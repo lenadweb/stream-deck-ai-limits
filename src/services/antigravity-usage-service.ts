@@ -129,7 +129,7 @@ export class AntigravityUsageService {
                 res.on('end', () => {
                     try {
                         const json = JSON.parse(data);
-                        streamDeck.logger.info(`[Antigravity] Raw response: ${JSON.stringify(json, null, 2)}`);
+
 
                         const usage = this.parseUsage(json);
                         resolve(usage);

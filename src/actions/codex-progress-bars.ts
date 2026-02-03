@@ -32,6 +32,14 @@ export class CodexProgressBars extends SingletonAction<ProgressBarSettings> {
         this.fetchData(ev);
     }
 
+    override async onDialRotate(ev: any): Promise<void> {
+        this.fetchData(ev);
+    }
+
+    override async onTouchTap(ev: any): Promise<void> {
+        this.fetchData(ev);
+    }
+
     private async fetchData(ev: any) {
         this.isLoading = true;
         this.startLoadingAnimation(ev);

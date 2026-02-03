@@ -165,7 +165,12 @@ export class ProgressBarRenderer {
             <rect x="${rectX}" y="${rectY}" width="${barWidth}" height="${barHeight}" fill="${colors.barBg}" rx="4" />
             <rect x="${rectX}" y="${rectY}" width="${value * (barWidth / 100)}" height="${barHeight}" fill="${color}" rx="4" />
             
-            <text x="${rectX + 6}" y="${textY}" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600" fill="${colors.text}" text-anchor="start" ${textShadow}>${label}</text>
+            <text x="${rectX + 6}" y="${textY}" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600" fill="${colors.text}" text-anchor="start" ${textShadow}>
+                ${label}
+                <tspan fill="#CCC" font-weight="400" font-size="12">
+                 ${value}%
+                </tspan>
+            </text>
             <text x="${rectX + barWidth - 6}" y="${textY}" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="500" fill="#DDD" text-anchor="end" ${textShadow}>${timeText}</text>
         `;
     }
