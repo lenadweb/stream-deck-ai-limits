@@ -17,18 +17,15 @@ export class AntigravityConnectionService {
         try {
             const info = await this.findProcess();
             if (!info) {
-                // streamDeck.logger.warn("[Antigravity] Process not found");
                 return null;
             }
 
-            // 1. Try Cached
             if (this.cachedPort && this.cachedToken === info.token) {
                 if (await this.testConnection(this.cachedPort, info.token)) {
                     return { port: this.cachedPort, token: info.token };
                 }
             }
 
-            // 2. Scan Ports
             const ports = await this.findListeningPorts(info.pid);
             for (const port of ports) {
                 if (await this.testConnection(port, info.token)) {
@@ -93,15 +90,8 @@ export class AntigravityConnectionService {
         });
     }
 
-    // Lightweight verification (ping) or full check? The usage service will do the full fetch.
-    // Ideally we want to know if it *is* the right server. 
-    // Let's optimize: checking "GetUserStatus" is safe.
-    // If we return true here, we might as well return the DATA but that violates separation.
-    // Let's keep it simple: just checking if it responds 200 OK.
     private async testConnection(port: number, token: string): Promise<boolean> {
         return new Promise((resolve) => {
-            // We can send a lightweight request or the actual one.
-            // The actual one is GetUserStatus.
             const options = {
                 hostname: '127.0.0.1',
                 port: port,
@@ -120,7 +110,6 @@ export class AntigravityConnectionService {
                 } else {
                     resolve(false);
                 }
-                // Consume response to free memory
                 res.resume();
             });
 

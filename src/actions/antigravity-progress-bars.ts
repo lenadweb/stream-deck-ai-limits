@@ -40,7 +40,6 @@ export class AntigravityProgressBars extends BaseMonitoringAction<any> {
         const image = `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
         await ev.action.setImage(image);
 
-        // Use base class helper or custom logic
         const dialSvg = this.renderer.render(
             claudePercent,
             geminiPercent,

@@ -23,9 +23,6 @@ export class AntigravityParser {
         if (typeof remainingFraction === 'number') {
             used = Math.round((1 - remainingFraction) * 100);
         } else if (resetTime) {
-            // If there is a reset time but no remaining fraction, assume capped (100% used)
-            // or maybe it means 0%? The original code assumed 100 if resetTime generic check.
-            // "if (model.quotaInfo.resetTime) used = 100;"
             used = 100;
         }
 

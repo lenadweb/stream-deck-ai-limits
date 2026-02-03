@@ -119,16 +119,27 @@ export class ProgressBarRenderer {
         `;
     }
 
-    renderLoader(angle: number, theme: ServiceTheme = 'claude'): string {
+    renderLoader(angle: number, theme: ServiceTheme = 'claude', width: number = 144, height: number = 144): string {
         const colors = this.themes[theme];
+        const cx = width / 2;
+        const cy = height / 2;
+
+        const isDial = width === 200 && height === 100;
+        const radius = isDial ? 20 : 25;
+        const strokeWidth = 5;
+        const spinnerY = isDial ? cy - 8 : cy;
+        const textY = isDial ? cy + 35 : 115;
+
+        // For Dial, we might want a different layout, e.g. text right, spinner left? 
+        // Or just centered. Let's stick to centered but properly positioned.
 
         return `
-        <svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144">
-            <rect width="144" height="144" fill="${colors.background}" />
-            <text x="72" y="115" font-family="system-ui, -apple-system, sans-serif" font-size="16" fill="${colors.text}" text-anchor="middle" opacity="0.7">Loading...</text>
-            <circle cx="72" cy="65" r="25" stroke="${colors.barBg}" stroke-width="5" fill="none" />
-            <g transform="rotate(${angle} 72 65)">
-                <path d="M72 40 A25 25 0 0 1 97 65" stroke="${colors.primary}" stroke-width="5" fill="none" stroke-linecap="round" />
+        <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+            <rect width="${width}" height="${height}" fill="${colors.background}" />
+            <text x="${cx}" y="${textY}" font-family="system-ui, -apple-system, sans-serif" font-size="${isDial ? 14 : 16}" fill="${colors.text}" text-anchor="middle" opacity="0.7">Loading...</text>
+            <circle cx="${cx}" cy="${spinnerY}" r="${radius}" stroke="${colors.barBg}" stroke-width="${strokeWidth}" fill="none" />
+            <g transform="rotate(${angle} ${cx} ${spinnerY})">
+                <path d="M${cx} ${spinnerY - radius} A${radius} ${radius} 0 0 1 ${cx + radius} ${spinnerY}" stroke="${colors.primary}" stroke-width="${strokeWidth}" fill="none" stroke-linecap="round" />
             </g>
         </svg>
         `;

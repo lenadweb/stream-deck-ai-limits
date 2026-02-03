@@ -10,10 +10,6 @@ export class CodexProgressBars extends BaseMonitoringAction<ProgressBarSettings>
     private readonly usageService = new CodexUsageService();
     private readonly renderer = new ProgressBarRenderer();
     private loaderInterval: NodeJS.Timeout | null = null;
-    // isLoading and loaderFrame are now in base class
-
-    // Lifecycle methods removed as they are handled by base class
-    // User interaction handlers removed as they are handled by base class
 
     protected async refresh(ev: any): Promise<void> {
         this.isLoading = true;
@@ -42,11 +38,13 @@ export class CodexProgressBars extends BaseMonitoringAction<ProgressBarSettings>
                 return;
             }
             this.loaderFrame = (this.loaderFrame + 30) % 360;
-            const svg = this.renderer.renderLoader(this.loaderFrame, 'codex');
-            const image = `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
+            const keySvg = this.renderer.renderLoader(this.loaderFrame, 'codex', 144, 144);
+            const dialSvg = this.renderer.renderLoader(this.loaderFrame, 'codex', 200, 100);
+
+            const image = `data:image/svg+xml;base64,${Buffer.from(keySvg).toString('base64')}`;
             await ev.action.setImage(image);
 
-            await this.updateDialFeedback(ev, svg);
+            await this.updateDialFeedback(ev, dialSvg);
         }, 100);
     }
 
@@ -73,7 +71,6 @@ export class CodexProgressBars extends BaseMonitoringAction<ProgressBarSettings>
         const image = `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
         await ev.action.setImage(image);
 
-        // Dial Feedback
         const dialSvg = this.renderer.render(
             sessionPercent,
             weekPercent,

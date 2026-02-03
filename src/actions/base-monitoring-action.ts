@@ -55,7 +55,6 @@ export abstract class BaseMonitoringAction<T extends Record<string, any>> extend
 
     protected abstract refresh(ev: any): Promise<void>;
 
-    // Optional helper for dial feedback, though subclasses might do custom things
     protected async updateDialFeedback(ev: any, svg: string) {
         const controller = this.controllers.get(ev.action.id);
         if (controller === 'Encoder') {
@@ -65,7 +64,7 @@ export abstract class BaseMonitoringAction<T extends Record<string, any>> extend
             try {
                 await (ev.action as any).setFeedback(feedback);
             } catch (err) {
-                // Ignore dial feedback errors for now or log sparsely
+
             }
         }
     }

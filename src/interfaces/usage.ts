@@ -4,15 +4,15 @@ export interface AntigravityUsage {
 }
 
 export interface ClaudeUsage {
-    sessionUsed: number | null; // Percent 0-100
-    sessionResetsAt: string | null; // ISO Date or specialized string
-    weekUsed: number | null; // Percent 0-100
-    weekResetsAt: string | null; // ISO Date
+    sessionUsed: number | null;
+    sessionResetsAt: string | null;
+    weekUsed: number | null;
+    weekResetsAt: string | null;
 }
 
 export interface CodexUsage {
     sessionUsed: number | null;
-    sessionResetsAt: number | null; // Timestamp
+    sessionResetsAt: number | null;
     weekUsed: number | null;
-    weekResetsAt: number | null; // Timestamp
+    weekResetsAt: number | null;
 }
