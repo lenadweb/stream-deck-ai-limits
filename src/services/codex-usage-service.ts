@@ -41,17 +41,9 @@ export class CodexUsageService {
         this.authPath = join(homedir(), ".codex", "auth.json");
     }
 
-    async startMonitoring(onDataReceived: (data: string) => void): Promise<void> {
+    async startMonitoring(): Promise<CodexUsage | null> {
         streamDeck.logger.info("[Codex] Starting usage monitoring via HTTP API...");
-
-        try {
-            const usage = await this.fetchUsage();
-            if (usage) {
-                streamDeck.logger.info(`[Codex] Session: ${usage.sessionUsed}%, Week: ${usage.weekUsed}%`);
-            }
-        } catch (err) {
-            streamDeck.logger.error(`[Codex] Error fetching usage: ${err}`);
-        }
+        return await this.fetchUsage();
     }
 
     stopMonitoring(): void {
@@ -121,6 +113,8 @@ export class CodexUsageService {
             }
 
             const data = await response.json() as CodexApiResponse;
+
+            streamDeck.logger.info(`[Codex] Raw API response: ${JSON.stringify(data)}`);
 
             const usage: CodexUsage = {
                 sessionUsed: data.rate_limit.primary_window?.used_percent ?? null,

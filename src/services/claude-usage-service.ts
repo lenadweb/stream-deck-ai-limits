@@ -11,9 +11,18 @@ interface ClaudeCredentials {
 }
 
 interface ClaudeApiResponse {
-    five_hour?: number | null;
-    seven_day?: number | null;
-    seven_day_sonnet?: number | null;
+    five_hour?: {
+        utilization: number;
+        resets_at: string;
+    } | null;
+    seven_day?: {
+        utilization: number;
+        resets_at: string;
+    } | null;
+    seven_day_sonnet?: {
+        utilization: number;
+        resets_at: string;
+    } | null;
 }
 
 export interface ClaudeUsage {
@@ -33,17 +42,9 @@ export class ClaudeUsageService {
         this.credPath = join(homedir(), ".claude", ".credentials.json");
     }
 
-    async startMonitoring(onDataReceived: (data: string) => void): Promise<void> {
+    async startMonitoring(): Promise<ClaudeUsage | null> {
         streamDeck.logger.info("[Claude] Starting usage monitoring via HTTP API...");
-
-        try {
-            const usage = await this.fetchUsage();
-            if (usage) {
-                streamDeck.logger.info(`[Claude] Session: ${usage.sessionUsed}%, Week: ${usage.weekUsed}%`);
-            }
-        } catch (err) {
-            streamDeck.logger.error(`[Claude] Error fetching usage: ${err}`);
-        }
+        return await this.fetchUsage();
     }
 
     stopMonitoring(): void {
@@ -142,9 +143,11 @@ export class ClaudeUsageService {
 
             const data = await response.json() as ClaudeApiResponse;
 
+            streamDeck.logger.info(`[Claude] Raw API response: ${JSON.stringify(data)}`);
+
             const usage: ClaudeUsage = {
-                sessionUsed: data.five_hour ?? null,
-                weekUsed: data.seven_day ?? null,
+                sessionUsed: data.five_hour?.utilization ?? null,
+                weekUsed: data.seven_day?.utilization ?? null,
             };
 
             streamDeck.logger.info(`[Claude] Fetched usage - Session: ${usage.sessionUsed}%, Week: ${usage.weekUsed}%`);
