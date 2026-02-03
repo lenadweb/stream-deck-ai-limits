@@ -11,17 +11,24 @@ export class ProgressBars extends SingletonAction<ProgressBarSettings> {
     private loaderInterval: NodeJS.Timeout | null = null;
     private isLoading = false;
     private loaderFrame = 0;
+    private controllers = new Map<string, string>();
 
     override async onWillAppear(ev: WillAppearEvent<ProgressBarSettings>): Promise<void> {
+        this.controllers.set(ev.action.id, ev.payload.controller);
         this.fetchData(ev);
     }
 
-    override async onWillDisappear(): Promise<void> {
+    override async onWillDisappear(ev: any): Promise<void> {
+        this.controllers.delete(ev.action.id);
         this.usageService.stopMonitoring();
         this.stopLoadingAnimation();
     }
 
     override async onKeyUp(ev: any): Promise<void> {
+        this.fetchData(ev);
+    }
+
+    override async onDialUp(ev: any): Promise<void> {
         this.fetchData(ev);
     }
 
@@ -55,6 +62,14 @@ export class ProgressBars extends SingletonAction<ProgressBarSettings> {
             const svg = this.renderer.renderLoader(this.loaderFrame, 'claude');
             const image = `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
             await ev.action.setImage(image);
+
+            const controller = this.controllers.get(ev.action.id);
+            if (controller === 'Encoder') {
+                const feedback = {
+                    full_view: `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`
+                };
+                await (ev.action as any).setFeedback(feedback).catch(() => { });
+            }
         }, 100);
     }
 
@@ -68,14 +83,34 @@ export class ProgressBars extends SingletonAction<ProgressBarSettings> {
     private async draw(ev: any, usage: ClaudeUsage) {
         const sessionPercent = usage.sessionUsed ?? 0;
         const weekPercent = usage.weekUsed ?? 0;
+
         const svg = this.renderer.render(
             sessionPercent,
             weekPercent,
             'claude',
             usage.sessionResetsAt,
-            usage.weekResetsAt
+            usage.weekResetsAt,
+            "Session", "Week",
+            144, 144
         );
         const image = `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
         await ev.action.setImage(image);
+
+        const controller = this.controllers.get(ev.action.id);
+        if (controller === 'Encoder') {
+            const dialSvg = this.renderer.render(
+                sessionPercent,
+                weekPercent,
+                'claude',
+                usage.sessionResetsAt,
+                usage.weekResetsAt,
+                "Session", "Week",
+                200, 100
+            );
+            const feedback = {
+                full_view: `data:image/svg+xml;base64,${Buffer.from(dialSvg).toString('base64')}`
+            };
+            await (ev.action as any).setFeedback(feedback).catch(() => { });
+        }
     }
 }

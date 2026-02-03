@@ -48,7 +48,9 @@ export class ProgressBarRenderer {
         sessionResetTime?: string | number | null,
         weekResetTime?: string | number | null,
         sessionLabel: string = "Session",
-        weekLabel: string = "Week"
+        weekLabel: string = "Week",
+        width: number = 144,
+        height: number = 144
     ): string {
         const colors = this.themes[theme];
         const sessionColor = this.getBarColor(session, theme);
@@ -59,13 +61,13 @@ export class ProgressBarRenderer {
             week, weekColor,
             colors, theme,
             sessionResetTime, weekResetTime,
-            sessionLabel, weekLabel
+            sessionLabel, weekLabel,
+            width, height
         );
     }
 
     private getBarColor(value: number, theme: ServiceTheme): string {
         const colors = this.themes[theme];
-
         if (value > 80) return '#EF4444';
         if (value > 60) return '#F59E0B';
         if (value === 0) return colors.barBg;
@@ -82,18 +84,47 @@ export class ProgressBarRenderer {
         sessionResetTime?: string | number | null,
         weekResetTime?: string | number | null,
         sessionLabel: string = "Session",
-        weekLabel: string = "Week"
+        weekLabel: string = "Week",
+        width: number = 144,
+        height: number = 144
     ): string {
         const serviceName = theme.charAt(0).toUpperCase() + theme.slice(1);
+        const centerX = width / 2;
+
+        if (width === 200 && height === 100) {
+            const rectWidth = 180;
+            const rectX = centerX - (rectWidth / 2);
+
+            const titleY = 22;
+            const bar1Y = 28;
+            const bar2Y = 62;
+
+            return `
+            <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+                <rect width="${width}" height="${height}" fill="${colors.background}" />
+                
+                <text x="${centerX}" y="${titleY}" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="600" fill="${colors.label}" text-anchor="middle">${serviceName}</text>
+                
+                ${this.renderDialBar(rectX, bar1Y, sessionVal, sessionColor, colors, sessionLabel, sessionResetTime, rectWidth)}
+                ${this.renderDialBar(rectX, bar2Y, weekVal, weekColor, colors, weekLabel, weekResetTime, rectWidth)}
+            </svg>
+            `;
+        }
+
+        let rectWidth = 100;
+        let rectX = centerX - 50;
+        let textY = 18;
+        let group1Y = 44;
+        let group2Y = 100;
 
         return `
-        <svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144">
-            <rect width="144" height="144" fill="${colors.background}" />
+        <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+            <rect width="${width}" height="${height}" fill="${colors.background}" />
             
-            <text x="72" y="18" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="${colors.label}" text-anchor="middle">${serviceName}</text>
+            <text x="${centerX}" y="${textY}" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="${colors.label}" text-anchor="middle">${serviceName}</text>
             
-            ${this.renderBarGroup(72, 44, 22, 52, sessionVal, sessionColor, colors, sessionLabel, sessionResetTime)}
-            ${this.renderBarGroup(72, 100, 22, 108, weekVal, weekColor, colors, weekLabel, weekResetTime)}
+            ${this.renderBarGroup(centerX, group1Y, rectX, group1Y + 8, sessionVal, sessionColor, colors, sessionLabel, sessionResetTime, rectWidth)}
+            ${this.renderBarGroup(centerX, group2Y, rectX, group2Y + 8, weekVal, weekColor, colors, weekLabel, weekResetTime, rectWidth)}
         </svg>
         `;
     }
@@ -113,6 +144,32 @@ export class ProgressBarRenderer {
         `;
     }
 
+    private renderDialBar(
+        rectX: number,
+        rectY: number,
+        value: number,
+        color: string,
+        colors: ThemeColors,
+        label: string,
+        resetTime?: string | number | null,
+        barWidth: number = 180
+    ): string {
+        const timeText = resetTime ? this.formatResetTime(resetTime) : "";
+
+        const barHeight = 24;
+        const textY = rectY + 16;
+
+        const textShadow = `style="text-shadow: 0px 1px 2px rgba(0,0,0,0.8)"`;
+
+        return `
+            <rect x="${rectX}" y="${rectY}" width="${barWidth}" height="${barHeight}" fill="${colors.barBg}" rx="4" />
+            <rect x="${rectX}" y="${rectY}" width="${value * (barWidth / 100)}" height="${barHeight}" fill="${color}" rx="4" />
+            
+            <text x="${rectX + 6}" y="${textY}" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600" fill="${colors.text}" text-anchor="start" ${textShadow}>${label}</text>
+            <text x="${rectX + barWidth - 6}" y="${textY}" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="500" fill="#DDD" text-anchor="end" ${textShadow}>${timeText}</text>
+        `;
+    }
+
     private renderBarGroup(
         textX: number,
         textY: number,
@@ -122,7 +179,8 @@ export class ProgressBarRenderer {
         color: string,
         colors: ThemeColors,
         label: string,
-        resetTime?: string | number | null
+        resetTime?: string | number | null,
+        barWidth: number = 100
     ): string {
         const timeText = resetTime ? this.formatResetTime(resetTime) : "";
 
@@ -131,9 +189,9 @@ export class ProgressBarRenderer {
                 <tspan font-size="15" font-weight="600" fill="${colors.text}">${value}%</tspan>
                 <tspan font-size="15" fill="#999">  ${label}</tspan>
             </text>
-            <rect x="${rectX}" y="${rectY}" width="100" height="24" fill="${colors.barBg}" rx="6" />
-            <rect x="${rectX}" y="${rectY}" width="${value}" height="24" fill="${color}" rx="6" />
-            ${timeText ? `<text x="72" y="${rectY + 17}" font-family="system-ui, -apple-system, sans-serif" font-size="15" font-weight="500" fill="#AAA" text-anchor="middle">${timeText}</text>` : ''}
+            <rect x="${rectX}" y="${rectY}" width="${barWidth}" height="20" fill="${colors.barBg}" rx="6" />
+            <rect x="${rectX}" y="${rectY}" width="${value * (barWidth / 100)}" height="20" fill="${color}" rx="6" />
+            ${timeText ? `<text x="${textX}" y="${rectY + 17}" font-family="system-ui, -apple-system, sans-serif" font-size="15" font-weight="500" fill="#AAA" text-anchor="middle">${timeText}</text>` : ''}
         `;
     }
 

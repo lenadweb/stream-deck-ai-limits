@@ -9,8 +9,18 @@
 			"Icon": "imgs/actions/counter/icon",
 			"Tooltip": "Displays Claude usage.",
 			"Controllers": [
-				"Keypad"
+				"Keypad",
+				"Encoder"
 			],
+			"Encoder": {
+				"layout": "layouts/full-view.json",
+				"StackColor": "#D97757",
+				"TriggerDescription": {
+					"Rotate": "Refresh",
+					"Touch": "Refresh",
+					"Push": "Refresh"
+				}
+			},
 			"States": [
 				{
 					"Image": "imgs/actions/counter/key",
@@ -24,8 +34,18 @@
 			"Icon": "imgs/actions/counter/icon",
 			"Tooltip": "Displays Codex usage.",
 			"Controllers": [
-				"Keypad"
+				"Keypad",
+				"Encoder"
 			],
+			"Encoder": {
+				"layout": "layouts/full-view.json",
+				"StackColor": "#10B981",
+				"TriggerDescription": {
+					"Rotate": "Refresh",
+					"Touch": "Refresh",
+					"Push": "Refresh"
+				}
+			},
 			"States": [
 				{
 					"Image": "imgs/actions/counter/key",
@@ -39,8 +59,18 @@
 			"Icon": "imgs/actions/counter/icon",
 			"Tooltip": "Displays Antigravity usage.",
 			"Controllers": [
-				"Keypad"
+				"Keypad",
+				"Encoder"
 			],
+			"Encoder": {
+				"layout": "layouts/full-view.json",
+				"StackColor": "#8B5CF6",
+				"TriggerDescription": {
+					"Rotate": "Refresh",
+					"Touch": "Refresh",
+					"Push": "Refresh"
+				}
+			},
 			"States": [
 				{
 					"Image": "imgs/actions/counter/key",

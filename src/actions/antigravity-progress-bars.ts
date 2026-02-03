@@ -8,8 +8,10 @@ export class AntigravityProgressBars extends SingletonAction<any> {
     private renderer = new ProgressBarRenderer();
     private intervalId: NodeJS.Timeout | null = null;
     private isMonitoring = false;
+    private controllers = new Map<string, string>();
 
     override async onWillAppear(ev: WillAppearEvent<any>): Promise<void> {
+        this.controllers.set(ev.action.id, ev.payload.controller);
         if (!this.isMonitoring) {
             this.isMonitoring = true;
             this.startMonitoring(ev);
@@ -17,6 +19,7 @@ export class AntigravityProgressBars extends SingletonAction<any> {
     }
 
     override async onWillDisappear(ev: WillDisappearEvent<any>): Promise<void> {
+        this.controllers.delete(ev.action.id);
         this.isMonitoring = false;
         if (this.intervalId) {
             clearInterval(this.intervalId);
@@ -25,6 +28,10 @@ export class AntigravityProgressBars extends SingletonAction<any> {
     }
 
     override async onKeyDown(ev: KeyDownEvent<any>): Promise<void> {
+        await this.updateUsage(ev);
+    }
+
+    override async onDialUp(ev: any): Promise<void> {
         await this.updateUsage(ev);
     }
 
@@ -63,9 +70,34 @@ export class AntigravityProgressBars extends SingletonAction<any> {
             usage.claude?.resetAt,
             usage.gemini?.resetAt,
             'Claude',
-            'Gemini'
+            'Gemini',
+            144, 144
         );
         const image = `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
         await ev.action.setImage(image);
+
+        const controller = this.controllers.get(ev.action.id);
+
+        if (controller === 'Encoder') {
+            const dialSvg = this.renderer.render(
+                claudePercent,
+                geminiPercent,
+                'antigravity',
+                usage.claude?.resetAt,
+                usage.gemini?.resetAt,
+                'Claude',
+                'Gemini',
+                200, 100
+            );
+            const feedback = {
+                full_view: `data:image/svg+xml;base64,${Buffer.from(dialSvg).toString('base64')}`
+            };
+
+            try {
+                await (ev.action as any).setFeedback(feedback);
+            } catch (err) {
+                streamDeck.logger.error(`[Antigravity] Failed to set feedback: ${err}`);
+            }
+        }
     }
 }

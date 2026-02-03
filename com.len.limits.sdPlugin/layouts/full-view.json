@@ -1,0 +1,16 @@
+{
+    "$schema": "https://schemas.elgato.com/streamdeck/plugins/layout.json",
+    "id": "com.len.limits.layout.fullview",
+    "items": [
+        {
+            "key": "full_view",
+            "type": "pixmap",
+            "rect": [
+                0,
+                0,
+                200,
+                100
+            ]
+        }
+    ]
+}
