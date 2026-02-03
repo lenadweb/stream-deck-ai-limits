@@ -8,51 +8,38 @@ type ProgressBarSettings = Record<string, any>;
 export class ProgressBars extends SingletonAction<ProgressBarSettings> {
     private readonly usageService = new ClaudeUsageService();
     private readonly renderer = new ProgressBarRenderer();
-    private refreshInterval: NodeJS.Timeout | null = null;
     private loaderInterval: NodeJS.Timeout | null = null;
-    private readonly REFRESH_RATE_MS = 60000;
-    private isLoading = true;
+    private isLoading = false;
     private loaderFrame = 0;
 
     override async onWillAppear(ev: WillAppearEvent<ProgressBarSettings>): Promise<void> {
-        this.isLoading = true;
-        this.startLoadingAnimation(ev);
-        this.startMonitoring(ev);
+        this.fetchData(ev);
     }
 
     override async onWillDisappear(): Promise<void> {
-        this.stopMonitoring();
+        this.usageService.stopMonitoring();
         this.stopLoadingAnimation();
     }
 
     override async onKeyUp(ev: any): Promise<void> {
-        if (this.isLoading) {
-            this.stopMonitoring();
-            this.startMonitoring(ev);
-            return;
-        }
-        this.updateView(ev);
-        this.usageService.triggerRefresh();
+        this.fetchData(ev);
     }
 
-    private startMonitoring(ev: WillAppearEvent<ProgressBarSettings>) {
+    private fetchData(ev: any) {
+        this.usageService.stopMonitoring();
+
+        this.isLoading = true;
+        this.startLoadingAnimation(ev);
+
         this.usageService.startMonitoring(() => {
-            if (this.isLoading) {
-                this.updateView(ev);
+            const usage = this.usageService.parseCurrentBuffer();
+            if (usage) {
+                this.isLoading = false;
+                this.stopLoadingAnimation();
+                this.draw(ev, usage);
+                this.usageService.stopMonitoring();
             }
         });
-
-        this.refreshInterval = setInterval(() => {
-            this.updateView(ev);
-        }, this.REFRESH_RATE_MS);
-    }
-
-    private stopMonitoring() {
-        if (this.refreshInterval) {
-            clearInterval(this.refreshInterval);
-            this.refreshInterval = null;
-        }
-        this.usageService.stopMonitoring();
     }
 
     private startLoadingAnimation(ev: WillAppearEvent<ProgressBarSettings>) {
@@ -75,15 +62,6 @@ export class ProgressBars extends SingletonAction<ProgressBarSettings> {
         if (this.loaderInterval) {
             clearInterval(this.loaderInterval);
             this.loaderInterval = null;
-        }
-    }
-
-    private async updateView(ev: any) {
-        const usage = this.usageService.parseCurrentBuffer();
-        if (usage) {
-            this.isLoading = false;
-            this.stopLoadingAnimation();
-            await this.draw(ev, usage);
         }
     }
 
