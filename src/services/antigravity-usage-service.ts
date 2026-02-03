@@ -58,6 +58,7 @@ export class AntigravityUsageService {
                 res.on('data', (chunk) => data += chunk);
                 res.on('end', () => {
                     try {
+                        streamDeck.logger.info(`[Antigravity] Raw API response: ${data}`);
                         const json = JSON.parse(data);
                         const usage = this.parser.parse(json);
                         resolve(usage);

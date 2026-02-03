@@ -1,5 +1,5 @@
 import streamDeck from "@elgato/streamdeck";
-import { execFileSync } from "child_process";
+import { execFileSync, spawn } from "child_process";
 import { readFile, stat } from "fs/promises";
 import { homedir, platform } from "os";
 import { join } from "path";
@@ -119,6 +119,8 @@ export class ClaudeUsageService {
             return null;
         }
 
+        streamDeck.logger.info(`[Claude] Token found (last 8 chars): ...${token.slice(-8)}`);
+
         try {
             streamDeck.logger.info("[Claude] Fetching usage from Anthropic API...");
 
@@ -137,6 +139,16 @@ export class ClaudeUsageService {
             });
 
             clearTimeout(timeout);
+
+            if (response.status === 401) {
+                streamDeck.logger.warn("[Claude] Got 401, attempting token refresh via CLI...");
+                const refreshed = await this.refreshTokenViaCLI();
+                if (refreshed) {
+                    this.credCache = null;
+                    return await this.fetchUsageInternal();
+                }
+                return null;
+            }
 
             if (!response.ok) {
                 streamDeck.logger.error(`[Claude] API returned status: ${response.status}`);
@@ -164,5 +176,81 @@ export class ClaudeUsageService {
             streamDeck.logger.error(`[Claude] API fetch error: ${err}`);
             return null;
         }
+    }
+
+    private async fetchUsageInternal(): Promise<ClaudeUsage | null> {
+        const token = await this.getCredentials();
+        if (!token) {
+            streamDeck.logger.warn("[Claude] No credentials found after refresh");
+            return null;
+        }
+
+        try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 5000);
+
+            const response = await fetch("https://api.anthropic.com/api/oauth/usage", {
+                method: "GET",
+                headers: {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`,
+                    "anthropic-beta": "oauth-2025-04-20",
+                },
+                signal: controller.signal,
+            });
+
+            clearTimeout(timeout);
+
+            if (!response.ok) {
+                streamDeck.logger.error(`[Claude] API still failing after refresh: ${response.status}`);
+                return null;
+            }
+
+            const data = await response.json() as ClaudeApiResponse;
+
+            const usage: ClaudeUsage = {
+                sessionUsed: data.five_hour?.utilization ?? null,
+                weekUsed: data.seven_day?.utilization ?? null,
+                sessionResetsAt: data.five_hour?.resets_at ?? null,
+                weekResetsAt: data.seven_day?.resets_at ?? null,
+            };
+
+            streamDeck.logger.info(`[Claude] Fetched usage after refresh - Session: ${usage.sessionUsed}%, Week: ${usage.weekUsed}%`);
+
+            this.cache = usage;
+            this.lastFetch = Date.now();
+
+            return usage;
+        } catch (err) {
+            streamDeck.logger.error(`[Claude] API fetch error after refresh: ${err}`);
+            return null;
+        }
+    }
+
+    private refreshTokenViaCLI(): Promise<boolean> {
+        return new Promise((resolve) => {
+            streamDeck.logger.info("[Claude] Spawning claude CLI to refresh token...");
+
+            const proc = spawn("claude", [], {
+                stdio: "ignore",
+                detached: true,
+            });
+
+            proc.on("error", (err) => {
+                streamDeck.logger.error(`[Claude] Failed to spawn claude CLI: ${err}`);
+                resolve(false);
+            });
+
+            setTimeout(() => {
+                try {
+                    proc.kill("SIGTERM");
+                    streamDeck.logger.info("[Claude] Killed claude CLI after 10s");
+                } catch { }
+                resolve(true);
+            }, 10000);
+
+            proc.unref();
+        });
     }
 }
