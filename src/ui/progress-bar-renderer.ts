@@ -85,7 +85,7 @@ export class ProgressBarRenderer {
             const rectWidth = 180;
             const rectX = centerX - (rectWidth / 2);
 
-            const titleY = 22;
+            const titleY = 20;
             const bar1Y = 28;
             const bar2Y = 62;
 
