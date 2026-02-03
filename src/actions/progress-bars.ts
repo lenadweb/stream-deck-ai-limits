@@ -1,46 +1,17 @@
-import { action, SingletonAction, WillAppearEvent } from "@elgato/streamdeck";
+import { action } from "@elgato/streamdeck";
 import { ClaudeUsageService, ClaudeUsage } from "../services/claude-usage-service";
 import { ProgressBarRenderer } from "../ui/progress-bar-renderer";
+import { BaseMonitoringAction } from "./base-monitoring-action";
 
 type ProgressBarSettings = Record<string, any>;
 
 @action({ UUID: "com.len.limits.progress" })
-export class ProgressBars extends SingletonAction<ProgressBarSettings> {
+export class ProgressBars extends BaseMonitoringAction<ProgressBarSettings> {
     private readonly usageService = new ClaudeUsageService();
     private readonly renderer = new ProgressBarRenderer();
     private loaderInterval: NodeJS.Timeout | null = null;
-    private isLoading = false;
-    private loaderFrame = 0;
-    private controllers = new Map<string, string>();
 
-    override async onWillAppear(ev: WillAppearEvent<ProgressBarSettings>): Promise<void> {
-        this.controllers.set(ev.action.id, ev.payload.controller);
-        this.fetchData(ev);
-    }
-
-    override async onWillDisappear(ev: any): Promise<void> {
-        this.controllers.delete(ev.action.id);
-        this.usageService.stopMonitoring();
-        this.stopLoadingAnimation();
-    }
-
-    override async onKeyUp(ev: any): Promise<void> {
-        this.fetchData(ev);
-    }
-
-    override async onDialUp(ev: any): Promise<void> {
-        this.fetchData(ev);
-    }
-
-    override async onDialRotate(ev: any): Promise<void> {
-        this.fetchData(ev);
-    }
-
-    override async onTouchTap(ev: any): Promise<void> {
-        this.fetchData(ev);
-    }
-
-    private async fetchData(ev: any) {
+    protected async refresh(ev: any): Promise<void> {
         this.isLoading = true;
         this.startLoadingAnimation(ev);
 
@@ -57,7 +28,7 @@ export class ProgressBars extends SingletonAction<ProgressBarSettings> {
         }
     }
 
-    private startLoadingAnimation(ev: WillAppearEvent<ProgressBarSettings>) {
+    private startLoadingAnimation(ev: any) {
         if (this.loaderInterval) clearInterval(this.loaderInterval);
 
         this.loaderFrame = 0;
@@ -71,13 +42,7 @@ export class ProgressBars extends SingletonAction<ProgressBarSettings> {
             const image = `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
             await ev.action.setImage(image);
 
-            const controller = this.controllers.get(ev.action.id);
-            if (controller === 'Encoder') {
-                const feedback = {
-                    full_view: `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`
-                };
-                await (ev.action as any).setFeedback(feedback).catch(() => { });
-            }
+            await this.updateDialFeedback(ev, svg);
         }, 100);
     }
 
@@ -104,21 +69,16 @@ export class ProgressBars extends SingletonAction<ProgressBarSettings> {
         const image = `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
         await ev.action.setImage(image);
 
-        const controller = this.controllers.get(ev.action.id);
-        if (controller === 'Encoder') {
-            const dialSvg = this.renderer.render(
-                sessionPercent,
-                weekPercent,
-                'claude',
-                usage.sessionResetsAt,
-                usage.weekResetsAt,
-                "Session", "Week",
-                200, 100
-            );
-            const feedback = {
-                full_view: `data:image/svg+xml;base64,${Buffer.from(dialSvg).toString('base64')}`
-            };
-            await (ev.action as any).setFeedback(feedback).catch(() => { });
-        }
+        // Dial Feedback
+        const dialSvg = this.renderer.render(
+            sessionPercent,
+            weekPercent,
+            'claude',
+            usage.sessionResetsAt,
+            usage.weekResetsAt,
+            "Session", "Week",
+            200, 100
+        );
+        await this.updateDialFeedback(ev, dialSvg);
     }
 }
