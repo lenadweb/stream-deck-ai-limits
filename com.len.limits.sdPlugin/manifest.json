@@ -4,10 +4,25 @@
 	"Author": "len",
 	"Actions": [
 		{
-			"Name": "Progress Bars",
+			"Name": "Progress Bars (Claude)",
 			"UUID": "com.len.limits.progress",
 			"Icon": "imgs/actions/counter/icon",
-			"Tooltip": "Displays two progress bars.",
+			"Tooltip": "Displays Claude usage.",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/counter/key",
+					"TitleAlignment": "middle"
+				}
+			]
+		},
+		{
+			"Name": "Progress Bars (Codex)",
+			"UUID": "com.len.limits.codex.progress",
+			"Icon": "imgs/actions/counter/icon",
+			"Tooltip": "Displays Codex usage.",
 			"Controllers": [
 				"Keypad"
 			],
