@@ -1,4 +1,4 @@
-import { spawn } from "child_process";
+import { spawn, exec } from "child_process";
 import stripAnsi from "strip-ansi";
 
 export type UsageData = {
@@ -15,6 +15,8 @@ export class ClaudeUsageService {
     private readonly WEEK_USAGE_REGEX = /Current week[\s\S]{0,300}?(\d+)%\s*used/g;
 
     startMonitoring(onDataReceived: (data: string) => void) {
+        this.stopMonitoring();
+
         const pythonCmd = "import pty; pty.spawn(['claude', '/usage'])";
 
         this.childProcess = spawn("python3", ["-c", pythonCmd], {
@@ -27,6 +29,13 @@ export class ClaudeUsageService {
 
     stopMonitoring() {
         if (this.childProcess) {
+            if (this.childProcess.pid) {
+                try {
+                    exec(`pkill -P ${this.childProcess.pid}`);
+                } catch (e) {
+                }
+            }
+
             this.childProcess.kill();
             this.childProcess = null;
         }
