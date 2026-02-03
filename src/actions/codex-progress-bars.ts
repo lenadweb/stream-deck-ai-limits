@@ -52,7 +52,7 @@ export class CodexProgressBars extends SingletonAction<ProgressBarSettings> {
                 return;
             }
             this.loaderFrame = (this.loaderFrame + 30) % 360;
-            const svg = this.renderer.renderLoader(this.loaderFrame);
+            const svg = this.renderer.renderLoader(this.loaderFrame, 'codex');
             const image = `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
             await ev.action.setImage(image);
         }, 100);
@@ -68,7 +68,7 @@ export class CodexProgressBars extends SingletonAction<ProgressBarSettings> {
     private async draw(ev: any, usage: CodexUsage) {
         const sessionPercent = usage.sessionUsed ?? 0;
         const weekPercent = usage.weekUsed ?? 0;
-        const svg = this.renderer.render(sessionPercent, weekPercent);
+        const svg = this.renderer.render(sessionPercent, weekPercent, 'codex');
         const image = `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
         await ev.action.setImage(image);
     }
