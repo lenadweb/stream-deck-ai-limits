@@ -32,6 +32,21 @@
 					"TitleAlignment": "middle"
 				}
 			]
+		},
+		{
+			"Name": "Progress Bars (Antigravity)",
+			"UUID": "com.len.limits.antigravity",
+			"Icon": "imgs/actions/counter/icon",
+			"Tooltip": "Displays Antigravity usage.",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/counter/key",
+					"TitleAlignment": "middle"
+				}
+			]
 		}
 	],
 	"Category": "limits",

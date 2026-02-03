@@ -1,4 +1,4 @@
-export type ServiceTheme = 'claude' | 'codex';
+export type ServiceTheme = 'claude' | 'codex' | 'antigravity';
 
 interface ThemeColors {
     primary: string;
@@ -7,6 +7,7 @@ interface ThemeColors {
     text: string;
     label: string;
     barBg: string;
+    barFill?: string;
 }
 
 export class ProgressBarRenderer {
@@ -14,18 +15,29 @@ export class ProgressBarRenderer {
         claude: {
             primary: '#D97757',
             secondary: '#E8956B',
-            background: '#1A1612',
-            text: '#F5E6D3',
-            label: '#CC6644',
-            barBg: '#2A2420'
+            background: '#2F2724',
+            text: '#FFFFFF',
+            label: '#9D8B86',
+            barBg: '#4A3D39',
+            barFill: '#D97757'
         },
         codex: {
             primary: '#10B981',
             secondary: '#34D399',
-            background: '#0F1419',
-            text: '#E0F2FE',
-            label: '#059669',
-            barBg: '#1F2937'
+            background: '#18181B',
+            text: '#FFFFFF',
+            label: '#71717A',
+            barBg: '#27272A',
+            barFill: '#10B981'
+        },
+        antigravity: {
+            primary: '#8B5CF6',
+            secondary: '#A78BFA',
+            background: '#1E1B2E',
+            text: '#FFFFFF',
+            label: '#9CA3AF',
+            barBg: '#2D2B40',
+            barFill: '#8B5CF6'
         }
     };
 
@@ -34,13 +46,21 @@ export class ProgressBarRenderer {
         week: number,
         theme: ServiceTheme = 'claude',
         sessionResetTime?: string | number | null,
-        weekResetTime?: string | number | null
+        weekResetTime?: string | number | null,
+        sessionLabel: string = "Session",
+        weekLabel: string = "Week"
     ): string {
         const colors = this.themes[theme];
         const sessionColor = this.getBarColor(session, theme);
         const weekColor = this.getBarColor(week, theme);
 
-        return this.buildSvg(session, sessionColor, week, weekColor, colors, theme, sessionResetTime, weekResetTime);
+        return this.buildSvg(
+            session, sessionColor,
+            week, weekColor,
+            colors, theme,
+            sessionResetTime, weekResetTime,
+            sessionLabel, weekLabel
+        );
     }
 
     private getBarColor(value: number, theme: ServiceTheme): string {
@@ -49,7 +69,7 @@ export class ProgressBarRenderer {
         if (value > 80) return '#EF4444';
         if (value > 60) return '#F59E0B';
         if (value === 0) return colors.barBg;
-        return colors.primary;
+        return colors.barFill || colors.primary;
     }
 
     private buildSvg(
@@ -60,9 +80,11 @@ export class ProgressBarRenderer {
         colors: ThemeColors,
         theme: ServiceTheme,
         sessionResetTime?: string | number | null,
-        weekResetTime?: string | number | null
+        weekResetTime?: string | number | null,
+        sessionLabel: string = "Session",
+        weekLabel: string = "Week"
     ): string {
-        const serviceName = theme === 'claude' ? 'Claude' : 'Codex';
+        const serviceName = theme.charAt(0).toUpperCase() + theme.slice(1);
 
         return `
         <svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144">
@@ -70,8 +92,8 @@ export class ProgressBarRenderer {
             
             <text x="72" y="18" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="${colors.label}" text-anchor="middle">${serviceName}</text>
             
-            ${this.renderBarGroup(72, 44, 22, 52, sessionVal, sessionColor, colors, "Session", sessionResetTime)}
-            ${this.renderBarGroup(72, 100, 22, 108, weekVal, weekColor, colors, "Week", weekResetTime)}
+            ${this.renderBarGroup(72, 44, 22, 52, sessionVal, sessionColor, colors, sessionLabel, sessionResetTime)}
+            ${this.renderBarGroup(72, 100, 22, 108, weekVal, weekColor, colors, weekLabel, weekResetTime)}
         </svg>
         `;
     }
