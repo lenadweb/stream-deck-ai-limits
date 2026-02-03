@@ -1,5 +1,5 @@
 import { action, SingletonAction, WillAppearEvent } from "@elgato/streamdeck";
-import { ClaudeUsageService, UsageData } from "../services/claude-usage-service";
+import { ClaudeUsageService, ClaudeUsage } from "../services/claude-usage-service";
 import { ProgressBarRenderer } from "../ui/progress-bar-renderer";
 
 type ProgressBarSettings = Record<string, any>;
@@ -25,21 +25,21 @@ export class ProgressBars extends SingletonAction<ProgressBarSettings> {
         this.fetchData(ev);
     }
 
-    private fetchData(ev: any) {
-        this.usageService.stopMonitoring();
-
+    private async fetchData(ev: any) {
         this.isLoading = true;
         this.startLoadingAnimation(ev);
 
-        this.usageService.startMonitoring(() => {
-            const usage = this.usageService.parseCurrentBuffer();
-            if (usage) {
+        try {
+            const usage = await this.usageService.fetchUsage();
+            if (usage && (usage.sessionUsed !== null || usage.weekUsed !== null)) {
                 this.isLoading = false;
                 this.stopLoadingAnimation();
                 this.draw(ev, usage);
-                this.usageService.stopMonitoring();
             }
-        });
+        } catch (err) {
+            this.isLoading = false;
+            this.stopLoadingAnimation();
+        }
     }
 
     private startLoadingAnimation(ev: WillAppearEvent<ProgressBarSettings>) {
@@ -65,8 +65,10 @@ export class ProgressBars extends SingletonAction<ProgressBarSettings> {
         }
     }
 
-    private async draw(ev: any, usage: UsageData) {
-        const svg = this.renderer.render(usage.session, usage.week);
+    private async draw(ev: any, usage: ClaudeUsage) {
+        const sessionPercent = usage.sessionUsed ?? 0;
+        const weekPercent = usage.weekUsed ?? 0;
+        const svg = this.renderer.render(sessionPercent, weekPercent);
         const image = `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
         await ev.action.setImage(image);
     }

@@ -1,96 +1,161 @@
-import { spawn, exec } from "child_process";
-import stripAnsi from "strip-ansi";
+import streamDeck from "@elgato/streamdeck";
+import { execFileSync } from "child_process";
+import { readFile, stat } from "fs/promises";
+import { homedir, platform } from "os";
+import { join } from "path";
 
-export type UsageData = {
-    session: number;
-    week: number;
-};
+interface ClaudeCredentials {
+    claudeAiOauth?: {
+        accessToken?: string;
+    };
+}
+
+interface ClaudeApiResponse {
+    five_hour?: number | null;
+    seven_day?: number | null;
+    seven_day_sonnet?: number | null;
+}
+
+export interface ClaudeUsage {
+    sessionUsed: number | null;
+    weekUsed: number | null;
+}
 
 export class ClaudeUsageService {
-    private childProcess: any = null;
-    private outputBuffer: string = "";
-    private readonly MAX_BUFFER_SIZE = 50000;
-    private readonly KEEP_BUFFER_SIZE = 20000;
-    private readonly SESSION_USAGE_REGEX = /Current session[\s\S]{0,300}?(\d+)%\s*used/g;
-    private readonly WEEK_USAGE_REGEX = /Current week[\s\S]{0,300}?(\d+)%\s*used/g;
+    private credPath: string;
+    private lastFetch: number = 0;
+    private cache: ClaudeUsage | null = null;
+    private credCache: { token: string | null; mtime?: number; timestamp?: number } | null = null;
+    private readonly CACHE_TTL_MS = 60000;
+    private readonly KEYCHAIN_CACHE_TTL_MS = 10000;
 
-    startMonitoring(onDataReceived: (data: string) => void) {
-        this.stopMonitoring();
-
-        const pythonCmd = "import pty; pty.spawn(['claude', '/usage'])";
-
-        this.childProcess = spawn("python3", ["-c", pythonCmd], {
-            env: { ...process.env, TERM: "xterm-256color" }
-        });
-
-        this.outputBuffer = "";
-        this.setupProcessListeners(onDataReceived);
+    constructor() {
+        this.credPath = join(homedir(), ".claude", ".credentials.json");
     }
 
-    stopMonitoring() {
-        if (this.childProcess) {
-            if (this.childProcess.pid) {
-                try {
-                    exec(`pkill -P ${this.childProcess.pid}`);
-                } catch (e) {
-                }
+    async startMonitoring(onDataReceived: (data: string) => void): Promise<void> {
+        streamDeck.logger.info("[Claude] Starting usage monitoring via HTTP API...");
+
+        try {
+            const usage = await this.fetchUsage();
+            if (usage) {
+                streamDeck.logger.info(`[Claude] Session: ${usage.sessionUsed}%, Week: ${usage.weekUsed}%`);
+            }
+        } catch (err) {
+            streamDeck.logger.error(`[Claude] Error fetching usage: ${err}`);
+        }
+    }
+
+    stopMonitoring(): void {
+        streamDeck.logger.info("[Claude] Stopping monitoring");
+    }
+
+    private async getCredentialsFromKeychain(): Promise<string | null> {
+        if (this.credCache?.timestamp && Date.now() - this.credCache.timestamp < this.KEYCHAIN_CACHE_TTL_MS) {
+            return this.credCache.token;
+        }
+
+        try {
+            const result = execFileSync(
+                "security",
+                ["find-generic-password", "-s", "Claude Code-credentials", "-w"],
+                { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
+            ).trim();
+
+            const creds: ClaudeCredentials = JSON.parse(result);
+            const token = creds?.claudeAiOauth?.accessToken ?? null;
+
+            this.credCache = { token, timestamp: Date.now() };
+            return token;
+        } catch {
+            return await this.getCredentialsFromFile();
+        }
+    }
+
+    private async getCredentialsFromFile(): Promise<string | null> {
+        try {
+            const fileStat = await stat(this.credPath);
+            const mtime = fileStat.mtimeMs;
+
+            if (this.credCache?.mtime === mtime) {
+                return this.credCache.token;
             }
 
-            this.childProcess.kill();
-            this.childProcess = null;
+            const content = await readFile(this.credPath, "utf-8");
+            const creds: ClaudeCredentials = JSON.parse(content);
+            const token = creds?.claudeAiOauth?.accessToken ?? null;
+
+            this.credCache = { token, mtime };
+            return token;
+        } catch {
+            return null;
         }
     }
 
-    triggerRefresh() {
-        if (this.childProcess) {
-            try {
-                this.childProcess.stdin.write("\n");
-            } catch { }
+    private async getCredentials(): Promise<string | null> {
+        try {
+            if (platform() === "darwin") {
+                return await this.getCredentialsFromKeychain();
+            }
+            return await this.getCredentialsFromFile();
+        } catch {
+            return null;
         }
     }
 
-    parseCurrentBuffer(): UsageData | null {
-        const cleanOutput = stripAnsi(this.outputBuffer);
+    async fetchUsage(): Promise<ClaudeUsage | null> {
+        const now = Date.now();
+        if (this.cache && (now - this.lastFetch) < this.CACHE_TTL_MS) {
+            streamDeck.logger.info("[Claude] Returning cached usage");
+            return this.cache;
+        }
 
-        const sessionMatch = this.findLastMatch(cleanOutput, this.SESSION_USAGE_REGEX);
-        const weekMatch = this.findLastMatch(cleanOutput, this.WEEK_USAGE_REGEX);
+        const token = await this.getCredentials();
+        if (!token) {
+            streamDeck.logger.warn("[Claude] No credentials found");
+            return null;
+        }
 
-        if (sessionMatch !== null || weekMatch !== null) {
-            return {
-                session: sessionMatch ?? 0,
-                week: weekMatch ?? 0
+        try {
+            streamDeck.logger.info("[Claude] Fetching usage from Anthropic API...");
+
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 5000);
+
+            const response = await fetch("https://api.anthropic.com/api/oauth/usage", {
+                method: "GET",
+                headers: {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`,
+                    "anthropic-beta": "oauth-2025-04-20",
+                },
+                signal: controller.signal,
+            });
+
+            clearTimeout(timeout);
+
+            if (!response.ok) {
+                streamDeck.logger.error(`[Claude] API returned status: ${response.status}`);
+                return null;
+            }
+
+            const data = await response.json() as ClaudeApiResponse;
+
+            const usage: ClaudeUsage = {
+                sessionUsed: data.five_hour ?? null,
+                weekUsed: data.seven_day ?? null,
             };
+
+            streamDeck.logger.info(`[Claude] Fetched usage - Session: ${usage.sessionUsed}%, Week: ${usage.weekUsed}%`);
+
+            this.cache = usage;
+            this.lastFetch = now;
+
+            return usage;
+        } catch (err) {
+            streamDeck.logger.error(`[Claude] API fetch error: ${err}`);
+            return null;
         }
-        return null;
-    }
-
-    private setupProcessListeners(onDataReceived: (data: string) => void) {
-        if (!this.childProcess) return;
-
-        this.childProcess.stdout.on("data", (data: Buffer) => {
-            const chunk = data.toString();
-            this.appendToBuffer(chunk);
-            onDataReceived(chunk);
-        });
-
-        this.childProcess.stderr.on("data", () => { });
-        this.childProcess.on("error", () => this.stopMonitoring());
-        this.childProcess.on("close", () => this.stopMonitoring());
-    }
-
-    private appendToBuffer(chunk: string) {
-        this.outputBuffer += chunk;
-        if (this.outputBuffer.length > this.MAX_BUFFER_SIZE) {
-            this.outputBuffer = this.outputBuffer.slice(-this.KEEP_BUFFER_SIZE);
-        }
-    }
-
-    private findLastMatch(text: string, regex: RegExp): number | null {
-        const matches = [...text.matchAll(regex)];
-        if (matches.length > 0) {
-            const lastMatch = matches[matches.length - 1];
-            return parseInt(lastMatch[1], 10);
-        }
-        return null;
     }
 }

@@ -48,7 +48,6 @@ export class CodexUsageService {
             const usage = await this.fetchUsage();
             if (usage) {
                 streamDeck.logger.info(`[Codex] Session: ${usage.sessionUsed}%, Week: ${usage.weekUsed}%`);
-                onDataReceived(JSON.stringify(usage));
             }
         } catch (err) {
             streamDeck.logger.error(`[Codex] Error fetching usage: ${err}`);
@@ -121,7 +120,7 @@ export class CodexUsageService {
                 return null;
             }
 
-            const data: CodexApiResponse = await response.json();
+            const data = await response.json() as CodexApiResponse;
 
             const usage: CodexUsage = {
                 sessionUsed: data.rate_limit.primary_window?.used_percent ?? null,
