@@ -1,4 +1,4 @@
-import { action } from "@elgato/streamdeck";
+import streamDeck, { action } from "@elgato/streamdeck";
 import { ClaudeUsage } from "../interfaces/usage";
 import { ProgressBarSettings } from "../interfaces/settings";
 import { ClaudeUsageService } from "../services/claude-usage-service";
@@ -21,6 +21,10 @@ export class ProgressBars extends BaseMonitoringAction<ProgressBarSettings> {
                 this.isLoading = false;
                 this.stopLoadingAnimation();
                 this.draw(ev, usage);
+            } else {
+                this.isLoading = false;
+                this.stopLoadingAnimation();
+                streamDeck.logger.warn("[Usage] Fetch returned null, stopping loader");
             }
         } catch (err) {
             this.isLoading = false;

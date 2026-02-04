@@ -230,9 +230,10 @@ export class ClaudeUsageService {
 
     private refreshTokenViaCLI(): Promise<boolean> {
         return new Promise((resolve) => {
-            streamDeck.logger.info("[Claude] Spawning claude CLI to refresh token...");
+            const claudePath = join(homedir(), ".local/bin/claude");
+            streamDeck.logger.info(`[Claude] Spawning claude CLI at ${claudePath} to refresh token...`);
 
-            const proc = spawn("claude", [], {
+            const proc = spawn(claudePath, [], {
                 stdio: "ignore",
                 detached: true,
             });
