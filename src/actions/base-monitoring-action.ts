@@ -1,4 +1,4 @@
-import streamDeck, { SingletonAction, WillAppearEvent, WillDisappearEvent, KeyDownEvent } from "@elgato/streamdeck";
+import streamDeck, { SingletonAction, KeyDownEvent, WillAppearEvent, WillDisappearEvent } from "@elgato/streamdeck";
 
 export abstract class BaseMonitoringAction<T extends Record<string, any>> extends SingletonAction<T> {
     protected controllers = new Map<string, string>();
@@ -12,14 +12,16 @@ export abstract class BaseMonitoringAction<T extends Record<string, any>> extend
         if (!this.isMonitoring) {
             this.isMonitoring = true;
             this.startMonitoring(ev);
+        } else {
+            this.redraw(ev);
         }
     }
 
     override async onWillDisappear(ev: WillDisappearEvent<T>): Promise<void> {
         this.controllers.delete(ev.action.id);
-        this.isMonitoring = false;
-        this.stopMonitoring();
     }
+
+    protected abstract redraw(ev: any): Promise<void>;
 
     override async onKeyDown(ev: KeyDownEvent<T>): Promise<void> {
         await this.refresh(ev);

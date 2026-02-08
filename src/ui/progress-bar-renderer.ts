@@ -231,4 +231,19 @@ export class ProgressBarRenderer {
 
         return `${diffMinutes}m`;
     }
+
+    renderPlaceholder(width: number, height: number): string {
+        const colors = this.themes.antigravity;
+        const centerX = width / 2;
+        const centerY = height / 2;
+
+        return `
+        <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+            <rect width="${width}" height="${height}" fill="${colors.background}" />
+            
+            <text x="${centerX}" y="${centerY - 10}" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="600" fill="${colors.text}" text-anchor="middle">Open</text>
+            <text x="${centerX}" y="${centerY + 10}" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="600" fill="${colors.text}" text-anchor="middle">Antigravity</text>
+        </svg>
+        `;
+    }
 }

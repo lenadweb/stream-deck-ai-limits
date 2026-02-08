@@ -10,6 +10,7 @@ export class ProgressBars extends BaseMonitoringAction<ProgressBarSettings> {
     private readonly usageService = new ClaudeUsageService();
     private readonly renderer = new ProgressBarRenderer();
     private loaderInterval: NodeJS.Timeout | null = null;
+    private lastUsage: ClaudeUsage | null = null;
 
     protected async refresh(ev: any): Promise<void> {
         this.isLoading = true;
@@ -18,6 +19,7 @@ export class ProgressBars extends BaseMonitoringAction<ProgressBarSettings> {
         try {
             const usage = await this.usageService.fetchUsage();
             if (usage && (usage.sessionUsed !== null || usage.weekUsed !== null)) {
+                this.lastUsage = usage;
                 this.isLoading = false;
                 this.stopLoadingAnimation();
                 this.draw(ev, usage);
@@ -29,6 +31,12 @@ export class ProgressBars extends BaseMonitoringAction<ProgressBarSettings> {
         } catch (err) {
             this.isLoading = false;
             this.stopLoadingAnimation();
+        }
+    }
+
+    protected async redraw(ev: any): Promise<void> {
+        if (this.lastUsage) {
+            await this.draw(ev, this.lastUsage);
         }
     }
 
