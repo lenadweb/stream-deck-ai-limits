@@ -9,24 +9,17 @@ import { BaseMonitoringAction } from "./base-monitoring-action";
 export class CodexProgressBars extends BaseMonitoringAction<ProgressBarSettings> {
     private readonly usageService = new CodexUsageService();
     private readonly renderer = new ProgressBarRenderer();
-    private loaderInterval: NodeJS.Timeout | null = null;
     private lastUsage: CodexUsage | null = null;
 
     protected async refresh(ev: any): Promise<void> {
-        this.isLoading = true;
-        this.startLoadingAnimation(ev);
-
         try {
             const usage = await this.usageService.fetchUsage();
             if (usage && (usage.sessionUsed !== null || usage.weekUsed !== null)) {
                 this.lastUsage = usage;
-                this.isLoading = false;
-                this.stopLoadingAnimation();
                 this.draw(ev, usage);
             }
         } catch (err) {
-            this.isLoading = false;
-            this.stopLoadingAnimation();
+            // Silently fail or log
         }
     }
 
@@ -36,32 +29,6 @@ export class CodexProgressBars extends BaseMonitoringAction<ProgressBarSettings>
         }
     }
 
-    private startLoadingAnimation(ev: any) {
-        if (this.loaderInterval) clearInterval(this.loaderInterval);
-
-        this.loaderFrame = 0;
-        this.loaderInterval = setInterval(async () => {
-            if (!this.isLoading) {
-                this.stopLoadingAnimation();
-                return;
-            }
-            this.loaderFrame = (this.loaderFrame + 30) % 360;
-            const keySvg = this.renderer.renderLoader(this.loaderFrame, 'codex', 144, 144);
-            const dialSvg = this.renderer.renderLoader(this.loaderFrame, 'codex', 200, 100);
-
-            const image = `data:image/svg+xml;base64,${Buffer.from(keySvg).toString('base64')}`;
-            await ev.action.setImage(image);
-
-            await this.updateDialFeedback(ev, dialSvg);
-        }, 100);
-    }
-
-    private stopLoadingAnimation() {
-        if (this.loaderInterval) {
-            clearInterval(this.loaderInterval);
-            this.loaderInterval = null;
-        }
-    }
 
     private async draw(ev: any, usage: CodexUsage) {
         const sessionPercent = usage.sessionUsed ?? 0;
