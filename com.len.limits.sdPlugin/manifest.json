@@ -83,6 +83,7 @@
 			"UUID": "com.len.limits.gemini-cli",
 			"Icon": "imgs/actions/counter/icon",
 			"Tooltip": "Displays Gemini CLI usage.",
+			"PropertyInspectorPath": "ui/gemini-settings.html",
 			"Controllers": [
 				"Keypad",
 				"Encoder"

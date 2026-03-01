@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+
+<head lang="en">
+    <title>Gemini CLI Settings</title>
+    <meta charset="utf-8" />
+    <script src="https://sdpi-components.dev/releases/v4/sdpi-components.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        select.sdpi-item-value {
+            width: 100%;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: #2d2d2d;
+            color: #ddd;
+            border: 1px solid #444;
+            font-size: 12px;
+        }
+        .info {
+            padding: 4px 16px;
+            font-size: 11px;
+            color: #999;
+        }
+    </style>
+</head>
+
+<body>
+    <sdpi-item label="Top Bar Model">
+        <select id="topModel" class="sdpi-item-value">
+            <option value="">Overall (Most Constrained)</option>
+        </select>
+    </sdpi-item>
+
+    <sdpi-item label="Bottom Bar Model">
+        <select id="bottomModel" class="sdpi-item-value">
+            <option value="">Overall (Most Constrained)</option>
+        </select>
+    </sdpi-item>
+
+    <div class="info">Press the button on your Stream Deck once to load models, then reopen settings.</div>
+
+    <script>
+        let _websocket = null;
+        let _uuid = null;
+        let _settings = {};
+
+        function connectElgatoStreamDeckSocket(port, uuid, registerEvent, info, actionInfo) {
+            _uuid = uuid;
+
+            if (actionInfo) {
+                const parsed = JSON.parse(actionInfo);
+                _settings = parsed?.payload?.settings || {};
+
+                // Load models from persisted settings immediately
+                if (_settings.availableModels && Array.isArray(_settings.availableModels)) {
+                    populateModels(_settings.availableModels);
+                }
+            }
+
+            _websocket = new WebSocket("ws://127.0.0.1:" + port);
+
+            _websocket.onopen = function () {
+                const json = {
+                    event: registerEvent,
+                    uuid: uuid,
+                };
+                _websocket.send(JSON.stringify(json));
+
+                // Also request fresh model list from the plugin
+                const request = {
+                    action: "com.len.limits.gemini-cli",
+                    event: "sendToPlugin",
+                    context: uuid,
+                    payload: { event: "getModels" },
+                };
+                _websocket.send(JSON.stringify(request));
+            };
+
+            _websocket.onmessage = function (evt) {
+                const data = JSON.parse(evt.data);
+
+                // Live update from plugin
+                if (data.event === "sendToPropertyInspector") {
+                    if (data.payload?.event === "modelList" && Array.isArray(data.payload.models)) {
+                        populateModels(data.payload.models);
+                    }
+                }
+
+                // Settings updated (e.g. plugin persisted new availableModels)
+                if (data.event === "didReceiveSettings") {
+                    _settings = data.payload?.settings || {};
+                    if (_settings.availableModels && Array.isArray(_settings.availableModels)) {
+                        populateModels(_settings.availableModels);
+                    }
+                    applySettings();
+                }
+            };
+        }
+
+        function populateModels(models) {
+            const topSelect = document.getElementById("topModel");
+            const bottomSelect = document.getElementById("bottomModel");
+
+            // Clear existing model options (keep first "Overall" option)
+            while (topSelect.options.length > 1) topSelect.remove(1);
+            while (bottomSelect.options.length > 1) bottomSelect.remove(1);
+
+            models.forEach(function (modelId) {
+                const displayName = modelId.replace(/^models\//, "");
+
+                const opt1 = document.createElement("option");
+                opt1.value = modelId;
+                opt1.textContent = displayName;
+                topSelect.appendChild(opt1);
+
+                const opt2 = document.createElement("option");
+                opt2.value = modelId;
+                opt2.textContent = displayName;
+                bottomSelect.appendChild(opt2);
+            });
+
+            // Restore saved selections
+            applySettings();
+        }
+
+        function applySettings() {
+            const topSelect = document.getElementById("topModel");
+            const bottomSelect = document.getElementById("bottomModel");
+
+            if (_settings.topModel !== undefined) topSelect.value = _settings.topModel;
+            if (_settings.bottomModel !== undefined) bottomSelect.value = _settings.bottomModel;
+        }
+
+        function saveSettings() {
+            const topSelect = document.getElementById("topModel");
+            const bottomSelect = document.getElementById("bottomModel");
+
+            _settings.topModel = topSelect.value;
+            _settings.bottomModel = bottomSelect.value;
+
+            if (_websocket && _uuid) {
+                const json = {
+                    event: "setSettings",
+                    context: _uuid,
+                    payload: _settings,
+                };
+                _websocket.send(JSON.stringify(json));
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            document.getElementById("topModel").addEventListener("change", saveSettings);
+            document.getElementById("bottomModel").addEventListener("change", saveSettings);
+        });
+    </script>
+</body>
+
+</html>
