@@ -28,6 +28,15 @@ export class ProgressBarRenderer {
             label: '#9CA3AF',
             barBg: '#2D2B40',
             barFill: '#8B5CF6'
+        },
+        'gemini-cli': {
+            primary: '#4285F4',
+            secondary: '#8AB4F8',
+            background: '#131314',
+            text: '#E3E3E3',
+            label: '#C4C7C5',
+            barBg: '#444746',
+            barFill: '#4285F4'
         }
     };
 

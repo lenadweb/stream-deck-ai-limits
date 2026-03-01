@@ -77,6 +77,31 @@
 					"TitleAlignment": "middle"
 				}
 			]
+		},
+		{
+			"Name": "Progress Bars (Gemini CLI)",
+			"UUID": "com.len.limits.gemini-cli",
+			"Icon": "imgs/actions/counter/icon",
+			"Tooltip": "Displays Gemini CLI usage.",
+			"Controllers": [
+				"Keypad",
+				"Encoder"
+			],
+			"Encoder": {
+				"layout": "layouts/full-view.json",
+				"StackColor": "#4285F4",
+				"TriggerDescription": {
+					"Rotate": "Refresh",
+					"Touch": "Refresh",
+					"Push": "Refresh"
+				}
+			},
+			"States": [
+				{
+					"Image": "imgs/actions/counter/key",
+					"TitleAlignment": "middle"
+				}
+			]
 		}
 	],
 	"Category": "limits",
