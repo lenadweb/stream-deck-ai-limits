@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100">
+  <rect width="200" height="100" fill="#2F2724" />
+  <text x="100" y="20" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="600" fill="#9D8B86" text-anchor="middle">Claude</text>
+  <rect x="10" y="28" width="180" height="24" fill="#4A3D39" rx="4" />
+  <rect x="10" y="28" width="29" height="24" fill="#D97757" rx="4" />
+  <text x="16" y="44" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600" fill="#FFFFFF" text-anchor="start">Session<tspan fill="#CCC" font-weight="400" font-size="12"> 16%</tspan></text>
+  <text x="184" y="44" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="500" fill="#DDD" text-anchor="end">3h 33m</text>
+  <rect x="10" y="62" width="180" height="24" fill="#4A3D39" rx="4" />
+  <rect x="10" y="62" width="166" height="24" fill="#EF4444" rx="4" />
+  <text x="16" y="78" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600" fill="#FFFFFF" text-anchor="start">Week<tspan fill="#CCC" font-weight="400" font-size="12"> 92%</tspan></text>
+  <text x="184" y="78" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="500" fill="#DDD" text-anchor="end">16h 3m</text>
+</svg>

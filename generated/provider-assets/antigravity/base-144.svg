@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144">
+  <rect width="144" height="144" fill="#1E1B2E" />
+  <text x="72" y="18" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="#9CA3AF" text-anchor="middle">Antigravity</text>
+  <text x="72" y="44" font-family="system-ui, -apple-system, sans-serif" text-anchor="middle">
+    <tspan font-size="15" font-weight="600" fill="#FFFFFF">24%</tspan>
+    <tspan font-size="15" fill="#999">  Claude</tspan>
+  </text>
+  <rect x="22" y="52" width="100" height="20" fill="#2D2B40" rx="6" />
+  <rect x="22" y="52" width="24" height="20" fill="#8B5CF6" rx="6" />
+  <text x="72" y="69" font-family="system-ui, -apple-system, sans-serif" font-size="15" font-weight="500" fill="#AAA" text-anchor="middle">2h 14m</text>
+
+  <text x="72" y="100" font-family="system-ui, -apple-system, sans-serif" text-anchor="middle">
+    <tspan font-size="15" font-weight="600" fill="#FFFFFF">41%</tspan>
+    <tspan font-size="15" fill="#999">  Gemini</tspan>
+  </text>
+  <rect x="22" y="108" width="100" height="20" fill="#2D2B40" rx="6" />
+  <rect x="22" y="108" width="41" height="20" fill="#8B5CF6" rx="6" />
+  <text x="72" y="125" font-family="system-ui, -apple-system, sans-serif" font-size="15" font-weight="500" fill="#FFFFFF" text-anchor="middle">4d 3h</text>
+</svg>

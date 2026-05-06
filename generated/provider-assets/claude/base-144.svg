@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144">
+  <rect width="144" height="144" fill="#2F2724" />
+  <text x="72" y="18" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="#9D8B86" text-anchor="middle">Claude</text>
+  <text x="72" y="44" font-family="system-ui, -apple-system, sans-serif" text-anchor="middle">
+    <tspan font-size="15" font-weight="600" fill="#FFFFFF">16%</tspan>
+    <tspan font-size="15" fill="#999">  Session</tspan>
+  </text>
+  <rect x="22" y="52" width="100" height="20" fill="#4A3D39" rx="6" />
+  <rect x="22" y="52" width="16" height="20" fill="#D97757" rx="6" />
+  <text x="72" y="69" font-family="system-ui, -apple-system, sans-serif" font-size="15" font-weight="500" fill="#AAA" text-anchor="middle">3h 33m</text>
+
+  <text x="72" y="100" font-family="system-ui, -apple-system, sans-serif" text-anchor="middle">
+    <tspan font-size="15" font-weight="600" fill="#FFFFFF">92%</tspan>
+    <tspan font-size="15" fill="#999">  Week</tspan>
+  </text>
+  <rect x="22" y="108" width="100" height="20" fill="#4A3D39" rx="6" />
+  <rect x="22" y="108" width="92" height="20" fill="#EF4444" rx="6" />
+  <text x="72" y="125" font-family="system-ui, -apple-system, sans-serif" font-size="15" font-weight="500" fill="#FFFFFF" text-anchor="middle">16h 3m</text>
+</svg>
