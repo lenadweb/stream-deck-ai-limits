@@ -1,6 +1,6 @@
 {
-	"Name": "limits",
-	"Version": "0.1.0.0",
+	"Name": "AI Usage Monitor",
+	"Version": "0.1.1.0",
 	"Author": "len",
 	"Actions": [
 		{
@@ -131,10 +131,10 @@
 			]
 		}
 	],
-	"Category": "limits",
+	"Category": "AI Usage Monitor",
 	"CategoryIcon": "imgs/plugin/category-icon",
 	"CodePath": "bin/plugin.js",
-	"Description": "claude limits",
+	"Description": "Displays usage limits for Claude, Codex, Antigravity, Gemini CLI, and MiniMax.",
 	"Icon": "imgs/plugin/marketplace",
 	"SDKVersion": 3,
 	"Software": {
@@ -152,7 +152,7 @@
 	],
 	"Nodejs": {
 		"Version": "20",
-		"Debug": "enabled"
+		"Debug": "disabled"
 	},
 	"UUID": "com.len.limits"
 }
