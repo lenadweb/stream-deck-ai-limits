@@ -22,12 +22,7 @@
     <sdpi-item label="API Key">
         <sdpi-textfield id="apiKey" type="password" placeholder="MINIMAX API key"></sdpi-textfield>
     </sdpi-item>
-
-    <sdpi-item label="Group ID">
-        <sdpi-textfield id="groupId" placeholder="MINIMAX Group ID"></sdpi-textfield>
-    </sdpi-item>
-
-    <div class="hint">These values are stored in the action settings and used for MiniMax API requests.</div>
+    <div class="hint">This value is stored in the action settings and is used for MiniMax API requests.</div>
 
     <script>
         let _websocket = null;
@@ -60,18 +55,12 @@
 
         function applySettings() {
             const apiKey = document.getElementById("apiKey");
-            const groupId = document.getElementById("groupId");
-
             apiKey.value = _settings.apiKey || "";
-            groupId.value = _settings.groupId || "";
         }
 
         function saveSettings() {
             const apiKey = document.getElementById("apiKey");
-            const groupId = document.getElementById("groupId");
-
             _settings.apiKey = apiKey.value || "";
-            _settings.groupId = groupId.value || "";
 
             if (_websocket && _uuid) {
                 _websocket.send(JSON.stringify({
@@ -84,10 +73,7 @@
 
         document.addEventListener("DOMContentLoaded", function () {
             const apiKey = document.getElementById("apiKey");
-            const groupId = document.getElementById("groupId");
-
             apiKey.addEventListener("input", saveSettings);
-            groupId.addEventListener("input", saveSettings);
 
             applySettings();
         });
