@@ -1,5 +1,5 @@
 {
-  "Name": "AI Usage Monitor",
+  "Name": "AI Usage Limits",
   "Version": "0.1.1.0",
   "Author": "len",
   "Actions": [
@@ -131,10 +131,10 @@
       ]
     }
   ],
-  "Category": "AI Usage Monitor",
+  "Category": "AI Usage Limits",
   "CategoryIcon": "imgs/plugin/category-icon",
   "CodePath": "bin/plugin.js",
-  "Description": "Displays usage limits for Claude, Codex, Antigravity, Gemini CLI, and MiniMax.",
+  "Description": "Track AI usage limits and reset times for Claude, Codex, Antigravity, Gemini CLI, and MiniMax.",
   "Icon": "imgs/plugin/plugin-icon",
   "SDKVersion": 3,
   "Software": {
