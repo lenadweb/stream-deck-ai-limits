@@ -1,158 +1,154 @@
 {
-	"Name": "AI Usage Monitor",
-	"Version": "0.1.1.0",
-	"Author": "len",
-	"Actions": [
-		{
-			"Name": "Progress Bars (Claude)",
-			"UUID": "com.len.limits.progress",
-			"Icon": "imgs/actions/counter/icon",
-			"Tooltip": "Displays Claude usage.",
-			"Controllers": [
-				"Keypad",
-				"Encoder"
-			],
-			"Encoder": {
-				"layout": "layouts/full-view.json",
-				"StackColor": "#D97757",
-				"TriggerDescription": {
-					"Rotate": "Refresh",
-					"Touch": "Refresh",
-					"Push": "Refresh"
-				}
-			},
-			"States": [
-				{
-					"Image": "imgs/actions/counter/key",
-					"TitleAlignment": "middle"
-				}
-			]
-		},
-		{
-			"Name": "Progress Bars (Codex)",
-			"UUID": "com.len.limits.codex.progress",
-			"Icon": "imgs/actions/counter/icon",
-			"Tooltip": "Displays Codex usage.",
-			"Controllers": [
-				"Keypad",
-				"Encoder"
-			],
-			"Encoder": {
-				"layout": "layouts/full-view.json",
-				"StackColor": "#10B981",
-				"TriggerDescription": {
-					"Rotate": "Refresh",
-					"Touch": "Refresh",
-					"Push": "Refresh"
-				}
-			},
-			"States": [
-				{
-					"Image": "imgs/actions/counter/key",
-					"TitleAlignment": "middle"
-				}
-			]
-		},
-		{
-			"Name": "Progress Bars (Antigravity)",
-			"UUID": "com.len.limits.antigravity",
-			"Icon": "imgs/actions/counter/icon",
-			"Tooltip": "Displays Antigravity usage.",
-			"Controllers": [
-				"Keypad",
-				"Encoder"
-			],
-			"Encoder": {
-				"layout": "layouts/full-view.json",
-				"StackColor": "#8B5CF6",
-				"TriggerDescription": {
-					"Rotate": "Refresh",
-					"Touch": "Refresh",
-					"Push": "Refresh"
-				}
-			},
-			"States": [
-				{
-					"Image": "imgs/actions/counter/key",
-					"TitleAlignment": "middle"
-				}
-			]
-		},
-		{
-			"Name": "Progress Bars (Gemini CLI)",
-			"UUID": "com.len.limits.gemini-cli",
-			"Icon": "imgs/actions/counter/icon",
-			"Tooltip": "Displays Gemini CLI usage.",
-			"PropertyInspectorPath": "ui/gemini-settings.html",
-			"Controllers": [
-				"Keypad",
-				"Encoder"
-			],
-			"Encoder": {
-				"layout": "layouts/full-view.json",
-				"StackColor": "#4285F4",
-				"TriggerDescription": {
-					"Rotate": "Refresh",
-					"Touch": "Refresh",
-					"Push": "Refresh"
-				}
-			},
-			"States": [
-				{
-					"Image": "imgs/actions/counter/key",
-					"TitleAlignment": "middle"
-				}
-			]
-		},
-		{
-			"Name": "Progress Bars (MiniMax)",
-			"UUID": "com.len.limits.minimax",
-			"Icon": "imgs/actions/counter/icon",
-			"Tooltip": "Displays MiniMax M* usage.",
-			"PropertyInspectorPath": "ui/minimax-settings.html",
-			"Controllers": [
-				"Keypad",
-				"Encoder"
-			],
-			"Encoder": {
-				"layout": "layouts/full-view.json",
-				"StackColor": "#3B82F6",
-				"TriggerDescription": {
-					"Rotate": "Refresh",
-					"Touch": "Refresh",
-					"Push": "Refresh"
-				}
-			},
-			"States": [
-				{
-					"Image": "imgs/actions/counter/key",
-					"TitleAlignment": "middle"
-				}
-			]
-		}
-	],
-	"Category": "AI Usage Monitor",
-	"CategoryIcon": "imgs/plugin/category-icon",
-	"CodePath": "bin/plugin.js",
-	"Description": "Displays usage limits for Claude, Codex, Antigravity, Gemini CLI, and MiniMax.",
-	"Icon": "imgs/plugin/marketplace",
-	"SDKVersion": 3,
-	"Software": {
-		"MinimumVersion": "6.9"
-	},
-	"OS": [
-		{
-			"Platform": "mac",
-			"MinimumVersion": "12"
-		},
-		{
-			"Platform": "windows",
-			"MinimumVersion": "10"
-		}
-	],
-	"Nodejs": {
-		"Version": "20",
-		"Debug": "disabled"
-	},
-	"UUID": "com.len.limits"
+  "Name": "AI Usage Monitor",
+  "Version": "0.1.1.0",
+  "Author": "len",
+  "Actions": [
+    {
+      "Name": "Progress Bars (Claude)",
+      "UUID": "com.len.limits.progress",
+      "Icon": "imgs/actions/counter/icon",
+      "Tooltip": "Displays Claude usage.",
+      "Controllers": [
+        "Keypad",
+        "Encoder"
+      ],
+      "Encoder": {
+        "layout": "layouts/full-view.json",
+        "StackColor": "#D97757",
+        "TriggerDescription": {
+          "Rotate": "Refresh",
+          "Touch": "Refresh",
+          "Push": "Refresh"
+        }
+      },
+      "States": [
+        {
+          "Image": "imgs/actions/counter/key",
+          "TitleAlignment": "middle"
+        }
+      ]
+    },
+    {
+      "Name": "Progress Bars (Codex)",
+      "UUID": "com.len.limits.codex.progress",
+      "Icon": "imgs/actions/counter/icon",
+      "Tooltip": "Displays Codex usage.",
+      "Controllers": [
+        "Keypad",
+        "Encoder"
+      ],
+      "Encoder": {
+        "layout": "layouts/full-view.json",
+        "StackColor": "#10B981",
+        "TriggerDescription": {
+          "Rotate": "Refresh",
+          "Touch": "Refresh",
+          "Push": "Refresh"
+        }
+      },
+      "States": [
+        {
+          "Image": "imgs/actions/counter/key",
+          "TitleAlignment": "middle"
+        }
+      ]
+    },
+    {
+      "Name": "Progress Bars (Antigravity)",
+      "UUID": "com.len.limits.antigravity",
+      "Icon": "imgs/actions/counter/icon",
+      "Tooltip": "Displays Antigravity usage.",
+      "Controllers": [
+        "Keypad",
+        "Encoder"
+      ],
+      "Encoder": {
+        "layout": "layouts/full-view.json",
+        "StackColor": "#8B5CF6",
+        "TriggerDescription": {
+          "Rotate": "Refresh",
+          "Touch": "Refresh",
+          "Push": "Refresh"
+        }
+      },
+      "States": [
+        {
+          "Image": "imgs/actions/counter/key",
+          "TitleAlignment": "middle"
+        }
+      ]
+    },
+    {
+      "Name": "Progress Bars (Gemini CLI)",
+      "UUID": "com.len.limits.gemini-cli",
+      "Icon": "imgs/actions/counter/icon",
+      "Tooltip": "Displays Gemini CLI usage.",
+      "PropertyInspectorPath": "ui/gemini-settings.html",
+      "Controllers": [
+        "Keypad",
+        "Encoder"
+      ],
+      "Encoder": {
+        "layout": "layouts/full-view.json",
+        "StackColor": "#4285F4",
+        "TriggerDescription": {
+          "Rotate": "Refresh",
+          "Touch": "Refresh",
+          "Push": "Refresh"
+        }
+      },
+      "States": [
+        {
+          "Image": "imgs/actions/counter/key",
+          "TitleAlignment": "middle"
+        }
+      ]
+    },
+    {
+      "Name": "Progress Bars (MiniMax)",
+      "UUID": "com.len.limits.minimax",
+      "Icon": "imgs/actions/counter/icon",
+      "Tooltip": "Displays MiniMax M* usage.",
+      "PropertyInspectorPath": "ui/minimax-settings.html",
+      "Controllers": [
+        "Keypad",
+        "Encoder"
+      ],
+      "Encoder": {
+        "layout": "layouts/full-view.json",
+        "StackColor": "#3B82F6",
+        "TriggerDescription": {
+          "Rotate": "Refresh",
+          "Touch": "Refresh",
+          "Push": "Refresh"
+        }
+      },
+      "States": [
+        {
+          "Image": "imgs/actions/counter/key",
+          "TitleAlignment": "middle"
+        }
+      ]
+    }
+  ],
+  "Category": "AI Usage Monitor",
+  "CategoryIcon": "imgs/plugin/category-icon",
+  "CodePath": "bin/plugin.js",
+  "Description": "Displays usage limits for Claude, Codex, Antigravity, Gemini CLI, and MiniMax.",
+  "Icon": "imgs/plugin/plugin-icon",
+  "SDKVersion": 3,
+  "Software": {
+    "MinimumVersion": "6.9"
+  },
+  "OS": [
+    {
+      "Platform": "mac",
+      "MinimumVersion": "12"
+    }
+  ],
+  "Nodejs": {
+    "Version": "20",
+    "Debug": "disabled"
+  },
+  "UUID": "com.len.limits"
 }
