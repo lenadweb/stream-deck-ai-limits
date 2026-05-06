@@ -103,6 +103,31 @@
 					"TitleAlignment": "middle"
 				}
 			]
+		},
+		{
+			"Name": "Progress Bars (MiniMax)",
+			"UUID": "com.len.limits.minimax",
+			"Icon": "imgs/actions/counter/icon",
+			"Tooltip": "Displays MiniMax M* usage.",
+			"Controllers": [
+				"Keypad",
+				"Encoder"
+			],
+			"Encoder": {
+				"layout": "layouts/full-view.json",
+				"StackColor": "#3B82F6",
+				"TriggerDescription": {
+					"Rotate": "Refresh",
+					"Touch": "Refresh",
+					"Push": "Refresh"
+				}
+			},
+			"States": [
+				{
+					"Image": "imgs/actions/counter/key",
+					"TitleAlignment": "middle"
+				}
+			]
 		}
 	],
 	"Category": "limits",

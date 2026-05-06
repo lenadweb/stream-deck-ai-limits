@@ -37,6 +37,15 @@ export class ProgressBarRenderer {
             label: '#C4C7C5',
             barBg: '#444746',
             barFill: '#4285F4'
+        },
+        minimax: {
+            primary: '#3B82F6',
+            secondary: '#60A5FA',
+            background: '#0F172A',
+            text: '#FFFFFF',
+            label: '#94A3B8',
+            barBg: '#1E293B',
+            barFill: '#3B82F6'
         }
     };
 

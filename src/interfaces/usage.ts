@@ -16,3 +16,10 @@ export interface CodexUsage {
     weekUsed: number | null;
     weekResetsAt: number | null;
 }
+
+export interface MiniMaxUsage {
+    sessionUsed: number | null;
+    sessionResetsAt: number | null;
+    weekUsed: number | null;
+    weekResetsAt: number | null;
+}
