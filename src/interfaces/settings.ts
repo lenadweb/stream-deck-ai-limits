@@ -6,3 +6,9 @@ export interface GeminiSettings {
     availableModels?: string[];
     [key: string]: any;
 }
+
+export interface MiniMaxSettings {
+    apiKey?: string;
+    groupId?: string;
+    [key: string]: any;
+}

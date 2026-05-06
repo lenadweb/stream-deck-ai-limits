@@ -1,7 +1,5 @@
 import streamDeck from "@elgato/streamdeck";
-import { readFile } from "fs/promises";
-import { homedir } from "os";
-import { join } from "path";
+import { MiniMaxSettings } from "../interfaces/settings";
 
 interface MiniMaxModelRemains {
     start_time: number;
@@ -32,49 +30,37 @@ export interface MiniMaxUsage {
 export class MiniMaxUsageService {
     private lastFetch: number = 0;
     private cache: MiniMaxUsage | null = null;
-    private envCache: { apiKey: string; groupId: string } | null = null;
+    private credentialsCache: { apiKey: string; groupId: string } | null = null;
     private readonly CACHE_TTL_MS = 60000;
     private readonly TARGET_MODEL = "MiniMax-M*";
 
-    private async readEnv(): Promise<{ apiKey: string; groupId: string } | null> {
-        if (this.envCache) return this.envCache;
+    private readSettings(settings?: MiniMaxSettings): { apiKey: string; groupId: string } | null {
+        const apiKey = settings?.apiKey?.trim();
+        const groupId = settings?.groupId?.trim();
 
-        try {
-            const envPath = join(homedir(), ".minimax", ".env");
-            const content = await readFile(envPath, "utf-8");
-            const vars: Record<string, string> = {};
-            for (const line of content.split("\n")) {
-                const match = line.match(/^([^#=]+)=(.*)$/);
-                if (match) {
-                    vars[match[1].trim()] = match[2].trim();
-                }
-            }
-
-            const apiKey = vars["MINIMAX_API_KEY"];
-            const groupId = vars["MINIMAX_GROUP_ID"];
-
-            if (!apiKey || !groupId) {
-                streamDeck.logger.warn("[MiniMax] Missing MINIMAX_API_KEY or MINIMAX_GROUP_ID in .env");
-                return null;
-            }
-
-            this.envCache = { apiKey, groupId };
-            return this.envCache;
-        } catch (err) {
-            streamDeck.logger.error(`[MiniMax] Failed to read .env: ${err}`);
+        if (!apiKey || !groupId) {
+            streamDeck.logger.warn("[MiniMax] Missing apiKey or groupId in action settings");
             return null;
         }
+
+        return { apiKey, groupId };
     }
 
-    async fetchUsage(): Promise<MiniMaxUsage | null> {
+    async fetchUsage(settings?: MiniMaxSettings): Promise<MiniMaxUsage | null> {
         const now = Date.now();
-        if (this.cache && (now - this.lastFetch) < this.CACHE_TTL_MS) {
+        const credentials = this.readSettings(settings);
+        if (!credentials) return null;
+
+        const isSameCredentials = this.credentialsCache
+            && this.credentialsCache.apiKey === credentials.apiKey
+            && this.credentialsCache.groupId === credentials.groupId;
+
+        if (isSameCredentials && this.cache && (now - this.lastFetch) < this.CACHE_TTL_MS) {
             streamDeck.logger.info("[MiniMax] Returning cached usage");
             return this.cache;
         }
 
-        const env = await this.readEnv();
-        if (!env) return null;
+        this.credentialsCache = credentials;
 
         try {
             streamDeck.logger.info("[MiniMax] Fetching usage from MiniMax API...");
@@ -82,11 +68,11 @@ export class MiniMaxUsageService {
             const controller = new AbortController();
             const timeout = setTimeout(() => controller.abort(), 5000);
 
-            const url = `https://platform.minimax.io/v1/api/openplatform/coding_plan/remains?GroupId=${env.groupId}`;
+            const url = `https://platform.minimax.io/v1/api/openplatform/coding_plan/remains?GroupId=${credentials.groupId}`;
             const response = await fetch(url, {
                 method: "GET",
                 headers: {
-                    "Authorization": `Bearer ${env.apiKey}`,
+                    "Authorization": `Bearer ${credentials.apiKey}`,
                     "Accept": "application/json",
                 },
                 signal: controller.signal,

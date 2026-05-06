@@ -109,6 +109,7 @@
 			"UUID": "com.len.limits.minimax",
 			"Icon": "imgs/actions/counter/icon",
 			"Tooltip": "Displays MiniMax M* usage.",
+			"PropertyInspectorPath": "ui/minimax-settings.html",
 			"Controllers": [
 				"Keypad",
 				"Encoder"

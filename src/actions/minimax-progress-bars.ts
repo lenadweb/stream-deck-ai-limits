@@ -1,19 +1,30 @@
 import { action } from "@elgato/streamdeck";
 import { MiniMaxUsage } from "../services/minimax-usage-service";
-import { ProgressBarSettings } from "../interfaces/settings";
+import { MiniMaxSettings } from "../interfaces/settings";
 import { MiniMaxUsageService } from "../services/minimax-usage-service";
 import { ProgressBarRenderer } from "../ui/progress-bar-renderer";
 import { BaseMonitoringAction } from "./base-monitoring-action";
 
 @action({ UUID: "com.len.limits.minimax" })
-export class MiniMaxProgressBars extends BaseMonitoringAction<ProgressBarSettings> {
+export class MiniMaxProgressBars extends BaseMonitoringAction<MiniMaxSettings> {
     private readonly usageService = new MiniMaxUsageService();
     private readonly renderer = new ProgressBarRenderer();
     private lastUsage: MiniMaxUsage | null = null;
+    private settings: MiniMaxSettings = {};
+
+    override async onWillAppear(ev: any): Promise<void> {
+        this.settings = (ev.payload?.settings ?? {}) as MiniMaxSettings;
+        await super.onWillAppear(ev);
+    }
+
+    override async onDidReceiveSettings(ev: any): Promise<void> {
+        this.settings = (ev.payload?.settings ?? {}) as MiniMaxSettings;
+        await this.refresh(ev);
+    }
 
     protected async refresh(ev: any): Promise<void> {
         try {
-            const usage = await this.usageService.fetchUsage();
+            const usage = await this.usageService.fetchUsage(this.settings);
             if (usage && (usage.sessionUsed !== null || usage.weekUsed !== null)) {
                 this.lastUsage = usage;
                 this.draw(ev, usage);
