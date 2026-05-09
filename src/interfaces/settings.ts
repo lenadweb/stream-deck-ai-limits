@@ -9,5 +9,6 @@ export interface GeminiSettings {
 
 export interface MiniMaxSettings {
     apiKey?: string;
+    groupId?: string;
     [key: string]: any;
 }

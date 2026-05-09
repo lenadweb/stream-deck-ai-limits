@@ -30,19 +30,20 @@ export interface MiniMaxUsage {
 export class MiniMaxUsageService {
     private lastFetch: number = 0;
     private cache: MiniMaxUsage | null = null;
-    private apiKeyCache: string | null = null;
+    private credentialsCache: { apiKey: string; groupId: string } | null = null;
     private readonly CACHE_TTL_MS = 60000;
     private readonly TARGET_MODEL = "MiniMax-M*";
 
-    private readSettings(settings?: MiniMaxSettings): { apiKey: string } | null {
+    private readSettings(settings?: MiniMaxSettings): { apiKey: string; groupId: string } | null {
         const apiKey = settings?.apiKey?.trim();
+        const groupId = settings?.groupId?.trim();
 
-        if (!apiKey) {
-            streamDeck.logger.warn("[MiniMax] Missing apiKey in action settings");
+        if (!apiKey || !groupId) {
+            streamDeck.logger.warn("[MiniMax] Missing apiKey or groupId in action settings");
             return null;
         }
 
-        return { apiKey };
+        return { apiKey, groupId };
     }
 
     async fetchUsage(settings?: MiniMaxSettings): Promise<MiniMaxUsage | null> {
@@ -50,14 +51,16 @@ export class MiniMaxUsageService {
         const credentials = this.readSettings(settings);
         if (!credentials) return null;
 
-        const isSameApiKey = this.apiKeyCache === credentials.apiKey;
+        const isSameCredentials = this.credentialsCache
+            && this.credentialsCache.apiKey === credentials.apiKey
+            && this.credentialsCache.groupId === credentials.groupId;
 
-        if (isSameApiKey && this.cache && (now - this.lastFetch) < this.CACHE_TTL_MS) {
+        if (isSameCredentials && this.cache && (now - this.lastFetch) < this.CACHE_TTL_MS) {
             streamDeck.logger.info("[MiniMax] Returning cached usage");
             return this.cache;
         }
 
-        this.apiKeyCache = credentials.apiKey;
+        this.credentialsCache = credentials;
 
         try {
             streamDeck.logger.info("[MiniMax] Fetching usage from MiniMax API...");
@@ -65,7 +68,7 @@ export class MiniMaxUsageService {
             const controller = new AbortController();
             const timeout = setTimeout(() => controller.abort(), 5000);
 
-            const url = `https://platform.minimax.io/v1/api/openplatform/coding_plan/remains`;
+            const url = `https://platform.minimax.io/v1/api/openplatform/coding_plan/remains?GroupId=${credentials.groupId}`;
             const response = await fetch(url, {
                 method: "GET",
                 headers: {
