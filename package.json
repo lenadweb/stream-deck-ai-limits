@@ -1,7 +1,9 @@
 {
     "scripts": {
         "build": "rollup -c",
-        "watch": "rollup -c -w --watch.onEnd=\"streamdeck restart com.len.limits\""
+        "watch": "rollup -c -w --watch.onEnd=\"streamdeck restart com.len.limits\"",
+        "version:bump": "node scripts/bump-version.mjs",
+        "release": "npm run version:bump && npm run build && streamdeck pack com.len.limits.sdPlugin --force --output ."
     },
     "type": "module",
     "devDependencies": {
