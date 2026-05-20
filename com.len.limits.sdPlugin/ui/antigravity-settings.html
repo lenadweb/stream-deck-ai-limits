@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+
+<head lang="en">
+    <title>Antigravity Settings</title>
+    <meta charset="utf-8" />
+    <script src="https://sdpi-components.dev/releases/v4/sdpi-components.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        select.sdpi-item-value {
+            width: 100%;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: #2d2d2d;
+            color: #ddd;
+            border: 1px solid #444;
+            font-size: 12px;
+        }
+        .info {
+            padding: 4px 16px;
+            font-size: 11px;
+            color: #999;
+            line-height: 1.4;
+        }
+        .auth-row {
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .auth-row button {
+            padding: 5px 12px;
+            border-radius: 4px;
+            background: #4285F4;
+            color: white;
+            border: 0;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .auth-row button.logout {
+            background: #444;
+        }
+        .auth-row button:disabled {
+            opacity: 0.6;
+            cursor: default;
+        }
+        .auth-status {
+            font-size: 11px;
+            color: #9ca3af;
+            flex: 1;
+        }
+        .auth-status.ok {
+            color: #10b981;
+        }
+        .auth-status.err {
+            color: #ef4444;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="auth-row">
+        <button id="loginBtn" type="button">Sign in with Google</button>
+        <button id="logoutBtn" type="button" class="logout" style="display:none">Sign out</button>
+        <span id="authStatus" class="auth-status">Not signed in</span>
+    </div>
+
+    <sdpi-item label="Top Bar Model">
+        <select id="topModel" class="sdpi-item-value">
+            <option value="">Overall (Most Constrained)</option>
+        </select>
+    </sdpi-item>
+
+    <sdpi-item label="Bottom Bar Model">
+        <select id="bottomModel" class="sdpi-item-value">
+            <option value="">Overall (Most Constrained)</option>
+        </select>
+    </sdpi-item>
+
+    <div class="info">After signing in, press the Stream Deck button once to load the latest quota and refresh the model list.</div>
+
+    <script>
+        let _websocket = null;
+        let _uuid = null;
+        let _actionUUID = null;
+        let _settings = {};
+
+        function connectElgatoStreamDeckSocket(port, uuid, registerEvent, info, actionInfo) {
+            _uuid = uuid;
+
+            if (actionInfo) {
+                const parsed = JSON.parse(actionInfo);
+                _actionUUID = parsed?.action;
+                _settings = parsed?.payload?.settings || {};
+
+                if (_settings.availableModels && Array.isArray(_settings.availableModels)) {
+                    populateModels(_settings.availableModels, _settings.availableModelLabels || {});
+                }
+            }
+
+            _websocket = new WebSocket("ws://127.0.0.1:" + port);
+
+            _websocket.onopen = function () {
+                _websocket.send(JSON.stringify({ event: registerEvent, uuid }));
+                sendToPlugin({ event: "getStatus" });
+                sendToPlugin({ event: "getModels" });
+            };
+
+            _websocket.onmessage = function (evt) {
+                const data = JSON.parse(evt.data);
+
+                if (data.event === "sendToPropertyInspector") {
+                    const payload = data.payload || {};
+                    if (payload.event === "status") {
+                        setAuthState(!!payload.loggedIn, payload.email || "");
+                        if (!payload.loggedIn) {
+                            populateModels([], {});
+                        }
+                    } else if (payload.event === "modelList" && Array.isArray(payload.models)) {
+                        populateModels(payload.models, payload.labels || {});
+                    } else if (payload.event === "loginError") {
+                        setAuthError(payload.message || "Login failed");
+                    }
+                }
+
+                if (data.event === "didReceiveSettings") {
+                    _settings = data.payload?.settings || {};
+                    if (_settings.availableModels && Array.isArray(_settings.availableModels)) {
+                        populateModels(_settings.availableModels, _settings.availableModelLabels || {});
+                    }
+                    applySettings();
+                }
+            };
+        }
+
+        function sendToPlugin(payload) {
+            if (!_websocket || !_actionUUID) return;
+            _websocket.send(JSON.stringify({
+                action: _actionUUID,
+                event: "sendToPlugin",
+                context: _uuid,
+                payload,
+            }));
+        }
+
+        function setAuthState(loggedIn, email) {
+            const status = document.getElementById("authStatus");
+            const loginBtn = document.getElementById("loginBtn");
+            const logoutBtn = document.getElementById("logoutBtn");
+            loginBtn.disabled = false;
+
+            if (loggedIn) {
+                status.textContent = email ? `Signed in as ${email}` : "Signed in";
+                status.classList.remove("err");
+                status.classList.add("ok");
+                loginBtn.style.display = "none";
+                logoutBtn.style.display = "";
+            } else {
+                status.textContent = "Not signed in";
+                status.classList.remove("err", "ok");
+                loginBtn.style.display = "";
+                logoutBtn.style.display = "none";
+            }
+        }
+
+        function setAuthError(msg) {
+            const status = document.getElementById("authStatus");
+            status.textContent = msg;
+            status.classList.remove("ok");
+            status.classList.add("err");
+            document.getElementById("loginBtn").disabled = false;
+        }
+
+        function populateModels(models, labels) {
+            const topSelect = document.getElementById("topModel");
+            const bottomSelect = document.getElementById("bottomModel");
+
+            while (topSelect.options.length > 1) topSelect.remove(1);
+            while (bottomSelect.options.length > 1) bottomSelect.remove(1);
+
+            models.forEach(function (modelId) {
+                const displayName = labels[modelId] || modelId;
+
+                const opt1 = document.createElement("option");
+                opt1.value = modelId;
+                opt1.textContent = displayName;
+                topSelect.appendChild(opt1);
+
+                const opt2 = document.createElement("option");
+                opt2.value = modelId;
+                opt2.textContent = displayName;
+                bottomSelect.appendChild(opt2);
+            });
+
+            applySettings();
+        }
+
+        function applySettings() {
+            const topSelect = document.getElementById("topModel");
+            const bottomSelect = document.getElementById("bottomModel");
+
+            if (_settings.topModel !== undefined) topSelect.value = _settings.topModel;
+            if (_settings.bottomModel !== undefined) bottomSelect.value = _settings.bottomModel;
+        }
+
+        function saveSettings() {
+            const topSelect = document.getElementById("topModel");
+            const bottomSelect = document.getElementById("bottomModel");
+
+            _settings.topModel = topSelect.value;
+            _settings.bottomModel = bottomSelect.value;
+
+            if (_websocket && _uuid) {
+                _websocket.send(JSON.stringify({
+                    event: "setSettings",
+                    context: _uuid,
+                    payload: _settings,
+                }));
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            document.getElementById("topModel").addEventListener("change", saveSettings);
+            document.getElementById("bottomModel").addEventListener("change", saveSettings);
+            document.getElementById("loginBtn").addEventListener("click", function () {
+                const status = document.getElementById("authStatus");
+                status.textContent = "Opening browser…";
+                status.classList.remove("err", "ok");
+                this.disabled = true;
+                sendToPlugin({ event: "login" });
+            });
+            document.getElementById("logoutBtn").addEventListener("click", function () {
+                sendToPlugin({ event: "logout" });
+            });
+        });
+    </script>
+</body>
+
+</html>
