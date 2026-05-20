@@ -7,6 +7,15 @@ export interface GeminiSettings {
     [key: string]: any;
 }
 
+export interface AntigravitySettings {
+    topModel?: string;
+    bottomModel?: string;
+    availableModels?: string[];
+    availableModelLabels?: Record<string, string>;
+    loggedInEmail?: string;
+    [key: string]: any;
+}
+
 export interface MiniMaxSettings {
     apiKey?: string;
     groupId?: string;

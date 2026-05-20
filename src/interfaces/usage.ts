@@ -1,6 +1,15 @@
-export interface AntigravityUsage {
-    gemini: { used: number; resetAt: string | null; } | null;
-    claude: { used: number; resetAt: string | null; } | null;
+export interface AntigravityModelQuota {
+    usage: number;
+    remaining: number;
+    limit: number;
+    resetTime?: string;
+    displayName?: string;
+}
+
+export interface AntigravityQuotaResult {
+    overallUsage: number;
+    overallResetTime: string | null;
+    perModel: Map<string, AntigravityModelQuota>;
 }
 
 export interface ClaudeUsage {
