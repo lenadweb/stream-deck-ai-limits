@@ -11,12 +11,14 @@ export class AntigravityProgressBars extends BaseMonitoringAction<AntigravitySet
     private lastQuota: AntigravityQuotaResult | null = null;
     private topModel: string = "";
     private bottomModel: string = "";
+    private cachedLabels: Record<string, string> = {};
 
     override async onWillAppear(ev: any): Promise<void> {
         const settings = ev.payload?.settings as AntigravitySettings | undefined;
         if (settings) {
             this.topModel = settings.topModel || "";
             this.bottomModel = settings.bottomModel || "";
+            this.cachedLabels = settings.availableModelLabels || {};
         }
         await super.onWillAppear(ev);
     }
@@ -26,6 +28,7 @@ export class AntigravityProgressBars extends BaseMonitoringAction<AntigravitySet
         if (settings) {
             this.topModel = settings.topModel || "";
             this.bottomModel = settings.bottomModel || "";
+            this.cachedLabels = settings.availableModelLabels || this.cachedLabels;
         }
         if (this.lastQuota) {
             await this.draw(ev, this.lastQuota);
@@ -136,17 +139,26 @@ export class AntigravityProgressBars extends BaseMonitoringAction<AntigravitySet
     private async persistModelsToSettings(ev: any): Promise<void> {
         const models = this.usageService.getAvailableModels();
         const labels = this.usageService.getModelLabels();
+        // Merge with previously-seen labels so an exhausted model that the API stops
+        // returning still has its label preserved across refreshes.
+        const mergedLabels = { ...this.cachedLabels, ...labels };
+        this.cachedLabels = mergedLabels;
+
         try {
             const currentSettings = (ev.payload?.settings ?? {}) as AntigravitySettings;
             const existingModels = currentSettings.availableModels;
+            const existingLabels = currentSettings.availableModelLabels;
 
-            if (JSON.stringify(existingModels) !== JSON.stringify(models)) {
+            if (
+                JSON.stringify(existingModels) !== JSON.stringify(models) ||
+                JSON.stringify(existingLabels) !== JSON.stringify(mergedLabels)
+            ) {
                 await ev.action.setSettings({
                     ...currentSettings,
                     topModel: this.topModel,
                     bottomModel: this.bottomModel,
                     availableModels: models,
-                    availableModelLabels: labels,
+                    availableModelLabels: mergedLabels,
                     loggedInEmail: this.usageService.getLoggedInEmail() ?? undefined,
                 });
             }
@@ -173,10 +185,13 @@ export class AntigravityProgressBars extends BaseMonitoringAction<AntigravitySet
             };
         }
 
+        // The model was selected previously but is missing from the latest API
+        // response — Antigravity drops exhausted models. Treat as 100% used.
+        const fallbackLabel = this.cachedLabels[modelKey] || modelKey;
         return {
-            usage: quota.overallUsage,
-            resetTime: quota.overallResetTime,
-            label: "Overall",
+            usage: 100,
+            resetTime: null,
+            label: this.shortLabel(fallbackLabel),
         };
     }
 
