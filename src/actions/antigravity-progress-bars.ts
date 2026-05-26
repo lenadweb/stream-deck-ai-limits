@@ -197,7 +197,9 @@ export class AntigravityProgressBars extends BaseMonitoringAction<AntigravitySet
 
     private shortLabel(name: string): string {
         // Drop parenthetical qualifiers ("(Thinking)", "(Medium)") for the on-key label
-        return name.replace(/\s*\([^)]*\)\s*$/, "").trim();
+        const readable = name.replace(/\s*\([^)]*\)\s*$/, "").trim();
+        // Hard cap: UI should never exceed 18 characters.
+        return readable.length > 18 ? `${readable.slice(0, 16)}..` : readable;
     }
 
     private async drawPlaceholder(ev: any) {
