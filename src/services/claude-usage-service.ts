@@ -39,6 +39,13 @@ export class ClaudeUsageService {
     private credCache: { token: string | null; mtime?: number; timestamp?: number } | null = null;
     private readonly CACHE_TTL_MS = 60000;
     private readonly KEYCHAIN_CACHE_TTL_MS = 10000;
+    private readonly MAX_RETRIES = 4;
+    private readonly BASE_BACKOFF_MS = 1000;
+    private readonly MAX_BACKOFF_MS = 30000;
+    private readonly MAX_CONSECUTIVE_429 = 4;
+    private readonly CIRCUIT_COOLDOWN_MS = 30 * 60 * 1000;
+    private consecutive429Count = 0;
+    private cooldownUntil = 0;
 
     constructor() {
         this.credPath = join(homedir(), ".claude", ".credentials.json");
@@ -108,6 +115,12 @@ export class ClaudeUsageService {
 
     async fetchUsage(): Promise<ClaudeUsage | null> {
         const now = Date.now();
+        if (this.cooldownUntil > now) {
+            const remainingMs = this.cooldownUntil - now;
+            streamDeck.logger.warn(`[Claude] Cooldown active after repeated 429. Skipping request for ${Math.ceil(remainingMs / 1000)}s`);
+            return this.cache;
+        }
+
         if (this.cache && (now - this.lastFetch) < this.CACHE_TTL_MS) {
             streamDeck.logger.info("[Claude] Returning cached usage");
             return this.cache;
@@ -123,22 +136,10 @@ export class ClaudeUsageService {
 
         try {
             streamDeck.logger.info("[Claude] Fetching usage from Anthropic API...");
-
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 5000);
-
-            const response = await fetch("https://api.anthropic.com/api/oauth/usage", {
-                method: "GET",
-                headers: {
-                    "Accept": "application/json",
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`,
-                    "anthropic-beta": "oauth-2025-04-20",
-                },
-                signal: controller.signal,
-            });
-
-            clearTimeout(timeout);
+            const response = await this.fetchWithRetry(token);
+            if (!response) {
+                return this.cache;
+            }
 
             if (response.status === 401) {
                 streamDeck.logger.warn("[Claude] Got 401, attempting token refresh via CLI...");
@@ -170,6 +171,8 @@ export class ClaudeUsageService {
 
             this.cache = usage;
             this.lastFetch = now;
+            this.consecutive429Count = 0;
+            this.cooldownUntil = 0;
 
             return usage;
         } catch (err) {
@@ -186,21 +189,10 @@ export class ClaudeUsageService {
         }
 
         try {
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 5000);
-
-            const response = await fetch("https://api.anthropic.com/api/oauth/usage", {
-                method: "GET",
-                headers: {
-                    "Accept": "application/json",
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`,
-                    "anthropic-beta": "oauth-2025-04-20",
-                },
-                signal: controller.signal,
-            });
-
-            clearTimeout(timeout);
+            const response = await this.fetchWithRetry(token);
+            if (!response) {
+                return this.cache;
+            }
 
             if (!response.ok) {
                 streamDeck.logger.error(`[Claude] API still failing after refresh: ${response.status}`);
@@ -220,12 +212,142 @@ export class ClaudeUsageService {
 
             this.cache = usage;
             this.lastFetch = Date.now();
+            this.consecutive429Count = 0;
+            this.cooldownUntil = 0;
 
             return usage;
         } catch (err) {
             streamDeck.logger.error(`[Claude] API fetch error after refresh: ${err}`);
             return null;
         }
+    }
+
+    private async fetchWithRetry(token: string): Promise<Response | null> {
+        let lastResponse: Response | null = null;
+
+        for (let attempt = 0; attempt <= this.MAX_RETRIES; attempt++) {
+            const response = await this.fetchUsageEndpoint(token);
+            if (!response) {
+                return null;
+            }
+
+            lastResponse = response;
+            if (response.ok || response.status === 401) {
+                return response;
+            }
+
+            if (response.status === 429) {
+                this.consecutive429Count += 1;
+                const body = await this.readResponseBody(response);
+                const retryAfterHeader = response.headers.get("retry-after");
+                const requestId = response.headers.get("request-id")
+                    ?? response.headers.get("x-request-id")
+                    ?? "unknown";
+                const resetHeader = response.headers.get("x-ratelimit-reset");
+
+                streamDeck.logger.warn(
+                    `[Claude] 429 from usage API (attempt ${attempt + 1}/${this.MAX_RETRIES + 1}, consecutive: ${this.consecutive429Count}, request-id: ${requestId}, retry-after: ${retryAfterHeader ?? "none"}, x-ratelimit-reset: ${resetHeader ?? "none"}, body: ${body ?? "empty"})`
+                );
+
+                if (this.consecutive429Count >= this.MAX_CONSECUTIVE_429) {
+                    this.cooldownUntil = Date.now() + this.CIRCUIT_COOLDOWN_MS;
+                    streamDeck.logger.error(`[Claude] Circuit breaker opened after ${this.consecutive429Count} consecutive 429 responses. Cooldown for ${Math.floor(this.CIRCUIT_COOLDOWN_MS / 60000)} minutes`);
+                    return response;
+                }
+
+                if (attempt >= this.MAX_RETRIES) {
+                    return response;
+                }
+
+                const delayMs = this.computeBackoffDelayMs(attempt, retryAfterHeader);
+                streamDeck.logger.warn(`[Claude] Backing off for ${delayMs}ms before retry`);
+                await this.sleep(delayMs);
+                continue;
+            }
+
+            this.consecutive429Count = 0;
+
+            if (response.status >= 500 && attempt < this.MAX_RETRIES) {
+                const delayMs = this.computeBackoffDelayMs(attempt, null);
+                streamDeck.logger.warn(`[Claude] Server error ${response.status}, retrying in ${delayMs}ms`);
+                await this.sleep(delayMs);
+                continue;
+            }
+
+            return response;
+        }
+
+        return lastResponse;
+    }
+
+    private async fetchUsageEndpoint(token: string): Promise<Response | null> {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
+
+        try {
+            return await fetch("https://api.anthropic.com/api/oauth/usage", {
+                method: "GET",
+                headers: {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`,
+                    "anthropic-beta": "oauth-2025-04-20",
+                },
+                signal: controller.signal,
+            });
+        } catch (err) {
+            streamDeck.logger.error(`[Claude] Usage request failed: ${err}`);
+            return null;
+        } finally {
+            clearTimeout(timeout);
+        }
+    }
+
+    private computeBackoffDelayMs(attempt: number, retryAfterHeader: string | null): number {
+        const retryAfterMs = this.parseRetryAfterMs(retryAfterHeader);
+        if (retryAfterMs !== null) {
+            return retryAfterMs;
+        }
+
+        const exponential = Math.min(this.BASE_BACKOFF_MS * (2 ** attempt), this.MAX_BACKOFF_MS);
+        const jitter = Math.floor(Math.random() * 500);
+        return exponential + jitter;
+    }
+
+    private parseRetryAfterMs(retryAfterHeader: string | null): number | null {
+        if (!retryAfterHeader) {
+            return null;
+        }
+
+        const seconds = Number(retryAfterHeader);
+        if (Number.isFinite(seconds) && seconds >= 0) {
+            return Math.floor(seconds * 1000);
+        }
+
+        const at = Date.parse(retryAfterHeader);
+        if (!Number.isNaN(at)) {
+            const delay = at - Date.now();
+            return delay > 0 ? delay : 0;
+        }
+
+        return null;
+    }
+
+    private async readResponseBody(response: Response): Promise<string | null> {
+        try {
+            const clone = response.clone();
+            const text = await clone.text();
+            if (!text) {
+                return null;
+            }
+            return text.length > 800 ? `${text.slice(0, 800)}...` : text;
+        } catch {
+            return null;
+        }
+    }
+
+    private async sleep(ms: number): Promise<void> {
+        await new Promise<void>((resolve) => setTimeout(resolve, ms));
     }
 
     private refreshTokenViaCLI(): Promise<boolean> {
