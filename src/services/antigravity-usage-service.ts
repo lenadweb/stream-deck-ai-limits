@@ -18,7 +18,7 @@ export type {
     AntigravityQuotaResult,
 };
 
-const CODE_ASSIST_ENDPOINT = "https://cloudcode-pa.googleapis.com/v1internal";
+const CODE_ASSIST_ENDPOINT = "https://daily-cloudcode-pa.googleapis.com/v1internal";
 // OAuth client used by the official `agy` CLI (and the open-source antigravity-usage CLI).
 // Required: the Antigravity Cloud Code backend whitelists tokens by client_id, so we
 // must reuse this client. Refreshing tokens is also tied to it.
@@ -31,12 +31,6 @@ const OAUTH_SCOPES = [
 
 const STORAGE_DIR = path.join(os.homedir(), ".limits-streamdeck");
 const TOKEN_PATH = path.join(STORAGE_DIR, "antigravity_oauth.json");
-
-const METADATA = {
-    ideType: "ANTIGRAVITY",
-    platform: "PLATFORM_UNSPECIFIED",
-    pluginType: "GEMINI",
-};
 
 interface StoredToken {
     access_token?: string;
@@ -60,6 +54,17 @@ interface ModelInfo {
 
 interface FetchAvailableModelsResponse {
     models?: Record<string, ModelInfo>;
+}
+
+interface RetrieveUserQuotaBucket {
+    modelId?: string;
+    remainingFraction?: number;
+    resetTime?: string;
+    [key: string]: any;
+}
+
+interface RetrieveUserQuotaResponse {
+    buckets?: RetrieveUserQuotaBucket[];
 }
 
 export class AntigravityUsageService {
@@ -241,44 +246,28 @@ export class AntigravityUsageService {
             return null;
         }
 
-        const data = await this.apiPost<FetchAvailableModelsResponse>("fetchAvailableModels", {});
-
         const perModel = new Map<string, AntigravityModelQuota>();
-        const models = data.models || {};
         const fractions: number[] = [];
+        let overallResetTime: string | null = null;
 
-        for (const [modelId, info] of Object.entries(models)) {
-            const qi = info.quotaInfo;
-            if (!qi || typeof qi.remainingFraction !== "number") continue;
-
-            const usage = Math.min(Math.max(Math.round((1 - qi.remainingFraction) * 100), 0), 100);
-            perModel.set(modelId, {
-                usage,
-                remaining: 0,
-                limit: 0,
-                resetTime: qi.resetTime,
-                displayName: info.displayName,
-            });
-            fractions.push(qi.remainingFraction);
+        // agy CLI path: quota comes from retrieveUserQuota buckets.
+        try {
+            const quota = await this.apiPost<RetrieveUserQuotaResponse>("retrieveUserQuota", {});
+            const modelLabels = await this.fetchModelDisplayNames();
+            this.buildPerModelFromQuotaBuckets(quota.buckets || [], perModel, fractions, modelLabels);
+            overallResetTime = this.pickOverallResetTimeFromQuotaBuckets(quota.buckets || [], fractions);
+        } catch (err) {
+            // Backward-compatible fallback for accounts/environments where quota RPC is unavailable.
+            streamDeck.logger.warn(`[Antigravity] retrieveUserQuota failed, fallback to fetchAvailableModels: ${err}`);
+            const data = await this.apiPost<FetchAvailableModelsResponse>("fetchAvailableModels", {});
+            this.buildPerModelFromAvailableModels(data.models || {}, perModel, fractions);
+            overallResetTime = this.pickOverallResetTimeFromAvailableModels(data.models || {}, fractions);
         }
 
         let overallUsage = 0;
-        let overallResetTime: string | null = null;
         if (fractions.length > 0) {
             const lowest = Math.min(...fractions);
             overallUsage = Math.min(Math.max(Math.round((1 - lowest) * 100), 0), 100);
-
-            let mostConstrained: ModelInfo | null = null;
-            let mostConstrainedFraction = Infinity;
-            for (const info of Object.values(models)) {
-                const f = info.quotaInfo?.remainingFraction;
-                if (typeof f !== "number") continue;
-                if (f < mostConstrainedFraction) {
-                    mostConstrainedFraction = f;
-                    mostConstrained = info;
-                }
-            }
-            overallResetTime = mostConstrained?.quotaInfo?.resetTime ?? null;
         }
 
         streamDeck.logger.info(
@@ -289,6 +278,99 @@ export class AntigravityUsageService {
         this.cache = result;
         this.lastFetch = now;
         return result;
+    }
+
+    private buildPerModelFromQuotaBuckets(
+        buckets: RetrieveUserQuotaBucket[],
+        perModel: Map<string, AntigravityModelQuota>,
+        fractions: number[],
+        modelLabels: Record<string, string>
+    ): void {
+        for (const bucket of buckets) {
+            const modelId = bucket.modelId;
+            const remainingFraction = bucket.remainingFraction;
+            if (!modelId || typeof remainingFraction !== "number") continue;
+
+            const usage = Math.min(Math.max(Math.round((1 - remainingFraction) * 100), 0), 100);
+            perModel.set(modelId, {
+                usage,
+                remaining: 0,
+                limit: 0,
+                resetTime: bucket.resetTime,
+                displayName: modelLabels[modelId] ?? modelId,
+            });
+            fractions.push(remainingFraction);
+        }
+    }
+
+    private async fetchModelDisplayNames(): Promise<Record<string, string>> {
+        const labels: Record<string, string> = {};
+        try {
+            const data = await this.apiPost<FetchAvailableModelsResponse>("fetchAvailableModels", {});
+            for (const [id, info] of Object.entries(data.models || {})) {
+                labels[id] = info.displayName || id;
+            }
+        } catch (err) {
+            streamDeck.logger.warn(`[Antigravity] fetchAvailableModels for labels failed: ${err}`);
+        }
+        return labels;
+    }
+
+    private pickOverallResetTimeFromQuotaBuckets(
+        buckets: RetrieveUserQuotaBucket[],
+        fractions: number[]
+    ): string | null {
+        if (fractions.length === 0) return null;
+        let mostConstrainedFraction = Infinity;
+        let resetTime: string | null = null;
+        for (const bucket of buckets) {
+            const f = bucket.remainingFraction;
+            if (typeof f !== "number") continue;
+            if (f < mostConstrainedFraction) {
+                mostConstrainedFraction = f;
+                resetTime = bucket.resetTime ?? null;
+            }
+        }
+        return resetTime;
+    }
+
+    private buildPerModelFromAvailableModels(
+        models: Record<string, ModelInfo>,
+        perModel: Map<string, AntigravityModelQuota>,
+        fractions: number[]
+    ): void {
+        for (const [modelId, info] of Object.entries(models)) {
+            const qi = info.quotaInfo;
+            if (!qi || typeof qi.remainingFraction !== "number") continue;
+
+            const usage = Math.min(Math.max(Math.round((1 - qi.remainingFraction) * 100), 0), 100);
+            perModel.set(modelId, {
+                usage,
+                remaining: 0,
+                limit: 0,
+                resetTime: qi.resetTime,
+                displayName: info.displayName ?? modelId,
+            });
+            fractions.push(qi.remainingFraction);
+        }
+    }
+
+    private pickOverallResetTimeFromAvailableModels(
+        models: Record<string, ModelInfo>,
+        fractions: number[]
+    ): string | null {
+        if (fractions.length === 0) return null;
+        let mostConstrained: ModelInfo | null = null;
+        let mostConstrainedFraction = Infinity;
+        for (const info of Object.values(models)) {
+            const f = info.quotaInfo?.remainingFraction;
+            if (typeof f !== "number") continue;
+            if (f < mostConstrainedFraction) {
+                mostConstrainedFraction = f;
+                mostConstrained = info;
+            }
+        }
+        return mostConstrained?.quotaInfo?.resetTime ?? null;
     }
 
     getAvailableModels(): string[] {
