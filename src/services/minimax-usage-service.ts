@@ -34,38 +34,31 @@ export interface MiniMaxUsage {
 export class MiniMaxUsageService {
     private lastFetch: number = 0;
     private cache: MiniMaxUsage | null = null;
-    private credentialsCache: { apiKey: string; groupId: string } | null = null;
+    private cachedApiKey: string | null = null;
     private readonly CACHE_TTL_MS = 60000;
     /** Coding-plan /coding_plan/remains returns model_name = "general" (LLM, MiniMax-M*) and "video". We track the LLM. */
     private readonly TARGET_MODEL = "general";
 
-    private readSettings(settings?: MiniMaxSettings): { apiKey: string; groupId: string } | null {
+    private readApiKey(settings?: MiniMaxSettings): string | null {
         const apiKey = settings?.apiKey?.trim();
-        const groupId = settings?.groupId?.trim();
-
-        if (!apiKey || !groupId) {
-            streamDeck.logger.warn("[MiniMax] Missing apiKey or groupId in action settings");
+        if (!apiKey) {
+            streamDeck.logger.warn("[MiniMax] Missing apiKey in action settings");
             return null;
         }
-
-        return { apiKey, groupId };
+        return apiKey;
     }
 
     async fetchUsage(settings?: MiniMaxSettings): Promise<MiniMaxUsage | null> {
         const now = Date.now();
-        const credentials = this.readSettings(settings);
-        if (!credentials) return null;
+        const apiKey = this.readApiKey(settings);
+        if (!apiKey) return null;
 
-        const isSameCredentials = this.credentialsCache
-            && this.credentialsCache.apiKey === credentials.apiKey
-            && this.credentialsCache.groupId === credentials.groupId;
-
-        if (isSameCredentials && this.cache && (now - this.lastFetch) < this.CACHE_TTL_MS) {
+        if (this.cachedApiKey === apiKey && this.cache && (now - this.lastFetch) < this.CACHE_TTL_MS) {
             streamDeck.logger.info("[MiniMax] Returning cached usage");
             return this.cache;
         }
 
-        this.credentialsCache = credentials;
+        this.cachedApiKey = apiKey;
 
         try {
             streamDeck.logger.info("[MiniMax] Fetching usage from MiniMax API...");
@@ -73,11 +66,10 @@ export class MiniMaxUsageService {
             const controller = new AbortController();
             const timeout = setTimeout(() => controller.abort(), 5000);
 
-            const url = `https://platform.minimax.io/v1/api/openplatform/coding_plan/remains?GroupId=${credentials.groupId}`;
-            const response = await fetch(url, {
+            const response = await fetch("https://platform.minimax.io/v1/api/openplatform/coding_plan/remains", {
                 method: "GET",
                 headers: {
-                    "Authorization": `Bearer ${credentials.apiKey}`,
+                    "Authorization": `Bearer ${apiKey}`,
                     "Accept": "application/json",
                 },
                 signal: controller.signal,

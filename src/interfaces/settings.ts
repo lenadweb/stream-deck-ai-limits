@@ -18,6 +18,5 @@ export interface AntigravitySettings {
 
 export interface MiniMaxSettings {
     apiKey?: string;
-    groupId?: string;
     [key: string]: any;
 }
