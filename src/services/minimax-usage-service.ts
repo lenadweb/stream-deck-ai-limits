@@ -13,6 +13,10 @@ interface MiniMaxModelRemains {
     weekly_start_time: number;
     weekly_end_time: number;
     weekly_remains_time: number;
+    current_interval_status?: number;
+    current_interval_remaining_percent?: number;
+    current_weekly_status?: number;
+    current_weekly_remaining_percent?: number;
 }
 
 interface MiniMaxApiResponse {
@@ -32,7 +36,8 @@ export class MiniMaxUsageService {
     private cache: MiniMaxUsage | null = null;
     private credentialsCache: { apiKey: string; groupId: string } | null = null;
     private readonly CACHE_TTL_MS = 60000;
-    private readonly TARGET_MODEL = "MiniMax-M*";
+    /** Coding-plan /coding_plan/remains returns model_name = "general" (LLM, MiniMax-M*) and "video". We track the LLM. */
+    private readonly TARGET_MODEL = "general";
 
     private readSettings(settings?: MiniMaxSettings): { apiKey: string; groupId: string } | null {
         const apiKey = settings?.apiKey?.trim();
@@ -95,19 +100,17 @@ export class MiniMaxUsageService {
 
             const model = data.model_remains.find(m => m.model_name === this.TARGET_MODEL);
             if (!model) {
-                streamDeck.logger.warn(`[MiniMax] Model ${this.TARGET_MODEL} not found in response`);
+                const available = data.model_remains.map(m => m.model_name).join(", ");
+                streamDeck.logger.warn(`[MiniMax] Model ${this.TARGET_MODEL} not found in response (available: ${available || "none"})`);
                 return null;
             }
 
-            const dailyUsed = model.current_interval_total_count - model.current_interval_usage_count;
-            const sessionPercent = model.current_interval_total_count > 0
-                ? Math.round((dailyUsed / model.current_interval_total_count) * 100)
-                : 0;
-
-            const weeklyUsed = model.current_weekly_total_count - model.current_weekly_usage_count;
-            const weekPercent = model.current_weekly_total_count > 0
-                ? Math.round((weeklyUsed / model.current_weekly_total_count) * 100)
-                : 0;
+            // The API exposes remaining% directly; total_count/usage_count are both 0 in current schema,
+            // so we cannot derive usage from them. used% = 100 - remaining%.
+            const dailyRemaining = model.current_interval_remaining_percent ?? 100;
+            const weeklyRemaining = model.current_weekly_remaining_percent ?? 100;
+            const sessionPercent = Math.max(0, Math.min(100, Math.round(100 - dailyRemaining)));
+            const weekPercent = Math.max(0, Math.min(100, Math.round(100 - weeklyRemaining)));
 
             const usage: MiniMaxUsage = {
                 sessionUsed: sessionPercent,
@@ -116,7 +119,7 @@ export class MiniMaxUsageService {
                 weekResetsAt: Math.floor(model.weekly_end_time / 1000),
             };
 
-            streamDeck.logger.info(`[MiniMax] ${this.TARGET_MODEL} - Daily: ${model.current_interval_usage_count}/${model.current_interval_total_count} (${sessionPercent}%), Weekly: ${model.current_weekly_usage_count}/${model.current_weekly_total_count} (${weekPercent}%)`);
+            streamDeck.logger.info(`[MiniMax] ${this.TARGET_MODEL} - Daily used: ${sessionPercent}% (remaining ${dailyRemaining}%), Weekly used: ${weekPercent}% (remaining ${weeklyRemaining}%)`);
 
             this.cache = usage;
             this.lastFetch = now;
