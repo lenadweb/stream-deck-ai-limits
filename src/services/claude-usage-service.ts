@@ -46,6 +46,7 @@ export class ClaudeUsageService {
     private readonly CIRCUIT_COOLDOWN_MS = 30 * 60 * 1000;
     private consecutive429Count = 0;
     private cooldownUntil = 0;
+    private invalidTokens = new Set<string>();
 
     constructor() {
         this.credPath = join(homedir(), ".claude", ".credentials.json");
@@ -62,7 +63,9 @@ export class ClaudeUsageService {
 
     private async getCredentialsFromKeychain(): Promise<string | null> {
         if (this.credCache?.timestamp && Date.now() - this.credCache.timestamp < this.KEYCHAIN_CACHE_TTL_MS) {
-            return this.credCache.token;
+            if (this.credCache.token && !this.invalidTokens.has(this.credCache.token)) {
+                return this.credCache.token;
+            }
         }
 
         try {
@@ -88,7 +91,9 @@ export class ClaudeUsageService {
             const mtime = fileStat.mtimeMs;
 
             if (this.credCache?.mtime === mtime) {
-                return this.credCache.token;
+                if (this.credCache.token && !this.invalidTokens.has(this.credCache.token)) {
+                    return this.credCache.token;
+                }
             }
 
             const content = await readFile(this.credPath, "utf-8");
@@ -104,10 +109,20 @@ export class ClaudeUsageService {
 
     private async getCredentials(): Promise<string | null> {
         try {
+            let token: string | null = null;
             if (platform() === "darwin") {
-                return await this.getCredentialsFromKeychain();
+                token = await this.getCredentialsFromKeychain();
+                if (token && this.invalidTokens.has(token)) {
+                    token = await this.getCredentialsFromFile();
+                }
+            } else {
+                token = await this.getCredentialsFromFile();
             }
-            return await this.getCredentialsFromFile();
+
+            if (token && this.invalidTokens.has(token)) {
+                return null;
+            }
+            return token;
         } catch {
             return null;
         }
@@ -143,9 +158,10 @@ export class ClaudeUsageService {
 
             if (response.status === 401) {
                 streamDeck.logger.warn("[Claude] Got 401, attempting token refresh via CLI...");
+                this.invalidTokens.add(token);
+                this.credCache = null;
                 const refreshed = await this.refreshTokenViaCLI();
                 if (refreshed) {
-                    this.credCache = null;
                     return await this.fetchUsageInternal();
                 }
                 return null;
@@ -192,6 +208,11 @@ export class ClaudeUsageService {
             const response = await this.fetchWithRetry(token);
             if (!response) {
                 return this.cache;
+            }
+
+            if (response.status === 401) {
+                this.invalidTokens.add(token);
+                this.credCache = null;
             }
 
             if (!response.ok) {
