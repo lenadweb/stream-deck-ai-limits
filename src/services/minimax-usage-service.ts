@@ -29,6 +29,7 @@ export interface MiniMaxUsage {
     sessionResetsAt: number | null;
     weekUsed: number | null;
     weekResetsAt: number | null;
+    error?: { code: number | string; message: string };
 }
 
 export class MiniMaxUsageService {
@@ -51,7 +52,15 @@ export class MiniMaxUsageService {
     async fetchUsage(settings?: MiniMaxSettings): Promise<MiniMaxUsage | null> {
         const now = Date.now();
         const apiKey = this.readApiKey(settings);
-        if (!apiKey) return null;
+        if (!apiKey) {
+            return {
+                sessionUsed: null,
+                sessionResetsAt: null,
+                weekUsed: null,
+                weekResetsAt: null,
+                error: { code: "AUTH", message: "Auth Required" }
+            };
+        }
 
         if (this.cachedApiKey === apiKey && this.cache && (now - this.lastFetch) < this.CACHE_TTL_MS) {
             streamDeck.logger.info("[MiniMax] Returning cached usage");
@@ -79,7 +88,16 @@ export class MiniMaxUsageService {
 
             if (!response.ok) {
                 streamDeck.logger.error(`[MiniMax] API returned status: ${response.status}`);
-                return null;
+                return {
+                    sessionUsed: null,
+                    sessionResetsAt: null,
+                    weekUsed: null,
+                    weekResetsAt: null,
+                    error: {
+                        code: response.status,
+                        message: response.status === 401 ? "Auth Required" : response.status === 429 ? "Rate Limit" : `Error ${response.status}`
+                    }
+                };
             }
 
             const data = await response.json() as MiniMaxApiResponse;
@@ -87,18 +105,28 @@ export class MiniMaxUsageService {
 
             if (data.base_resp.status_code !== 0) {
                 streamDeck.logger.error(`[MiniMax] API error: ${data.base_resp.status_msg}`);
-                return null;
+                return {
+                    sessionUsed: null,
+                    sessionResetsAt: null,
+                    weekUsed: null,
+                    weekResetsAt: null,
+                    error: { code: "API", message: "API Error" }
+                };
             }
 
             const model = data.model_remains.find(m => m.model_name === this.TARGET_MODEL);
             if (!model) {
                 const available = data.model_remains.map(m => m.model_name).join(", ");
                 streamDeck.logger.warn(`[MiniMax] Model ${this.TARGET_MODEL} not found in response (available: ${available || "none"})`);
-                return null;
+                return {
+                    sessionUsed: null,
+                    sessionResetsAt: null,
+                    weekUsed: null,
+                    weekResetsAt: null,
+                    error: { code: "API", message: "Model missing" }
+                };
             }
 
-            // The API exposes remaining% directly; total_count/usage_count are both 0 in current schema,
-            // so we cannot derive usage from them. used% = 100 - remaining%.
             const dailyRemaining = model.current_interval_remaining_percent ?? 100;
             const weeklyRemaining = model.current_weekly_remaining_percent ?? 100;
             const sessionPercent = Math.max(0, Math.min(100, Math.round(100 - dailyRemaining)));
@@ -119,7 +147,13 @@ export class MiniMaxUsageService {
             return usage;
         } catch (err) {
             streamDeck.logger.error(`[MiniMax] API fetch error: ${err}`);
-            return null;
+            return {
+                sessionUsed: null,
+                sessionResetsAt: null,
+                weekUsed: null,
+                weekResetsAt: null,
+                error: { code: "CONN", message: "Conn Error" }
+            };
         }
     }
 }

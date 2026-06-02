@@ -32,6 +32,7 @@ export interface GeminiQuotaResult {
     overallUsage: number;
     overallResetTime: string | null;
     perModel: Map<string, ModelQuota>;
+    error?: { code: number | string; message: string };
 }
 
 interface LoadCodeAssistResponse {
@@ -191,65 +192,86 @@ export class GeminiCliUsageService {
             return this.cache;
         }
 
-        await this.initialize();
+        try {
+            await this.initialize();
 
-        const projectId = await this.resolveProjectId();
-        streamDeck.logger.info(`[Gemini] Fetching quota for project: ${projectId}`);
+            const projectId = await this.resolveProjectId();
+            streamDeck.logger.info(`[Gemini] Fetching quota for project: ${projectId}`);
 
-        const data = await this.apiPost<QuotaResponse>("retrieveUserQuota", {
-            project: projectId,
-        });
+            const data = await this.apiPost<QuotaResponse>("retrieveUserQuota", {
+                project: projectId,
+            });
 
-        streamDeck.logger.info(`[Gemini] Raw quota response: ${JSON.stringify(data)}`);
+            streamDeck.logger.info(`[Gemini] Raw quota response: ${JSON.stringify(data)}`);
 
-        const perModel = new Map<string, ModelQuota>();
+            const perModel = new Map<string, ModelQuota>();
 
-        if (!data.buckets || data.buckets.length === 0) {
-            streamDeck.logger.warn("[Gemini] No quota buckets returned");
-            const result: GeminiQuotaResult = { overallUsage: 0, overallResetTime: null, perModel };
+            if (!data.buckets || data.buckets.length === 0) {
+                streamDeck.logger.warn("[Gemini] No quota buckets returned");
+                const result: GeminiQuotaResult = { overallUsage: 0, overallResetTime: null, perModel };
+                this.cache = result;
+                this.lastFetch = now;
+                return result;
+            }
+
+            streamDeck.logger.info(`[Gemini] Got ${data.buckets.length} bucket(s)`);
+
+            for (const bucket of data.buckets) {
+                if (!bucket.modelId || bucket.remainingFraction == null) continue;
+
+                const usage = Math.round((1 - bucket.remainingFraction) * 100);
+
+                let remaining = 0;
+                let limit = 0;
+                if (bucket.remainingAmount) {
+                    remaining = parseInt(bucket.remainingAmount, 10);
+                    limit = bucket.remainingFraction > 0
+                        ? Math.round(remaining / bucket.remainingFraction)
+                        : 0;
+                }
+
+                if (bucket.modelId.endsWith("_vertex")) continue;
+
+                perModel.set(bucket.modelId, { usage, remaining, limit, resetTime: bucket.resetTime });
+                streamDeck.logger.info(`[Gemini] Model: ${bucket.modelId} — ${usage}% used, fraction: ${bucket.remainingFraction}, resets: ${bucket.resetTime ?? "N/A"}`);
+            }
+
+            const lowestFraction = Math.min(...data.buckets.map((b) => b.remainingFraction ?? 1));
+            const overallUsage = Math.min(Math.max(Math.round((1 - lowestFraction) * 100), 0), 100);
+
+            const mostConstrained = data.buckets.reduce((prev, curr) =>
+                (curr.remainingFraction ?? 1) < (prev.remainingFraction ?? 1) ? curr : prev
+            );
+            const overallResetTime = mostConstrained.resetTime || null;
+
+            streamDeck.logger.info(`[Gemini] Overall usage: ${overallUsage}%, models: [${[...perModel.keys()].join(", ")}]`);
+
+            const result: GeminiQuotaResult = { overallUsage, overallResetTime, perModel };
             this.cache = result;
             this.lastFetch = now;
             return result;
-        }
-
-        streamDeck.logger.info(`[Gemini] Got ${data.buckets.length} bucket(s)`);
-
-        for (const bucket of data.buckets) {
-            if (!bucket.modelId || bucket.remainingFraction == null) continue;
-
-            const usage = Math.round((1 - bucket.remainingFraction) * 100);
-
-            // If remainingAmount is present, compute remaining/limit like the official CLI
-            let remaining = 0;
-            let limit = 0;
-            if (bucket.remainingAmount) {
-                remaining = parseInt(bucket.remainingAmount, 10);
-                limit = bucket.remainingFraction > 0
-                    ? Math.round(remaining / bucket.remainingFraction)
-                    : 0;
+        } catch (err: any) {
+            streamDeck.logger.error(`[Gemini] Error fetching quota: ${err}`);
+            const msg = String(err?.message || err);
+            let code: string | number = "API";
+            let message = "API Error";
+            if (msg.includes("credentials") || msg.includes("ENOENT") || msg.includes("token") || msg.includes("401") || msg.includes("403")) {
+                code = "AUTH";
+                message = "Auth Required";
+            } else if (msg.includes("429")) {
+                code = 429;
+                message = "Rate Limit";
+            } else if (msg.includes("fetch") || msg.includes("CONN") || msg.includes("Network")) {
+                code = "CONN";
+                message = "Conn Error";
             }
-
-            // Skip _vertex duplicates — they mirror the base model
-            if (bucket.modelId.endsWith("_vertex")) continue;
-
-            perModel.set(bucket.modelId, { usage, remaining, limit, resetTime: bucket.resetTime });
-            streamDeck.logger.info(`[Gemini] Model: ${bucket.modelId} — ${usage}% used, fraction: ${bucket.remainingFraction}, resets: ${bucket.resetTime ?? "N/A"}`);
+            return {
+                overallUsage: 0,
+                overallResetTime: null,
+                perModel: new Map(),
+                error: { code, message }
+            };
         }
-
-        const lowestFraction = Math.min(...data.buckets.map((b) => b.remainingFraction ?? 1));
-        const overallUsage = Math.min(Math.max(Math.round((1 - lowestFraction) * 100), 0), 100);
-
-        const mostConstrained = data.buckets.reduce((prev, curr) =>
-            (curr.remainingFraction ?? 1) < (prev.remainingFraction ?? 1) ? curr : prev
-        );
-        const overallResetTime = mostConstrained.resetTime || null;
-
-        streamDeck.logger.info(`[Gemini] Overall usage: ${overallUsage}%, models: [${[...perModel.keys()].join(", ")}]`);
-
-        const result: GeminiQuotaResult = { overallUsage, overallResetTime, perModel };
-        this.cache = result;
-        this.lastFetch = now;
-        return result;
     }
 
     public getAvailableModels(): string[] {

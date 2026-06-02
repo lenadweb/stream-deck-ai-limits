@@ -39,27 +39,16 @@ export class AntigravityProgressBars extends BaseMonitoringAction<AntigravitySet
 
     protected async refresh(ev: any): Promise<void> {
         try {
-            const loggedIn = await this.usageService.isLoggedIn();
-            if (!loggedIn) {
-                this.lastQuota = null;
-                await this.drawPlaceholder(ev);
-                return;
-            }
-
             const quota = await this.usageService.getQuota();
-            if (!quota) {
-                this.lastQuota = null;
-                await this.drawPlaceholder(ev);
-                return;
+            if (quota) {
+                this.lastQuota = quota;
+                if (!quota.error) {
+                    await this.persistModelsToSettings(ev);
+                }
+                await this.draw(ev, quota);
             }
-
-            this.lastQuota = quota;
-            await this.persistModelsToSettings(ev);
-            await this.draw(ev, quota);
         } catch (err) {
             streamDeck.logger.error(`[Antigravity] Refresh failed: ${err}`);
-            this.lastQuota = null;
-            await this.drawPlaceholder(ev);
         }
     }
 
@@ -212,6 +201,16 @@ export class AntigravityProgressBars extends BaseMonitoringAction<AntigravitySet
     }
 
     private async draw(ev: any, quota: AntigravityQuotaResult) {
+        if (quota.error) {
+            const svg = this.renderer.renderError(quota.error.message, "antigravity", 144, 144);
+            const image = `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+            await ev.action.setImage(image);
+
+            const dialSvg = this.renderer.renderError(quota.error.message, "antigravity", 200, 100);
+            await this.updateDialFeedback(ev, dialSvg);
+            return;
+        }
+
         const top = this.getModelData(this.topModel, quota);
         const bottom = this.getModelData(this.bottomModel, quota);
 

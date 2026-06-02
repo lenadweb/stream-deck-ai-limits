@@ -243,25 +243,50 @@ export class AntigravityUsageService {
             await this.initialize();
         } catch (err) {
             streamDeck.logger.warn(`[Antigravity] Not logged in: ${err}`);
-            return null;
+            return {
+                overallUsage: 0,
+                overallResetTime: null,
+                perModel: new Map(),
+                error: { code: "AUTH", message: "Auth Required" }
+            };
         }
 
         const perModel = new Map<string, AntigravityModelQuota>();
         const fractions: number[] = [];
         let overallResetTime: string | null = null;
 
-        // agy CLI path: quota comes from retrieveUserQuota buckets.
         try {
             const quota = await this.apiPost<RetrieveUserQuotaResponse>("retrieveUserQuota", {});
             const modelLabels = await this.fetchModelDisplayNames();
             this.buildPerModelFromQuotaBuckets(quota.buckets || [], perModel, fractions, modelLabels);
             overallResetTime = this.pickOverallResetTimeFromQuotaBuckets(quota.buckets || [], fractions);
         } catch (err) {
-            // Backward-compatible fallback for accounts/environments where quota RPC is unavailable.
             streamDeck.logger.warn(`[Antigravity] retrieveUserQuota failed, fallback to fetchAvailableModels: ${err}`);
-            const data = await this.apiPost<FetchAvailableModelsResponse>("fetchAvailableModels", {});
-            this.buildPerModelFromAvailableModels(data.models || {}, perModel, fractions);
-            overallResetTime = this.pickOverallResetTimeFromAvailableModels(data.models || {}, fractions);
+            try {
+                const data = await this.apiPost<FetchAvailableModelsResponse>("fetchAvailableModels", {});
+                this.buildPerModelFromAvailableModels(data.models || {}, perModel, fractions);
+                overallResetTime = this.pickOverallResetTimeFromAvailableModels(data.models || {}, fractions);
+            } catch (fallbackErr: any) {
+                const msg = String(fallbackErr?.message || fallbackErr);
+                let code: string | number = "API";
+                let message = "API Error";
+                if (msg.includes("401") || msg.includes("403") || msg.includes("token")) {
+                    code = "AUTH";
+                    message = "Auth Required";
+                } else if (msg.includes("429")) {
+                    code = 429;
+                    message = "Rate Limit";
+                } else if (msg.includes("fetch") || msg.includes("CONN") || msg.includes("Network")) {
+                    code = "CONN";
+                    message = "Conn Error";
+                }
+                return {
+                    overallUsage: 0,
+                    overallResetTime: null,
+                    perModel,
+                    error: { code, message }
+                };
+            }
         }
 
         let overallUsage = 0;

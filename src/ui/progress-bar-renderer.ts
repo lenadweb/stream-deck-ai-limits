@@ -250,6 +250,37 @@ export class ProgressBarRenderer {
         return `${diffMinutes}m`;
     }
 
+    renderError(
+        message: string,
+        theme: ServiceTheme = 'claude',
+        width: number = 144,
+        height: number = 144
+    ): string {
+        const colors = this.themes[theme];
+        const serviceName = theme.charAt(0).toUpperCase() + theme.slice(1);
+        const centerX = width / 2;
+
+        if (width === 200 && height === 100) {
+            return `
+            <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+                <rect width="${width}" height="${height}" fill="${colors.background}" />
+                <text x="${centerX}" y="30" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="600" fill="${colors.label}" text-anchor="middle">${serviceName}</text>
+                <rect x="10" y="42" width="180" height="36" fill="${colors.barBg}" rx="4" />
+                <text x="${centerX}" y="64" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600" fill="#EF4444" text-anchor="middle">${message}</text>
+            </svg>
+            `;
+        }
+
+        return `
+        <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+            <rect width="${width}" height="${height}" fill="${colors.background}" />
+            <text x="${centerX}" y="24" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="${colors.label}" text-anchor="middle">${serviceName}</text>
+            <text x="${centerX}" y="68" font-family="system-ui, -apple-system, sans-serif" font-size="15" font-weight="700" fill="#EF4444" text-anchor="middle">ERROR</text>
+            <text x="${centerX}" y="94" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="${colors.text}" text-anchor="middle">${message}</text>
+        </svg>
+        `;
+    }
+
     renderPlaceholder(width: number, height: number): string {
         const colors = this.themes.antigravity;
         const centerX = width / 2;

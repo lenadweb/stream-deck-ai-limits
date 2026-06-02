@@ -128,6 +128,16 @@ export class GeminiCliProgressBars extends BaseMonitoringAction<GeminiSettings> 
     }
 
     private async draw(ev: any, quota: GeminiQuotaResult) {
+        if (quota.error) {
+            const svg = this.renderer.renderError(quota.error.message, 'gemini-cli', 144, 144);
+            const image = `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
+            await ev.action.setImage(image);
+
+            const dialSvg = this.renderer.renderError(quota.error.message, 'gemini-cli', 200, 100);
+            await this.updateDialFeedback(ev, dialSvg);
+            return;
+        }
+
         const top = this.getModelData(this.topModel, quota);
         const bottom = this.getModelData(this.bottomModel, quota);
 

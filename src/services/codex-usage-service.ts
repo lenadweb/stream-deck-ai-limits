@@ -31,6 +31,7 @@ export interface CodexUsage {
     weekUsed: number | null;
     sessionResetsAt: number | null;
     weekResetsAt: number | null;
+    error?: { code: number | string; message: string };
 }
 
 export class CodexUsageService {
@@ -87,7 +88,13 @@ export class CodexUsageService {
 
         const auth = await this.readAuthTokens();
         if (!auth) {
-            return null;
+            return {
+                sessionUsed: null,
+                weekUsed: null,
+                sessionResetsAt: null,
+                weekResetsAt: null,
+                error: { code: "AUTH", message: "Auth Required" }
+            };
         }
 
         try {
@@ -111,7 +118,16 @@ export class CodexUsageService {
 
             if (!response.ok) {
                 streamDeck.logger.error(`[Codex] API returned status: ${response.status}`);
-                return null;
+                return {
+                    sessionUsed: null,
+                    weekUsed: null,
+                    sessionResetsAt: null,
+                    weekResetsAt: null,
+                    error: {
+                        code: response.status,
+                        message: response.status === 401 ? "Auth Required" : response.status === 429 ? "Rate Limit" : `Error ${response.status}`
+                    }
+                };
             }
 
             const data = await response.json() as CodexApiResponse;
@@ -133,7 +149,13 @@ export class CodexUsageService {
             return usage;
         } catch (err) {
             streamDeck.logger.error(`[Codex] API fetch error: ${err}`);
-            return null;
+            return {
+                sessionUsed: null,
+                weekUsed: null,
+                sessionResetsAt: null,
+                weekResetsAt: null,
+                error: { code: "CONN", message: "Conn Error" }
+            };
         }
     }
 }

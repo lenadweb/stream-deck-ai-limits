@@ -10,6 +10,7 @@ export interface AntigravityQuotaResult {
     overallUsage: number;
     overallResetTime: string | null;
     perModel: Map<string, AntigravityModelQuota>;
+    error?: { code: number | string; message: string };
 }
 
 export interface ClaudeUsage {
@@ -17,6 +18,7 @@ export interface ClaudeUsage {
     sessionResetsAt: string | null;
     weekUsed: number | null;
     weekResetsAt: string | null;
+    error?: { code: number | string; message: string };
 }
 
 export interface CodexUsage {
@@ -24,6 +26,7 @@ export interface CodexUsage {
     sessionResetsAt: number | null;
     weekUsed: number | null;
     weekResetsAt: number | null;
+    error?: { code: number | string; message: string };
 }
 
 export interface MiniMaxUsage {
@@ -31,4 +34,5 @@ export interface MiniMaxUsage {
     sessionResetsAt: number | null;
     weekUsed: number | null;
     weekResetsAt: number | null;
+    error?: { code: number | string; message: string };
 }

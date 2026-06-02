@@ -30,6 +30,7 @@ export interface ClaudeUsage {
     weekUsed: number | null;
     sessionResetsAt: string | null;
     weekResetsAt: string | null;
+    error?: { code: number | string; message: string };
 }
 
 export class ClaudeUsageService {
@@ -133,7 +134,13 @@ export class ClaudeUsageService {
         if (this.cooldownUntil > now) {
             const remainingMs = this.cooldownUntil - now;
             streamDeck.logger.warn(`[Claude] Cooldown active after repeated 429. Skipping request for ${Math.ceil(remainingMs / 1000)}s`);
-            return this.cache;
+            return {
+                sessionUsed: null,
+                weekUsed: null,
+                sessionResetsAt: null,
+                weekResetsAt: null,
+                error: { code: 429, message: "Rate Limit" }
+            };
         }
 
         if (this.cache && (now - this.lastFetch) < this.CACHE_TTL_MS) {
@@ -144,7 +151,13 @@ export class ClaudeUsageService {
         const token = await this.getCredentials();
         if (!token) {
             streamDeck.logger.warn("[Claude] No credentials found");
-            return null;
+            return {
+                sessionUsed: null,
+                weekUsed: null,
+                sessionResetsAt: null,
+                weekResetsAt: null,
+                error: { code: "AUTH", message: "Auth Required" }
+            };
         }
 
         streamDeck.logger.info(`[Claude] Token found (last 8 chars): ...${token.slice(-8)}`);
@@ -153,7 +166,13 @@ export class ClaudeUsageService {
             streamDeck.logger.info("[Claude] Fetching usage from Anthropic API...");
             const response = await this.fetchWithRetry(token);
             if (!response) {
-                return this.cache;
+                return {
+                    sessionUsed: null,
+                    weekUsed: null,
+                    sessionResetsAt: null,
+                    weekResetsAt: null,
+                    error: { code: "CONN", message: "Conn Error" }
+                };
             }
 
             if (response.status === 401) {
@@ -164,12 +183,34 @@ export class ClaudeUsageService {
                 if (refreshed) {
                     return await this.fetchUsageInternal();
                 }
-                return null;
+                return {
+                    sessionUsed: null,
+                    weekUsed: null,
+                    sessionResetsAt: null,
+                    weekResetsAt: null,
+                    error: { code: 401, message: "Unauthorized" }
+                };
+            }
+
+            if (response.status === 429) {
+                return {
+                    sessionUsed: null,
+                    weekUsed: null,
+                    sessionResetsAt: null,
+                    weekResetsAt: null,
+                    error: { code: 429, message: "Rate Limit" }
+                };
             }
 
             if (!response.ok) {
                 streamDeck.logger.error(`[Claude] API returned status: ${response.status}`);
-                return null;
+                return {
+                    sessionUsed: null,
+                    weekUsed: null,
+                    sessionResetsAt: null,
+                    weekResetsAt: null,
+                    error: { code: response.status, message: `Error ${response.status}` }
+                };
             }
 
             const data = await response.json() as ClaudeApiResponse;
@@ -193,7 +234,13 @@ export class ClaudeUsageService {
             return usage;
         } catch (err) {
             streamDeck.logger.error(`[Claude] API fetch error: ${err}`);
-            return null;
+            return {
+                sessionUsed: null,
+                weekUsed: null,
+                sessionResetsAt: null,
+                weekResetsAt: null,
+                error: { code: "API", message: "API Error" }
+            };
         }
     }
 
@@ -201,23 +248,58 @@ export class ClaudeUsageService {
         const token = await this.getCredentials();
         if (!token) {
             streamDeck.logger.warn("[Claude] No credentials found after refresh");
-            return null;
+            return {
+                sessionUsed: null,
+                weekUsed: null,
+                sessionResetsAt: null,
+                weekResetsAt: null,
+                error: { code: "AUTH", message: "Auth Required" }
+            };
         }
 
         try {
             const response = await this.fetchWithRetry(token);
             if (!response) {
-                return this.cache;
+                return {
+                    sessionUsed: null,
+                    weekUsed: null,
+                    sessionResetsAt: null,
+                    weekResetsAt: null,
+                    error: { code: "CONN", message: "Conn Error" }
+                };
             }
 
             if (response.status === 401) {
                 this.invalidTokens.add(token);
                 this.credCache = null;
+                return {
+                    sessionUsed: null,
+                    weekUsed: null,
+                    sessionResetsAt: null,
+                    weekResetsAt: null,
+                    error: { code: 401, message: "Unauthorized" }
+                };
+            }
+
+            if (response.status === 429) {
+                return {
+                    sessionUsed: null,
+                    weekUsed: null,
+                    sessionResetsAt: null,
+                    weekResetsAt: null,
+                    error: { code: 429, message: "Rate Limit" }
+                };
             }
 
             if (!response.ok) {
                 streamDeck.logger.error(`[Claude] API still failing after refresh: ${response.status}`);
-                return null;
+                return {
+                    sessionUsed: null,
+                    weekUsed: null,
+                    sessionResetsAt: null,
+                    weekResetsAt: null,
+                    error: { code: response.status, message: `Error ${response.status}` }
+                };
             }
 
             const data = await response.json() as ClaudeApiResponse;
@@ -239,7 +321,13 @@ export class ClaudeUsageService {
             return usage;
         } catch (err) {
             streamDeck.logger.error(`[Claude] API fetch error after refresh: ${err}`);
-            return null;
+            return {
+                sessionUsed: null,
+                weekUsed: null,
+                sessionResetsAt: null,
+                weekResetsAt: null,
+                error: { code: "API", message: "API Error" }
+            };
         }
     }
 
