@@ -34,7 +34,7 @@
   },
   "dependencies": {
     "@elgato/streamdeck": "^2.0.0",
-    "@lenadweb/ai-limits": "^1.0.0",
+    "@lenadweb/ai-limits": "^1.0.1",
     "google-auth-library": "^10.6.1",
     "strip-ansi": "^7.1.2"
   }
