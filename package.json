@@ -1,27 +1,41 @@
 {
-    "scripts": {
-        "build": "rollup -c",
-        "watch": "rollup -c -w --watch.onEnd=\"streamdeck restart com.len.limits\"",
-        "version:bump": "node scripts/bump-version.mjs",
-        "release": "npm run version:bump && npm run build && streamdeck pack com.len.limits.sdPlugin --force --output ."
-    },
-    "type": "module",
-    "devDependencies": {
-        "@elgato/cli": "^1.7.0",
-        "@rollup/plugin-commonjs": "^28.0.0",
-        "@rollup/plugin-json": "^6.1.0",
-        "@rollup/plugin-node-resolve": "^15.2.2",
-        "@rollup/plugin-terser": "^0.4.4",
-        "@rollup/plugin-typescript": "^12.1.0",
-        "@tsconfig/node20": "^20.1.2",
-        "@types/node": "~20.15.0",
-        "rollup": "^4.0.2",
-        "tslib": "^2.6.2",
-        "typescript": "^5.2.2"
-    },
-    "dependencies": {
-        "@elgato/streamdeck": "^2.0.0",
-        "google-auth-library": "^10.6.1",
-        "strip-ansi": "^7.1.2"
-    }
+  "name": "stream-deck-ai-limits",
+  "version": "1.0.0",
+  "description": "Stream Deck plugin to monitor AI agent limits and quotas across multiple providers.",
+  "type": "module",
+  "scripts": {
+    "build": "rollup -c",
+    "watch": "rollup -c -w --watch.onEnd=\"streamdeck restart com.len.limits\"",
+    "version:bump": "node scripts/bump-version.mjs",
+    "release": "npm run version:bump && npm run build && streamdeck pack com.len.limits.sdPlugin --force --output ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lenadweb/stream-deck-ai-limits.git"
+  },
+  "bugs": {
+    "url": "https://github.com/lenadweb/stream-deck-ai-limits/issues"
+  },
+  "homepage": "https://github.com/lenadweb/stream-deck-ai-limits#readme",
+  "author": "lenadweb <lenadweber@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "@elgato/cli": "^1.7.0",
+    "@rollup/plugin-commonjs": "^28.0.0",
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^15.2.2",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^12.1.0",
+    "@tsconfig/node20": "^20.1.2",
+    "@types/node": "~20.15.0",
+    "rollup": "^4.0.2",
+    "tslib": "^2.6.2",
+    "typescript": "^5.2.2"
+  },
+  "dependencies": {
+    "@elgato/streamdeck": "^2.0.0",
+    "@lenadweb/ai-limits": "^1.0.0",
+    "google-auth-library": "^10.6.1",
+    "strip-ansi": "^7.1.2"
+  }
 }
