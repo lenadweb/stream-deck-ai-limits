@@ -19,9 +19,6 @@ export type {
 };
 
 const CODE_ASSIST_ENDPOINT = "https://daily-cloudcode-pa.googleapis.com/v1internal";
-// OAuth client used by the official `agy` CLI (and the open-source antigravity-usage CLI).
-// Required: the Antigravity Cloud Code backend whitelists tokens by client_id, so we
-// must reuse this client. Refreshing tokens is also tied to it.
 const OAUTH_CLIENT_ID = "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com";
 const OAUTH_CLIENT_SECRET = "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"; // NOTE: public OAuth client secret embedded in Google's Antigravity desktop app. It is a native/desktop "installed app" client using PKCE, so this value is non-confidential by Google's OAuth design — NOT a personal credential.
 const OAUTH_SCOPES = [
@@ -70,8 +67,8 @@ interface RetrieveUserQuotaResponse {
 export class AntigravityUsageService {
     private static instance: AntigravityUsageService;
     private client = new OAuth2Client({
-        clientId: OAUTH_CLIENT_ID,
-        clientSecret: OAUTH_CLIENT_SECRET,
+        clientId: process.env.ANTIGRAVITY_CLIENT_ID || OAUTH_CLIENT_ID,
+        clientSecret: process.env.ANTIGRAVITY_CLIENT_SECRET || OAUTH_CLIENT_SECRET,
     });
     private isInitialized = false;
     private email: string | null = null;
@@ -115,8 +112,8 @@ export class AntigravityUsageService {
         this.cache = null;
         this.lastFetch = 0;
         this.client = new OAuth2Client({
-            clientId: OAUTH_CLIENT_ID,
-            clientSecret: OAUTH_CLIENT_SECRET,
+            clientId: process.env.ANTIGRAVITY_CLIENT_ID || OAUTH_CLIENT_ID,
+            clientSecret: process.env.ANTIGRAVITY_CLIENT_SECRET || OAUTH_CLIENT_SECRET,
         });
         try {
             await fs.unlink(TOKEN_PATH);
@@ -482,8 +479,8 @@ export class AntigravityUsageService {
     private async exchangeCode(code: string, codeVerifier: string, redirectUri: string): Promise<StoredToken> {
         const params = new URLSearchParams({
             code,
-            client_id: OAUTH_CLIENT_ID,
-            client_secret: OAUTH_CLIENT_SECRET,
+            client_id: process.env.ANTIGRAVITY_CLIENT_ID || OAUTH_CLIENT_ID,
+            client_secret: process.env.ANTIGRAVITY_CLIENT_SECRET || OAUTH_CLIENT_SECRET,
             redirect_uri: redirectUri,
             grant_type: "authorization_code",
             code_verifier: codeVerifier,

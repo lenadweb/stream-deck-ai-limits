@@ -44,7 +44,7 @@ export class ClaudeUsageService {
     private readonly BASE_BACKOFF_MS = 1000;
     private readonly MAX_BACKOFF_MS = 30000;
     private readonly MAX_CONSECUTIVE_429 = 4;
-    private readonly CIRCUIT_COOLDOWN_MS = 30 * 60 * 1000;
+    private readonly CIRCUIT_COOLDOWN_MS = 1 * 60 * 1000;
     private consecutive429Count = 0;
     private cooldownUntil = 0;
     private invalidTokens = new Set<string>();

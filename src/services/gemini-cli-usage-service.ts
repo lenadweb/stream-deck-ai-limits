@@ -52,8 +52,8 @@ export class GeminiCliUsageService {
 
     private constructor() {
         this.client = new OAuth2Client({
-            clientId: OAUTH_CLIENT_ID,
-            clientSecret: OAUTH_CLIENT_SECRET,
+            clientId: process.env.GEMINI_CLIENT_ID || OAUTH_CLIENT_ID,
+            clientSecret: process.env.GEMINI_CLIENT_SECRET || OAUTH_CLIENT_SECRET,
         });
     }
 
