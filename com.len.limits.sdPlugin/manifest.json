@@ -1,6 +1,6 @@
 {
   "Name": "AI Usage Limits",
-  "Version": "0.1.11.0",
+  "Version": "0.1.12.0",
   "Author": "len",
   "Actions": [
     {
@@ -145,6 +145,10 @@
     {
       "Platform": "mac",
       "MinimumVersion": "12"
+    },
+    {
+      "Platform": "windows",
+      "MinimumVersion": "10"
     }
   ],
   "Nodejs": {
