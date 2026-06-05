@@ -9,6 +9,8 @@ export abstract class BaseMonitoringAction<T extends Record<string, any>> extend
     protected intervalId: NodeJS.Timeout | null = null;
     protected isMonitoring = false;
     protected lastResult: StandardUsageResult | null = null;
+    protected lastFetchTime = 0;
+    protected readonly monitoringIntervalMs = 900000;
     protected readonly renderer = new ProgressBarRenderer();
     protected readonly limitsManager = LimitsManager.getInstance();
 
@@ -17,11 +19,11 @@ export abstract class BaseMonitoringAction<T extends Record<string, any>> extend
 
     override async onWillAppear(ev: WillAppearEvent<T>): Promise<void> {
         this.controllers.set(ev.action.id, ev.payload.controller);
+        // Draw cached data immediately so switching pages/folders never blanks the key
+        await this.redraw(ev);
         if (!this.isMonitoring) {
             this.isMonitoring = true;
             this.startMonitoring(ev);
-        } else {
-            await this.redraw(ev);
         }
     }
 
@@ -50,12 +52,17 @@ export abstract class BaseMonitoringAction<T extends Record<string, any>> extend
     }
 
     protected startMonitoring(ev: any): void {
-        this.refresh(ev);
+        // Only hit the network on a cold start or when the cached data has gone stale,
+        // so re-appearing after a page/folder switch doesn't trigger a visible refresh.
+        const isStale = !this.lastResult || (Date.now() - this.lastFetchTime) >= this.monitoringIntervalMs;
+        if (isStale) {
+            this.refresh(ev);
+        }
         this.intervalId = setInterval(() => {
             if (this.isMonitoring) {
                 this.refresh(ev);
             }
-        }, 900000);
+        }, this.monitoringIntervalMs);
     }
 
     protected stopMonitoring(): void {
@@ -69,6 +76,7 @@ export abstract class BaseMonitoringAction<T extends Record<string, any>> extend
         try {
             const result = await this.fetchProviderUsage(ev);
             this.lastResult = result;
+            this.lastFetchTime = Date.now();
             await this.draw(ev, result);
         } catch (err: any) {
             streamDeck.logger.error(`[${this.providerName}] Refresh failed: ${err}`);
