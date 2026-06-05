@@ -24,6 +24,14 @@
             color: #999;
             line-height: 1.4;
         }
+        .link {
+            color: #4285F4;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+        .link:hover {
+            color: #357ae8;
+        }
         .auth-row {
             padding: 8px 16px;
             display: flex;
@@ -80,6 +88,7 @@
     </sdpi-item>
 
     <div class="info">After signing in, press the Stream Deck button once to load the latest quota and refresh the model list.</div>
+    <div class="info">Found a bug? <span class="link" onclick="openGitHub()">Contribute on GitHub</span></div>
 
     <script>
         let _websocket = null;
@@ -217,6 +226,17 @@
                     event: "setSettings",
                     context: _uuid,
                     payload: _settings,
+                }));
+            }
+        }
+
+        function openGitHub() {
+            if (_websocket) {
+                _websocket.send(JSON.stringify({
+                    event: "openUrl",
+                    payload: {
+                        url: "https://github.com/lenadweb/stream-deck-ai-limits"
+                    }
                 }));
             }
         }

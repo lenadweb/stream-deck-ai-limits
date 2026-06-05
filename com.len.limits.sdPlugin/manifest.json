@@ -8,6 +8,7 @@
       "UUID": "com.len.limits.progress",
       "Icon": "imgs/actions/counter/icon",
       "Tooltip": "Displays Claude usage.",
+      "PropertyInspectorPath": "ui/claude-settings.html",
       "Controllers": [
         "Keypad",
         "Encoder"
@@ -33,6 +34,7 @@
       "UUID": "com.len.limits.codex.progress",
       "Icon": "imgs/actions/counter/icon",
       "Tooltip": "Displays Codex usage.",
+      "PropertyInspectorPath": "ui/codex-settings.html",
       "Controllers": [
         "Keypad",
         "Encoder"

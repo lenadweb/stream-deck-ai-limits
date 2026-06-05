@@ -15,6 +15,14 @@
             font-size: 11px;
             color: #999;
         }
+        .link {
+            color: #4285F4;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+        .link:hover {
+            color: #357ae8;
+        }
     </style>
 </head>
 
@@ -24,6 +32,7 @@
     </sdpi-item>
 
     <div class="hint">This value is stored in the action settings and used for MiniMax API requests.</div>
+    <div class="hint">Found a bug? <span class="link" onclick="openGitHub()">Contribute on GitHub</span></div>
 
     <script>
         let _websocket = null;
@@ -68,6 +77,17 @@
                     event: "setSettings",
                     context: _uuid,
                     payload: _settings,
+                }));
+            }
+        }
+
+        function openGitHub() {
+            if (_websocket) {
+                _websocket.send(JSON.stringify({
+                    event: "openUrl",
+                    payload: {
+                        url: "https://github.com/lenadweb/stream-deck-ai-limits"
+                    }
                 }));
             }
         }
