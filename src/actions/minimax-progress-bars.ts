@@ -3,6 +3,7 @@ import { LimitsClient, ProviderName, StandardUsageResult } from "@lenadweb/ai-li
 import { MiniMaxSettings } from "../interfaces/settings";
 import { BaseMonitoringAction } from "./base-monitoring-action";
 import { ServiceTheme } from "../interfaces/theme";
+import { streamDeckLogger } from "../services/limits-manager";
 
 @action({ UUID: "com.len.limits.minimax" })
 export class MiniMaxProgressBars extends BaseMonitoringAction<MiniMaxSettings> {
@@ -30,7 +31,7 @@ export class MiniMaxProgressBars extends BaseMonitoringAction<MiniMaxSettings> {
                 error: { code: "AUTH", message: "Auth Required" }
             };
         }
-        const client = new LimitsClient({ minimax: { apiKey } });
+        const client = new LimitsClient({ minimax: { apiKey }, logger: streamDeckLogger });
         return client.fetchUsage(this.providerName);
     }
 
