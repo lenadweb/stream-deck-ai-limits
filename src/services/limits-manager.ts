@@ -1,8 +1,14 @@
-import { LimitsClient, ProviderName, AntigravityProvider, GeminiProvider } from "@lenadweb/ai-limits";
+import streamDeck from "@elgato/streamdeck";
+import { LimitsClient, ProviderName, AntigravityProvider, GeminiProvider, Logger } from "@lenadweb/ai-limits";
+
+export const streamDeckLogger: Logger = {
+    log: (message: string) => streamDeck.logger.info(message),
+    error: (message: string) => streamDeck.logger.error(message),
+};
 
 export class LimitsManager {
     private static instance: LimitsManager;
-    private client = new LimitsClient();
+    private client = new LimitsClient({ logger: streamDeckLogger });
 
     private constructor() {}
 
