@@ -1,30 +1,4 @@
-import streamDeck from "@elgato/streamdeck";
-import { spawn, ChildProcess } from "child_process";
-import { existsSync } from "fs";
-import { readFile } from "fs/promises";
-import { homedir } from "os";
-import { join } from "path";
-
-interface CodexAuthData {
-    tokens?: {
-        access_token?: string;
-        account_id?: string;
-    };
-}
-
-interface CodexApiResponse {
-    plan_type: string;
-    rate_limit: {
-        primary_window?: {
-            used_percent: number;
-            reset_at: number;
-        } | null;
-        secondary_window?: {
-            used_percent: number;
-            reset_at: number;
-        } | null;
-    };
-}
+import { LimitsClient, ProviderName } from "@lenadweb/ai-limits";
 
 export interface CodexUsage {
     sessionUsed: number | null;
@@ -35,126 +9,35 @@ export interface CodexUsage {
 }
 
 export class CodexUsageService {
-    private authPath: string;
-    private lastFetch: number = 0;
-    private cache: CodexUsage | null = null;
-    private readonly CACHE_TTL_MS = 60000;
-
-    constructor() {
-        this.authPath = join(homedir(), ".codex", "auth.json");
-    }
-
-    async startMonitoring(): Promise<CodexUsage | null> {
-        streamDeck.logger.info("[Codex] Starting usage monitoring via HTTP API...");
-        return await this.fetchUsage();
-    }
-
-    stopMonitoring(): void {
-        streamDeck.logger.info("[Codex] Stopping monitoring");
-    }
-
-    private async readAuthTokens(): Promise<{ accessToken: string; accountId: string } | null> {
-        try {
-            if (!existsSync(this.authPath)) {
-                streamDeck.logger.warn(`[Codex] Auth file not found: ${this.authPath}`);
-                return null;
-            }
-
-            const content = await readFile(this.authPath, "utf-8");
-            const auth: CodexAuthData = JSON.parse(content);
-
-            const accessToken = auth?.tokens?.access_token;
-            const accountId = auth?.tokens?.account_id;
-
-            if (!accessToken || !accountId) {
-                streamDeck.logger.warn("[Codex] Missing tokens in auth.json");
-                return null;
-            }
-
-            streamDeck.logger.info("[Codex] Successfully read auth tokens");
-            return { accessToken, accountId };
-        } catch (err) {
-            streamDeck.logger.error(`[Codex] Error reading auth: ${err}`);
-            return null;
-        }
-    }
+    private client = new LimitsClient();
 
     async fetchUsage(): Promise<CodexUsage | null> {
-        const now = Date.now();
-        if (this.cache && (now - this.lastFetch) < this.CACHE_TTL_MS) {
-            streamDeck.logger.info("[Codex] Returning cached usage");
-            return this.cache;
-        }
-
-        const auth = await this.readAuthTokens();
-        if (!auth) {
-            return {
-                sessionUsed: null,
-                weekUsed: null,
-                sessionResetsAt: null,
-                weekResetsAt: null,
-                error: { code: "AUTH", message: "Auth Required" }
-            };
-        }
-
         try {
-            streamDeck.logger.info("[Codex] Fetching usage from ChatGPT API...");
-
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 5000);
-
-            const response = await fetch("https://chatgpt.com/backend-api/wham/usage", {
-                method: "GET",
-                headers: {
-                    "Accept": "application/json",
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${auth.accessToken}`,
-                    "ChatGPT-Account-Id": auth.accountId,
-                },
-                signal: controller.signal,
-            });
-
-            clearTimeout(timeout);
-
-            if (!response.ok) {
-                streamDeck.logger.error(`[Codex] API returned status: ${response.status}`);
+            const res = await this.client.fetchUsage(ProviderName.ChatGpt);
+            if (res.error) {
                 return {
                     sessionUsed: null,
                     weekUsed: null,
                     sessionResetsAt: null,
                     weekResetsAt: null,
-                    error: {
-                        code: response.status,
-                        message: response.status === 401 ? "Auth Required" : response.status === 429 ? "Rate Limit" : `Error ${response.status}`
-                    }
+                    error: res.error
                 };
             }
-
-            const data = await response.json() as CodexApiResponse;
-
-            streamDeck.logger.info(`[Codex] Raw API response: ${JSON.stringify(data)}`);
-
-            const usage: CodexUsage = {
-                sessionUsed: data.rate_limit.primary_window?.used_percent ?? null,
-                weekUsed: data.rate_limit.secondary_window?.used_percent ?? null,
-                sessionResetsAt: data.rate_limit.primary_window?.reset_at ?? null,
-                weekResetsAt: data.rate_limit.secondary_window?.reset_at ?? null,
+            const primary = res.perModel?.["primary_window"];
+            const secondary = res.perModel?.["secondary_window"];
+            return {
+                sessionUsed: primary ? primary.usagePercent : null,
+                sessionResetsAt: primary && primary.resetTime ? Math.floor(new Date(primary.resetTime).getTime() / 1000) : null,
+                weekUsed: secondary ? secondary.usagePercent : null,
+                weekResetsAt: secondary && secondary.resetTime ? Math.floor(new Date(secondary.resetTime).getTime() / 1000) : null
             };
-
-            streamDeck.logger.info(`[Codex] Fetched usage - Session: ${usage.sessionUsed}%, Week: ${usage.weekUsed}%`);
-
-            this.cache = usage;
-            this.lastFetch = now;
-
-            return usage;
-        } catch (err) {
-            streamDeck.logger.error(`[Codex] API fetch error: ${err}`);
+        } catch (err: any) {
             return {
                 sessionUsed: null,
                 weekUsed: null,
                 sessionResetsAt: null,
                 weekResetsAt: null,
-                error: { code: "CONN", message: "Conn Error" }
+                error: { code: "ERROR", message: err.message || String(err) }
             };
         }
     }
