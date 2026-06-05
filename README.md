@@ -11,7 +11,7 @@ Track usage limits and reset times for **Claude**, **Codex**, **Antigravity**, *
 [![Download on Elgato Marketplace](https://img.shields.io/badge/Elgato%20Marketplace-Download-2c2c2e?style=for-the-badge&logo=elgato&logoColor=white)](https://marketplace.elgato.com/product/ai-usage-limits-b78ef6c4-0165-4bf2-8ba8-889f723e915f)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-macOS%2012%2B-black.svg)](#requirements)
+[![Platform](https://img.shields.io/badge/platform-macOS%2012%2B%20%7C%20Windows%2010%2B-black.svg)](#requirements)
 [![Stream Deck](https://img.shields.io/badge/Stream%20Deck-6.9%2B-1c1c1e.svg)](https://www.elgato.com/stream-deck)
 [![Built with TypeScript](https://img.shields.io/badge/built%20with-TypeScript-3178c6.svg)](https://www.typescriptlang.org/)
 [![Keys & Dials](https://img.shields.io/badge/supports-Keys%20%26%20Dials-d97757.svg)](#actions)
@@ -63,11 +63,11 @@ Then open the **Stream Deck** app, find **AI Usage Limits** in the actions list,
 | Requirement | Version |
 |---|---|
 | **Stream Deck application** | 6.9 or newer |
-| **Operating system** | macOS 12 (Monterey) or newer |
+| **Operating system** | macOS 12 (Monterey) or newer, or Windows 10 or newer |
 | **Node.js** | 20 or newer |
 | **Elgato CLI** (`@elgato/cli`) | installed as a dev dependency |
 
-> The provider logic is cross-platform, but the packaged plugin currently ships **macOS-only** (declared in `manifest.json`). Windows support is on the roadmap.
+> The plugin runs on both **macOS** and **Windows**. On macOS, Claude credentials are read from the Keychain; on Windows and Linux they are read from the credential file written by the matching CLI (see [Provider setup](#provider-setup)).
 
 ---
 
@@ -91,7 +91,7 @@ For most providers the plugin simply reads the credentials your CLI already wrot
 
 | Provider | How it authenticates | Where credentials come from |
 |---|---|---|
-| **Claude** | Automatic | macOS Keychain (`Claude Code-credentials`), falling back to `~/.claude/.credentials.json` |
+| **Claude** | Automatic | macOS: Keychain (`Claude Code-credentials`), falling back to `~/.claude/.credentials.json`. Windows: `%USERPROFILE%\.claude\.credentials.json` |
 | **Codex / ChatGPT** | Automatic | `~/.codex/auth.json` |
 | **Gemini CLI** | Automatic | `~/.gemini/oauth_creds.json` |
 | **Antigravity** | One-time login | Click **Login** in the Property Inspector to start the Google OAuth2 flow; the token is saved to `~/.limits-streamdeck/antigravity_oauth.json` |
