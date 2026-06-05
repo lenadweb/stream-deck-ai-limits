@@ -1,19 +1,20 @@
 import streamDeck, { action } from "@elgato/streamdeck";
+import { ProviderName, StandardUsageResult, AntigravityProvider } from "@lenadweb/ai-limits";
 import { AntigravitySettings } from "../interfaces/settings";
-import { AntigravityUsageService, type AntigravityQuotaResult } from "../services/antigravity-usage-service";
-import { ProgressBarRenderer } from "../ui/progress-bar-renderer";
 import { BaseMonitoringAction } from "./base-monitoring-action";
+import { ServiceTheme } from "../interfaces/theme";
 
 @action({ UUID: "com.len.limits.antigravity" })
 export class AntigravityProgressBars extends BaseMonitoringAction<AntigravitySettings> {
-    private readonly usageService = AntigravityUsageService.getInstance();
-    private readonly renderer = new ProgressBarRenderer();
-    private lastQuota: AntigravityQuotaResult | null = null;
+    protected readonly providerName = ProviderName.Antigravity;
+    protected readonly themeName: ServiceTheme = "antigravity";
     private topModel: string = "";
     private bottomModel: string = "";
     private cachedLabels: Record<string, string> = {};
+    private provider!: AntigravityProvider;
 
     override async onWillAppear(ev: any): Promise<void> {
+        this.provider = this.limitsManager.getAntigravityProvider();
         const settings = ev.payload?.settings as AntigravitySettings | undefined;
         if (settings) {
             this.topModel = settings.topModel || "";
@@ -30,76 +31,51 @@ export class AntigravityProgressBars extends BaseMonitoringAction<AntigravitySet
             this.bottomModel = settings.bottomModel || "";
             this.cachedLabels = settings.availableModelLabels || this.cachedLabels;
         }
-        if (this.lastQuota) {
-            await this.draw(ev, this.lastQuota);
-        } else {
-            await this.drawPlaceholder(ev);
-        }
+        await this.redraw(ev);
     }
 
-    protected async refresh(ev: any): Promise<void> {
-        try {
-            const quota = await this.usageService.getQuota();
-            if (quota) {
-                this.lastQuota = quota;
-                if (!quota.error) {
-                    await this.persistModelsToSettings(ev);
-                }
-                await this.draw(ev, quota);
-            }
-        } catch (err) {
-            streamDeck.logger.error(`[Antigravity] Refresh failed: ${err}`);
-        }
-    }
-
-    protected async redraw(ev: any): Promise<void> {
-        if (this.lastQuota) {
-            await this.draw(ev, this.lastQuota);
-        } else {
-            await this.drawPlaceholder(ev);
+    override async refresh(ev: any): Promise<void> {
+        await super.refresh(ev);
+        if (this.lastResult && !this.lastResult.error) {
+            await this.persistModelsToSettings(ev);
         }
     }
 
     override async onSendToPlugin(ev: any): Promise<void> {
-        const evt = ev.payload?.event;
+        const eventType = ev.payload?.event;
 
-        if (evt === "getStatus") {
+        if (eventType === "getStatus") {
             await this.sendStatusToPI(ev);
             return;
         }
 
-        if (evt === "login") {
+        if (eventType === "login") {
             try {
-                streamDeck.logger.info("[Antigravity] PI requested login");
-                const email = await this.usageService.login();
-                streamDeck.logger.info(`[Antigravity] Logged in as ${email}`);
+                const email = await this.provider.login();
                 await this.sendStatusToPI(ev);
                 await this.refresh(ev);
             } catch (err: any) {
-                streamDeck.logger.error(`[Antigravity] Login failed: ${err}`);
                 await streamDeck.ui.sendToPropertyInspector({
                     event: "loginError",
-                    message: err?.message || String(err),
+                    message: err?.message || String(err)
                 });
             }
             return;
         }
 
-        if (evt === "logout") {
-            await this.usageService.logout();
-            this.lastQuota = null;
+        if (eventType === "logout") {
+            await this.provider.logout();
+            this.lastResult = null;
             await this.sendStatusToPI(ev);
             await this.drawPlaceholder(ev);
             return;
         }
 
-        if (evt === "getModels") {
-            if (!this.lastQuota) {
+        if (eventType === "getModels") {
+            if (!this.lastResult) {
                 try {
                     await this.refresh(ev);
-                } catch (err) {
-                    streamDeck.logger.error(`[Antigravity] Failed to fetch models for PI: ${err}`);
-                }
+                } catch {}
             }
             await this.sendModelsToPI(ev);
             return;
@@ -107,40 +83,49 @@ export class AntigravityProgressBars extends BaseMonitoringAction<AntigravitySet
     }
 
     private async sendStatusToPI(ev: any): Promise<void> {
-        const loggedIn = await this.usageService.isLoggedIn();
+        const loggedIn = await this.provider.isLoggedIn();
         await streamDeck.ui.sendToPropertyInspector({
             event: "status",
             loggedIn,
-            email: this.usageService.getLoggedInEmail(),
+            email: this.provider.getLoggedInEmail()
         });
     }
 
     private async sendModelsToPI(ev: any): Promise<void> {
-        const models = this.usageService.getAvailableModels();
-        const labels = this.usageService.getModelLabels();
+        const models = this.getAvailableModels();
+        const labels = this.getModelLabels();
         await streamDeck.ui.sendToPropertyInspector({
             event: "modelList",
             models,
-            labels,
+            labels
         });
     }
 
+    private getAvailableModels(): string[] {
+        if (!this.lastResult || !this.lastResult.perModel) return [];
+        return Object.keys(this.lastResult.perModel);
+    }
+
+    private getModelLabels(): Record<string, string> {
+        const labels: Record<string, string> = {};
+        if (!this.lastResult || !this.lastResult.perModel) return labels;
+        for (const [id, info] of Object.entries(this.lastResult.perModel)) {
+            labels[id] = info.displayName || id;
+        }
+        return labels;
+    }
+
     private async persistModelsToSettings(ev: any): Promise<void> {
-        const models = this.usageService.getAvailableModels();
-        const labels = this.usageService.getModelLabels();
-        // Merge with previously-seen labels so an exhausted model that the API stops
-        // returning still has its label preserved across refreshes.
+        const models = this.getAvailableModels();
+        const labels = this.getModelLabels();
         const mergedLabels = { ...this.cachedLabels, ...labels };
         this.cachedLabels = mergedLabels;
 
         try {
             const currentSettings = (ev.payload?.settings ?? {}) as AntigravitySettings;
-            const existingModels = currentSettings.availableModels;
-            const existingLabels = currentSettings.availableModelLabels;
-
             if (
-                JSON.stringify(existingModels) !== JSON.stringify(models) ||
-                JSON.stringify(existingLabels) !== JSON.stringify(mergedLabels)
+                JSON.stringify(currentSettings.availableModels) !== JSON.stringify(models) ||
+                JSON.stringify(currentSettings.availableModelLabels) !== JSON.stringify(mergedLabels)
             ) {
                 await ev.action.setSettings({
                     ...currentSettings,
@@ -148,95 +133,53 @@ export class AntigravityProgressBars extends BaseMonitoringAction<AntigravitySet
                     bottomModel: this.bottomModel,
                     availableModels: models,
                     availableModelLabels: mergedLabels,
-                    loggedInEmail: this.usageService.getLoggedInEmail() ?? undefined,
+                    loggedInEmail: this.provider.getLoggedInEmail() || undefined
                 });
             }
-        } catch (err) {
-            streamDeck.logger.error(`[Antigravity] Failed to persist models: ${err}`);
-        }
+        } catch {}
     }
 
-    private getModelData(modelKey: string, quota: AntigravityQuotaResult): { usage: number; resetTime: string | null; label: string } {
+    private getModelData(modelKey: string, result: StandardUsageResult): { usage: number; resetTime: string | null; label: string } {
         if (!modelKey || modelKey === "__overall__") {
             return {
-                usage: quota.overallUsage,
-                resetTime: quota.overallResetTime,
-                label: "Overall",
+                usage: result.overallUsagePercent ?? 0,
+                resetTime: result.overallResetTime,
+                label: "Overall"
             };
         }
 
-        const modelData = quota.perModel.get(modelKey);
-        if (modelData) {
+        const model = result.perModel?.[modelKey];
+        if (model) {
             return {
-                usage: modelData.usage,
-                resetTime: modelData.resetTime ?? null,
-                label: this.shortLabel(modelData.displayName || modelKey),
+                usage: model.usagePercent,
+                resetTime: model.resetTime ?? null,
+                label: this.shortLabel(model.displayName || modelKey)
             };
         }
 
-        // The model was selected previously but is missing from the latest API
-        // response — Antigravity drops exhausted models. Treat as 100% used.
         const fallbackLabel = this.cachedLabels[modelKey] || modelKey;
         return {
             usage: 100,
             resetTime: null,
-            label: this.shortLabel(fallbackLabel),
+            label: this.shortLabel(fallbackLabel)
         };
     }
 
     private shortLabel(name: string): string {
-        // Drop parenthetical qualifiers ("(Thinking)", "(Medium)") for the on-key label
         const readable = name.replace(/\s*\([^)]*\)\s*$/, "").trim();
-        // Hard cap: UI should never exceed 18 characters.
         return readable.length > 18 ? `${readable.slice(0, 16)}..` : readable;
     }
 
-    private async drawPlaceholder(ev: any) {
-        const svg = this.renderer.renderPlaceholder(144, 144);
-        const image = `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
-        await ev.action.setImage(image);
-
-        const dialSvg = this.renderer.renderPlaceholder(200, 100);
-        await this.updateDialFeedback(ev, dialSvg);
-    }
-
-    private async draw(ev: any, quota: AntigravityQuotaResult) {
-        if (quota.error) {
-            const svg = this.renderer.renderError(quota.error.message, "antigravity", 144, 144);
-            const image = `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
-            await ev.action.setImage(image);
-
-            const dialSvg = this.renderer.renderError(quota.error.message, "antigravity", 200, 100);
-            await this.updateDialFeedback(ev, dialSvg);
-            return;
-        }
-
-        const top = this.getModelData(this.topModel, quota);
-        const bottom = this.getModelData(this.bottomModel, quota);
-
-        const svg = this.renderer.render(
-            top.usage,
-            bottom.usage,
-            "antigravity",
-            top.resetTime,
-            bottom.resetTime,
-            top.label,
-            bottom.label,
-            144, 144
-        );
-        const image = `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
-        await ev.action.setImage(image);
-
-        const dialSvg = this.renderer.render(
-            top.usage,
-            bottom.usage,
-            "antigravity",
-            top.resetTime,
-            bottom.resetTime,
-            top.label,
-            bottom.label,
-            200, 100
-        );
-        await this.updateDialFeedback(ev, dialSvg);
+    protected getDisplayData(ev: any, result: StandardUsageResult) {
+        const top = this.getModelData(this.topModel, result);
+        const bottom = this.getModelData(this.bottomModel, result);
+        return {
+            value1: top.usage,
+            value2: bottom.usage,
+            label1: top.label,
+            label2: bottom.label,
+            resetTime1: top.resetTime,
+            resetTime2: bottom.resetTime
+        };
     }
 }

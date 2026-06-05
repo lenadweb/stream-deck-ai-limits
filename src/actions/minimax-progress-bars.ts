@@ -1,15 +1,13 @@
 import { action } from "@elgato/streamdeck";
-import { MiniMaxUsage } from "../services/minimax-usage-service";
+import { LimitsClient, ProviderName, StandardUsageResult } from "@lenadweb/ai-limits";
 import { MiniMaxSettings } from "../interfaces/settings";
-import { MiniMaxUsageService } from "../services/minimax-usage-service";
-import { ProgressBarRenderer } from "../ui/progress-bar-renderer";
 import { BaseMonitoringAction } from "./base-monitoring-action";
+import { ServiceTheme } from "../interfaces/theme";
 
 @action({ UUID: "com.len.limits.minimax" })
 export class MiniMaxProgressBars extends BaseMonitoringAction<MiniMaxSettings> {
-    private readonly usageService = new MiniMaxUsageService();
-    private readonly renderer = new ProgressBarRenderer();
-    private lastUsage: MiniMaxUsage | null = null;
+    protected readonly providerName = ProviderName.MiniMax;
+    protected readonly themeName: ServiceTheme = "minimax";
     private settings: MiniMaxSettings = {};
 
     override async onWillAppear(ev: any): Promise<void> {
@@ -22,58 +20,30 @@ export class MiniMaxProgressBars extends BaseMonitoringAction<MiniMaxSettings> {
         await this.refresh(ev);
     }
 
-    protected async refresh(ev: any): Promise<void> {
-        try {
-            const usage = await this.usageService.fetchUsage(this.settings);
-            if (usage) {
-                this.lastUsage = usage;
-                this.draw(ev, usage);
-            }
-        } catch (err) {
+    protected override async fetchProviderUsage(ev: any): Promise<StandardUsageResult> {
+        const apiKey = this.settings.apiKey?.trim() || "";
+        if (!apiKey) {
+            return {
+                provider: this.providerName,
+                overallUsagePercent: null,
+                overallResetTime: null,
+                error: { code: "AUTH", message: "Auth Required" }
+            };
         }
+        const client = new LimitsClient({ minimax: { apiKey } });
+        return client.fetchUsage(this.providerName);
     }
 
-    protected async redraw(ev: any): Promise<void> {
-        if (this.lastUsage) {
-            await this.draw(ev, this.lastUsage);
-        }
-    }
-
-    private async draw(ev: any, usage: MiniMaxUsage) {
-        if (usage.error) {
-            const svg = this.renderer.renderError(usage.error.message, 'minimax', 144, 144);
-            const image = `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
-            await ev.action.setImage(image);
-
-            const dialSvg = this.renderer.renderError(usage.error.message, 'minimax', 200, 100);
-            await this.updateDialFeedback(ev, dialSvg);
-            return;
-        }
-
-        const sessionPercent = usage.sessionUsed ?? 0;
-        const weekPercent = usage.weekUsed ?? 0;
-
-        const svg = this.renderer.render(
-            sessionPercent,
-            weekPercent,
-            'minimax',
-            usage.sessionResetsAt,
-            usage.weekResetsAt,
-            "Daily", "Week",
-            144, 144
-        );
-        const image = `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
-        await ev.action.setImage(image);
-
-        const dialSvg = this.renderer.render(
-            sessionPercent,
-            weekPercent,
-            'minimax',
-            usage.sessionResetsAt,
-            usage.weekResetsAt,
-            "Daily", "Week",
-            200, 100
-        );
-        await this.updateDialFeedback(ev, dialSvg);
+    protected getDisplayData(ev: any, result: StandardUsageResult) {
+        const general = result.perModel?.["general"];
+        const weekly = result.perModel?.["weekly_interval"];
+        return {
+            value1: general ? general.usagePercent : 0,
+            value2: weekly ? weekly.usagePercent : 0,
+            label1: "Daily",
+            label2: "Week",
+            resetTime1: general?.resetTime,
+            resetTime2: weekly?.resetTime
+        };
     }
 }

@@ -1,14 +1,13 @@
 import streamDeck, { action } from "@elgato/streamdeck";
+import { ProviderName, StandardUsageResult } from "@lenadweb/ai-limits";
 import { GeminiSettings } from "../interfaces/settings";
-import { GeminiCliUsageService, type GeminiQuotaResult } from "../services/gemini-cli-usage-service";
-import { ProgressBarRenderer } from "../ui/progress-bar-renderer";
 import { BaseMonitoringAction } from "./base-monitoring-action";
+import { ServiceTheme } from "../interfaces/theme";
 
 @action({ UUID: "com.len.limits.gemini-cli" })
 export class GeminiCliProgressBars extends BaseMonitoringAction<GeminiSettings> {
-    private readonly usageService = GeminiCliUsageService.getInstance();
-    private readonly renderer = new ProgressBarRenderer();
-    private lastQuota: GeminiQuotaResult | null = null;
+    protected readonly providerName = ProviderName.Gemini;
+    protected readonly themeName: ServiceTheme = "gemini-cli";
     private topModel: string = "";
     private bottomModel: string = "";
 
@@ -17,7 +16,6 @@ export class GeminiCliProgressBars extends BaseMonitoringAction<GeminiSettings> 
         if (settings) {
             this.topModel = settings.topModel || "";
             this.bottomModel = settings.bottomModel || "";
-            streamDeck.logger.info(`[Gemini] Settings loaded — top: "${this.topModel}", bottom: "${this.bottomModel}"`);
         }
         await super.onWillAppear(ev);
     }
@@ -27,143 +25,88 @@ export class GeminiCliProgressBars extends BaseMonitoringAction<GeminiSettings> 
         if (settings) {
             this.topModel = settings.topModel || "";
             this.bottomModel = settings.bottomModel || "";
-            streamDeck.logger.info(`[Gemini] Settings updated — top: "${this.topModel}", bottom: "${this.bottomModel}"`);
         }
-        if (this.lastQuota) {
-            await this.draw(ev, this.lastQuota);
-        }
+        await this.redraw(ev);
     }
 
-    protected async refresh(ev: any): Promise<void> {
-        try {
-            streamDeck.logger.info("[Gemini] Refreshing quota...");
-            const quota = await this.usageService.getQuota();
-            this.lastQuota = quota;
-
-            // Persist available models into settings so the PI can read them
-            await this.persistModelsToSettings(ev);
-
-            this.draw(ev, quota);
-        } catch (err) {
-            streamDeck.logger.error(`[Gemini] Refresh failed: ${err}`);
-        }
-    }
-
-    protected async redraw(ev: any): Promise<void> {
-        if (this.lastQuota !== null) {
-            await this.draw(ev, this.lastQuota);
-        }
-    }
-
-    private async persistModelsToSettings(ev: any) {
-        const models = this.usageService.getAvailableModels();
-        try {
-            const currentSettings = (ev.payload?.settings ?? {}) as GeminiSettings;
-            const existingModels = currentSettings.availableModels;
-
-            // Only update if models changed
-            if (JSON.stringify(existingModels) !== JSON.stringify(models)) {
-                await ev.action.setSettings({
-                    ...currentSettings,
-                    topModel: this.topModel,
-                    bottomModel: this.bottomModel,
-                    availableModels: models,
-                });
-                streamDeck.logger.info(`[Gemini] Persisted ${models.length} models to settings: [${models.join(", ")}]`);
-            }
-        } catch (err) {
-            streamDeck.logger.error(`[Gemini] Failed to persist models to settings: ${err}`);
-        }
+    override async refresh(ev: any): Promise<void> {
+        await super.refresh(ev);
+        await this.persistModelsToSettings(ev);
     }
 
     override async onSendToPlugin(ev: any): Promise<void> {
         if (ev.payload?.event === "getModels") {
-            streamDeck.logger.info("[Gemini] PI requested model list");
-            if (!this.lastQuota) {
+            if (!this.lastResult) {
                 try {
-                    const quota = await this.usageService.getQuota();
-                    this.lastQuota = quota;
-                } catch (err) {
-                    streamDeck.logger.error(`[Gemini] Failed to fetch models for PI: ${err}`);
-                }
+                    this.lastResult = await this.fetchProviderUsage(ev);
+                } catch {}
             }
-            const models = this.usageService.getAvailableModels();
+            const models = this.getAvailableModels();
             try {
                 await ev.action.sendToPropertyInspector({
                     event: "modelList",
-                    models,
+                    models
                 });
-                streamDeck.logger.info(`[Gemini] Sent ${models.length} models to PI via sendToPropertyInspector`);
-            } catch (err) {
-                streamDeck.logger.warn(`[Gemini] sendToPropertyInspector failed: ${err}`);
-            }
+            } catch {}
         }
     }
 
-    private getModelData(modelKey: string, quota: GeminiQuotaResult): { usage: number; resetTime: string | null; label: string } {
+    private getAvailableModels(): string[] {
+        if (!this.lastResult || !this.lastResult.perModel) return [];
+        return Object.keys(this.lastResult.perModel);
+    }
+
+    private async persistModelsToSettings(ev: any): Promise<void> {
+        const models = this.getAvailableModels();
+        try {
+            const currentSettings = (ev.payload?.settings ?? {}) as GeminiSettings;
+            if (JSON.stringify(currentSettings.availableModels) !== JSON.stringify(models)) {
+                await ev.action.setSettings({
+                    ...currentSettings,
+                    topModel: this.topModel,
+                    bottomModel: this.bottomModel,
+                    availableModels: models
+                });
+            }
+        } catch {}
+    }
+
+    private getModelData(modelKey: string, result: StandardUsageResult): { usage: number; resetTime: string | null; label: string } {
         if (!modelKey || modelKey === "__overall__") {
             return {
-                usage: quota.overallUsage,
-                resetTime: quota.overallResetTime,
-                label: "Overall",
+                usage: result.overallUsagePercent ?? 0,
+                resetTime: result.overallResetTime,
+                label: "Overall"
             };
         }
 
-        const modelData = quota.perModel.get(modelKey);
-        if (modelData) {
+        const model = result.perModel?.[modelKey];
+        if (model) {
             const shortName = modelKey.replace(/^models\//, "").replace(/^gemini-/, "");
             return {
-                usage: modelData.usage,
-                resetTime: modelData.resetTime ?? null,
-                label: shortName,
+                usage: model.usagePercent,
+                resetTime: model.resetTime ?? null,
+                label: shortName
             };
         }
 
-        streamDeck.logger.warn(`[Gemini] Selected model "${modelKey}" not found in quota, falling back to overall`);
         return {
-            usage: quota.overallUsage,
-            resetTime: quota.overallResetTime,
-            label: "Overall",
+            usage: result.overallUsagePercent ?? 0,
+            resetTime: result.overallResetTime,
+            label: "Overall"
         };
     }
 
-    private async draw(ev: any, quota: GeminiQuotaResult) {
-        if (quota.error) {
-            const svg = this.renderer.renderError(quota.error.message, 'gemini-cli', 144, 144);
-            const image = `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
-            await ev.action.setImage(image);
-
-            const dialSvg = this.renderer.renderError(quota.error.message, 'gemini-cli', 200, 100);
-            await this.updateDialFeedback(ev, dialSvg);
-            return;
-        }
-
-        const top = this.getModelData(this.topModel, quota);
-        const bottom = this.getModelData(this.bottomModel, quota);
-
-        streamDeck.logger.info(`[Gemini] Drawing — top: ${top.label} ${top.usage}%, bottom: ${bottom.label} ${bottom.usage}%`);
-
-        const svg = this.renderer.render(
-            top.usage,
-            bottom.usage,
-            'gemini-cli',
-            top.resetTime,
-            bottom.resetTime,
-            top.label, bottom.label,
-            144, 144
-        );
-        const image = `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
-        await ev.action.setImage(image);
-
-        const dialSvg = this.renderer.render(
-            top.usage,
-            bottom.usage,
-            'gemini-cli',
-            top.resetTime,
-            bottom.resetTime,
-            top.label, bottom.label,
-            200, 100
-        );
-        await this.updateDialFeedback(ev, dialSvg);
+    protected getDisplayData(ev: any, result: StandardUsageResult) {
+        const top = this.getModelData(this.topModel, result);
+        const bottom = this.getModelData(this.bottomModel, result);
+        return {
+            value1: top.usage,
+            value2: bottom.usage,
+            label1: top.label,
+            label2: bottom.label,
+            resetTime1: top.resetTime,
+            resetTime2: bottom.resetTime
+        };
     }
 }
