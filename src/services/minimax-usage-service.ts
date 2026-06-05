@@ -1,28 +1,5 @@
-import streamDeck from "@elgato/streamdeck";
+import { LimitsClient, ProviderName } from "@lenadweb/ai-limits";
 import { MiniMaxSettings } from "../interfaces/settings";
-
-interface MiniMaxModelRemains {
-    start_time: number;
-    end_time: number;
-    remains_time: number;
-    current_interval_total_count: number;
-    current_interval_usage_count: number;
-    model_name: string;
-    current_weekly_total_count: number;
-    current_weekly_usage_count: number;
-    weekly_start_time: number;
-    weekly_end_time: number;
-    weekly_remains_time: number;
-    current_interval_status?: number;
-    current_interval_remaining_percent?: number;
-    current_weekly_status?: number;
-    current_weekly_remaining_percent?: number;
-}
-
-interface MiniMaxApiResponse {
-    model_remains: MiniMaxModelRemains[];
-    base_resp: { status_code: number; status_msg: string };
-}
 
 export interface MiniMaxUsage {
     sessionUsed: number | null;
@@ -33,25 +10,8 @@ export interface MiniMaxUsage {
 }
 
 export class MiniMaxUsageService {
-    private lastFetch: number = 0;
-    private cache: MiniMaxUsage | null = null;
-    private cachedApiKey: string | null = null;
-    private readonly CACHE_TTL_MS = 60000;
-    /** Coding-plan /coding_plan/remains returns model_name = "general" (LLM, MiniMax-M*) and "video". We track the LLM. */
-    private readonly TARGET_MODEL = "general";
-
-    private readApiKey(settings?: MiniMaxSettings): string | null {
-        const apiKey = settings?.apiKey?.trim();
-        if (!apiKey) {
-            streamDeck.logger.warn("[MiniMax] Missing apiKey in action settings");
-            return null;
-        }
-        return apiKey;
-    }
-
     async fetchUsage(settings?: MiniMaxSettings): Promise<MiniMaxUsage | null> {
-        const now = Date.now();
-        const apiKey = this.readApiKey(settings);
+        const apiKey = settings?.apiKey?.trim() || "";
         if (!apiKey) {
             return {
                 sessionUsed: null,
@@ -62,97 +22,33 @@ export class MiniMaxUsageService {
             };
         }
 
-        if (this.cachedApiKey === apiKey && this.cache && (now - this.lastFetch) < this.CACHE_TTL_MS) {
-            streamDeck.logger.info("[MiniMax] Returning cached usage");
-            return this.cache;
-        }
-
-        this.cachedApiKey = apiKey;
-
         try {
-            streamDeck.logger.info("[MiniMax] Fetching usage from MiniMax API...");
-
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 5000);
-
-            const response = await fetch("https://platform.minimax.io/v1/api/openplatform/coding_plan/remains", {
-                method: "GET",
-                headers: {
-                    "Authorization": `Bearer ${apiKey}`,
-                    "Accept": "application/json",
-                },
-                signal: controller.signal,
-            });
-
-            clearTimeout(timeout);
-
-            if (!response.ok) {
-                streamDeck.logger.error(`[MiniMax] API returned status: ${response.status}`);
+            const client = new LimitsClient({ minimax: { apiKey } });
+            const res = await client.fetchUsage(ProviderName.MiniMax);
+            if (res.error) {
                 return {
                     sessionUsed: null,
                     sessionResetsAt: null,
                     weekUsed: null,
                     weekResetsAt: null,
-                    error: {
-                        code: response.status,
-                        message: response.status === 401 ? "Auth Required" : response.status === 429 ? "Rate Limit" : `Error ${response.status}`
-                    }
+                    error: res.error
                 };
             }
-
-            const data = await response.json() as MiniMaxApiResponse;
-            streamDeck.logger.info(`[MiniMax] Raw API response: ${JSON.stringify(data)}`);
-
-            if (data.base_resp.status_code !== 0) {
-                streamDeck.logger.error(`[MiniMax] API error: ${data.base_resp.status_msg}`);
-                return {
-                    sessionUsed: null,
-                    sessionResetsAt: null,
-                    weekUsed: null,
-                    weekResetsAt: null,
-                    error: { code: "API", message: "API Error" }
-                };
-            }
-
-            const model = data.model_remains.find(m => m.model_name === this.TARGET_MODEL);
-            if (!model) {
-                const available = data.model_remains.map(m => m.model_name).join(", ");
-                streamDeck.logger.warn(`[MiniMax] Model ${this.TARGET_MODEL} not found in response (available: ${available || "none"})`);
-                return {
-                    sessionUsed: null,
-                    sessionResetsAt: null,
-                    weekUsed: null,
-                    weekResetsAt: null,
-                    error: { code: "API", message: "Model missing" }
-                };
-            }
-
-            const dailyRemaining = model.current_interval_remaining_percent ?? 100;
-            const weeklyRemaining = model.current_weekly_remaining_percent ?? 100;
-            const sessionPercent = Math.max(0, Math.min(100, Math.round(100 - dailyRemaining)));
-            const weekPercent = Math.max(0, Math.min(100, Math.round(100 - weeklyRemaining)));
-
-            const usage: MiniMaxUsage = {
-                sessionUsed: sessionPercent,
-                sessionResetsAt: Math.floor(model.end_time / 1000),
-                weekUsed: weekPercent,
-                weekResetsAt: Math.floor(model.weekly_end_time / 1000),
+            const general = res.perModel?.["general"];
+            const weekly = res.perModel?.["weekly_interval"];
+            return {
+                sessionUsed: general ? general.usagePercent : null,
+                sessionResetsAt: general && general.resetTime ? Math.floor(new Date(general.resetTime).getTime() / 1000) : null,
+                weekUsed: weekly ? weekly.usagePercent : null,
+                weekResetsAt: weekly && weekly.resetTime ? Math.floor(new Date(weekly.resetTime).getTime() / 1000) : null
             };
-
-            streamDeck.logger.info(`[MiniMax] ${this.TARGET_MODEL} - Daily used: ${sessionPercent}% (remaining ${dailyRemaining}%), Weekly used: ${weekPercent}% (remaining ${weeklyRemaining}%)`);
-
-            this.cache = usage;
-            this.lastFetch = now;
-
-            return usage;
-        } catch (err) {
-            streamDeck.logger.error(`[MiniMax] API fetch error: ${err}`);
+        } catch (err: any) {
             return {
                 sessionUsed: null,
                 sessionResetsAt: null,
                 weekUsed: null,
                 weekResetsAt: null,
-                error: { code: "CONN", message: "Conn Error" }
+                error: { code: "ERROR", message: err.message || String(err) }
             };
         }
     }
