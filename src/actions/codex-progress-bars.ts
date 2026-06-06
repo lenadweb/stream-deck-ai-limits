@@ -13,8 +13,8 @@ export class CodexProgressBars extends BaseMonitoringAction<ProgressBarSettings>
         const primary = result.perModel?.["primary_window"];
         const secondary = result.perModel?.["secondary_window"];
         return {
-            value1: primary ? primary.usagePercent : 0,
-            value2: secondary ? secondary.usagePercent : 0,
+            value1: primary?.usagePercent ?? 0,
+            value2: secondary?.usagePercent ?? 0,
             label1: "Session",
             label2: "Week",
             resetTime1: primary?.resetTime,

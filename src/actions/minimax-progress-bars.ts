@@ -39,8 +39,8 @@ export class MiniMaxProgressBars extends BaseMonitoringAction<MiniMaxSettings> {
         const general = result.perModel?.["general"];
         const weekly = result.perModel?.["weekly_interval"];
         return {
-            value1: general ? general.usagePercent : 0,
-            value2: weekly ? weekly.usagePercent : 0,
+            value1: general?.usagePercent ?? 0,
+            value2: weekly?.usagePercent ?? 0,
             label1: "Daily",
             label2: "Week",
             resetTime1: general?.resetTime,
