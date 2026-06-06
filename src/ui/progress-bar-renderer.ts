@@ -46,8 +46,26 @@ export class ProgressBarRenderer {
             label: '#94A3B8',
             barBg: '#1E293B',
             barFill: '#3B82F6'
+        },
+        openrouter: {
+            primary: '#6467F2',
+            secondary: '#8B8DF6',
+            background: '#0E0E11',
+            text: '#FFFFFF',
+            label: '#9CA0A8',
+            barBg: '#23232B',
+            barFill: '#6467F2'
         }
     };
+
+    private static readonly serviceLabels: Partial<Record<ServiceTheme, string>> = {
+        'gemini-cli': 'Gemini',
+        openrouter: 'OpenRouter'
+    };
+
+    private serviceName(theme: ServiceTheme): string {
+        return ProgressBarRenderer.serviceLabels[theme] ?? theme.charAt(0).toUpperCase() + theme.slice(1);
+    }
 
     render(
         session: number,
@@ -58,7 +76,9 @@ export class ProgressBarRenderer {
         sessionLabel: string = "Session",
         weekLabel: string = "Week",
         width: number = 144,
-        height: number = 144
+        height: number = 144,
+        sessionValueText?: string,
+        weekValueText?: string
     ): string {
         const colors = this.themes[theme];
         const sessionColor = this.getBarColor(session, theme);
@@ -70,7 +90,8 @@ export class ProgressBarRenderer {
             colors, theme,
             sessionResetTime, weekResetTime,
             sessionLabel, weekLabel,
-            width, height
+            width, height,
+            sessionValueText, weekValueText
         );
     }
 
@@ -94,9 +115,11 @@ export class ProgressBarRenderer {
         sessionLabel: string = "Session",
         weekLabel: string = "Week",
         width: number = 144,
-        height: number = 144
+        height: number = 144,
+        sessionValueText?: string,
+        weekValueText?: string
     ): string {
-        const serviceName = theme.charAt(0).toUpperCase() + theme.slice(1);
+        const serviceName = this.serviceName(theme);
         const centerX = width / 2;
 
         if (width === 200 && height === 100) {
@@ -110,11 +133,11 @@ export class ProgressBarRenderer {
             return `
             <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
                 <rect width="${width}" height="${height}" fill="${colors.background}" />
-                
+
                 <text x="${centerX}" y="${titleY}" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="600" fill="${colors.label}" text-anchor="middle">${serviceName}</text>
-                
-                ${this.renderDialBar(rectX, bar1Y, sessionVal, sessionColor, colors, sessionLabel, sessionResetTime, rectWidth)}
-                ${this.renderDialBar(rectX, bar2Y, weekVal, weekColor, colors, weekLabel, weekResetTime, rectWidth)}
+
+                ${this.renderDialBar(rectX, bar1Y, sessionVal, sessionColor, colors, sessionLabel, sessionResetTime, rectWidth, sessionValueText)}
+                ${this.renderDialBar(rectX, bar2Y, weekVal, weekColor, colors, weekLabel, weekResetTime, rectWidth, weekValueText)}
             </svg>
             `;
         }
@@ -128,11 +151,11 @@ export class ProgressBarRenderer {
         return `
         <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
             <rect width="${width}" height="${height}" fill="${colors.background}" />
-            
+
             <text x="${centerX}" y="${textY}" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="${colors.label}" text-anchor="middle">${serviceName}</text>
-            
-            ${this.renderBarGroup(centerX, group1Y, rectX, group1Y + 8, sessionVal, sessionColor, colors, sessionLabel, sessionResetTime, rectWidth)}
-            ${this.renderBarGroup(centerX, group2Y, rectX, group2Y + 8, weekVal, weekColor, colors, weekLabel, weekResetTime, rectWidth)}
+
+            ${this.renderBarGroup(centerX, group1Y, rectX, group1Y + 8, sessionVal, sessionColor, colors, sessionLabel, sessionResetTime, rectWidth, sessionValueText)}
+            ${this.renderBarGroup(centerX, group2Y, rectX, group2Y + 8, weekVal, weekColor, colors, weekLabel, weekResetTime, rectWidth, weekValueText)}
         </svg>
         `;
     }
@@ -171,9 +194,11 @@ export class ProgressBarRenderer {
         colors: ThemeColors,
         label: string,
         resetTime?: string | number | null,
-        barWidth: number = 180
+        barWidth: number = 180,
+        valueText?: string
     ): string {
         const timeText = resetTime ? this.formatResetTime(resetTime) : "";
+        const valueLabel = valueText ?? `${value}%`;
 
         const barHeight = 24;
         const textY = rectY + 16;
@@ -183,11 +208,11 @@ export class ProgressBarRenderer {
         return `
             <rect x="${rectX}" y="${rectY}" width="${barWidth}" height="${barHeight}" fill="${colors.barBg}" rx="4" />
             <rect x="${rectX}" y="${rectY}" width="${value * (barWidth / 100)}" height="${barHeight}" fill="${color}" rx="4" />
-            
+
             <text x="${rectX + 6}" y="${textY}" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600" fill="${colors.text}" text-anchor="start" ${textShadow}>
                 ${label}
                 <tspan fill="#CCC" font-weight="400" font-size="12">
-                 ${value}%
+                 ${valueLabel}
                 </tspan>
             </text>
             <text x="${rectX + barWidth - 6}" y="${textY}" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="500" fill="#DDD" text-anchor="end" ${textShadow}>${timeText}</text>
@@ -204,13 +229,15 @@ export class ProgressBarRenderer {
         colors: ThemeColors,
         label: string,
         resetTime?: string | number | null,
-        barWidth: number = 100
+        barWidth: number = 100,
+        valueText?: string
     ): string {
         const timeText = resetTime ? this.formatResetTime(resetTime) : "";
+        const valueLabel = valueText ?? `${value}%`;
 
         return `
             <text x="${textX}" y="${textY}" font-family="system-ui, -apple-system, sans-serif" text-anchor="middle">
-                <tspan font-size="15" font-weight="600" fill="${colors.text}">${value}%</tspan>
+                <tspan font-size="15" font-weight="600" fill="${colors.text}">${valueLabel}</tspan>
                 <tspan font-size="15" fill="#999">  ${label}</tspan>
             </text>
             <rect x="${rectX}" y="${rectY}" width="${barWidth}" height="20" fill="${colors.barBg}" rx="6" />
@@ -257,7 +284,7 @@ export class ProgressBarRenderer {
         height: number = 144
     ): string {
         const colors = this.themes[theme];
-        const serviceName = theme.charAt(0).toUpperCase() + theme.slice(1);
+        const serviceName = this.serviceName(theme);
         const centerX = width / 2;
 
         if (width === 200 && height === 100) {
