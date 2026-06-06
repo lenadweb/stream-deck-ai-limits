@@ -6,7 +6,7 @@
 
 **See exactly how much of your AI coding quota is left, right on your Stream Deck keys and dials.**
 
-Track usage limits and reset times for **Claude**, **Codex**, **Antigravity**, **Gemini CLI**, and **MiniMax** at a glance, without ever opening a terminal or a billing page.
+Track usage limits and reset times for **Claude**, **Codex**, **Antigravity**, **Gemini CLI**, **MiniMax**, and **OpenRouter** at a glance, without ever opening a terminal or a billing page.
 
 [![Download on Elgato Marketplace](https://img.shields.io/badge/Elgato%20Marketplace-Download-2c2c2e?style=for-the-badge&logo=elgato&logoColor=white)](https://marketplace.elgato.com/product/ai-usage-limits-b78ef6c4-0165-4bf2-8ba8-889f723e915f)
 
@@ -22,10 +22,10 @@ Track usage limits and reset times for **Claude**, **Codex**, **Antigravity**, *
 
 ## Why you'll like it
 
-- **Five providers, one glance:** Claude, Codex, Antigravity, Gemini CLI and MiniMax, each with its own action and brand-matched theme.
+- **Six providers, one glance:** Claude, Codex, Antigravity, Gemini CLI, MiniMax and OpenRouter, each with its own action and brand-matched theme.
 - **Keys *and* dials:** every action renders on standard keys **and** on Stream Deck+ encoders with a full dial layout.
 - **Live progress bars:** color-coded usage (green, amber, red) plus human-friendly reset countdowns like `3h 33m` or `4d 3h`.
-- **Zero key juggling for most providers:** reuses the credentials your existing CLIs already created locally. Only MiniMax needs a key pasted in.
+- **Zero key juggling for most providers:** reuses the credentials your existing CLIs already created locally. Only MiniMax and OpenRouter need a key pasted in.
 - **Always fresh:** usage is polled and cached automatically, so the keys stay current without hammering provider APIs.
 - **Powered by a typed SDK:** all the provider logic lives in the reusable [`@lenadweb/ai-limits`](https://github.com/lenadweb/ai-limits) library.
 
@@ -82,6 +82,7 @@ Each provider is a separate action. All of them work on **Keypad** (keys) and **
 | **Progress Bars (Antigravity)** | Antigravity (Claude + Gemini) usage | `com.len.limits.antigravity` |
 | **Progress Bars (Gemini CLI)** | Gemini CLI quota usage | `com.len.limits.gemini-cli` |
 | **Progress Bars (MiniMax)** | MiniMax M-series coding-plan usage | `com.len.limits.minimax` |
+| **Progress Bars (OpenRouter)** | OpenRouter key spend limit & spend by day/week/month | `com.len.limits.openrouter` |
 
 ---
 
@@ -96,6 +97,7 @@ For most providers the plugin simply reads the credentials your CLI already wrot
 | **Gemini CLI** | Automatic | `~/.gemini/oauth_creds.json` |
 | **Antigravity** | One-time login | Click **Login** in the Property Inspector to start the Google OAuth2 flow; the token is saved to `~/.limits-streamdeck/antigravity_oauth.json` |
 | **MiniMax** | API key | Paste your key into the Property Inspector |
+| **OpenRouter** | API key | Paste a key from [openrouter.ai/keys](https://openrouter.ai/keys); pick what each bar shows (limit / spend by day, week, month, total) |
 
 > **Tip:** Make sure the matching CLI (Claude Code, Codex, Gemini CLI) is installed and logged in first; that is what creates the credential files the plugin reads.
 

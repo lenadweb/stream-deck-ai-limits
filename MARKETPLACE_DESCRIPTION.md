@@ -7,7 +7,7 @@ What it does:
 - Displays usage as dual progress bars on a single key.
 - Shows usage percentages and reset times.
 - Supports automatic periodic refresh plus manual refresh on demand.
-- Includes provider actions for Claude, Codex, Antigravity, Gemini CLI, and MiniMax.
+- Includes provider actions for Claude, Codex, Antigravity, Gemini CLI, MiniMax, and OpenRouter.
 - Works with Stream Deck dials (Encoder): push/touch/rotate can trigger refresh.
 
 How it looks:
@@ -27,6 +27,7 @@ Configuration:
 
 - Gemini CLI: open action settings and choose the models for top and bottom bars (or keep overall view).
 - MiniMax: open action settings and enter your API key.
+- OpenRouter: open action settings, enter your API key, and choose what each bar shows (key limit, or spend by day/week/month/total).
 - Other providers rely on locally available auth/session data from their respective tools/apps.
 
 Usage controls:

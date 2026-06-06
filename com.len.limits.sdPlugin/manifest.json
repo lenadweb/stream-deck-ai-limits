@@ -132,12 +132,38 @@
           "TitleAlignment": "middle"
         }
       ]
+    },
+    {
+      "Name": "Progress Bars (OpenRouter)",
+      "UUID": "com.len.limits.openrouter",
+      "Icon": "imgs/actions/counter/icon",
+      "Tooltip": "Displays OpenRouter key limit and spend.",
+      "PropertyInspectorPath": "ui/openrouter-settings.html",
+      "Controllers": [
+        "Keypad",
+        "Encoder"
+      ],
+      "Encoder": {
+        "layout": "layouts/full-view.json",
+        "StackColor": "#6467F2",
+        "TriggerDescription": {
+          "Rotate": "Refresh",
+          "Touch": "Refresh",
+          "Push": "Refresh"
+        }
+      },
+      "States": [
+        {
+          "Image": "imgs/actions/counter/key",
+          "TitleAlignment": "middle"
+        }
+      ]
     }
   ],
   "Category": "AI Usage Limits",
   "CategoryIcon": "imgs/plugin/category-icon",
   "CodePath": "bin/plugin.js",
-  "Description": "Track AI usage limits and reset times for Claude, Codex, Antigravity, Gemini CLI, and MiniMax.",
+  "Description": "Track AI usage limits and reset times for Claude, Codex, Antigravity, Gemini CLI, MiniMax, and OpenRouter.",
   "Icon": "imgs/plugin/plugin-icon",
   "SDKVersion": 3,
   "Software": {
