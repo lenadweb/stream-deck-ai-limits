@@ -5,7 +5,9 @@ import { dirname, resolve } from "node:path";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const manifestPath = resolve(here, "..", "com.len.limits.sdPlugin", "manifest.json");
+const packagePath = resolve(here, "..", "package.json");
 
+// manifest.json is the single source of truth for the plugin version (Elgato uses a 4-part scheme).
 const raw = readFileSync(manifestPath, "utf-8");
 const manifest = JSON.parse(raw);
 
@@ -23,3 +25,16 @@ const indent = indentMatch ? indentMatch[1].length : 2;
 writeFileSync(manifestPath, JSON.stringify(manifest, null, indent) + "\n");
 
 console.log(`Bumped manifest version: ${parts.join(".")} -> ${next}`);
+
+// Keep package.json in sync with the manifest, dropping the build segment to stay valid semver.
+const pkgRaw = readFileSync(packagePath, "utf-8");
+const pkg = JSON.parse(pkgRaw);
+const semver = `${major}.${minor}.${patch + 1}`;
+const prevPkgVersion = pkg.version;
+pkg.version = semver;
+
+const pkgIndentMatch = pkgRaw.match(/^(\s+)"/m);
+const pkgIndent = pkgIndentMatch ? pkgIndentMatch[1].length : 2;
+writeFileSync(packagePath, JSON.stringify(pkg, null, pkgIndent) + "\n");
+
+console.log(`Synced package.json version: ${prevPkgVersion} -> ${semver}`);

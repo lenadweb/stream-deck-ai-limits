@@ -1,6 +1,6 @@
 {
   "name": "stream-deck-ai-limits",
-  "version": "1.0.0",
+  "version": "0.1.14",
   "description": "Stream Deck plugin to monitor AI agent limits and quotas across multiple providers.",
   "type": "module",
   "scripts": {
