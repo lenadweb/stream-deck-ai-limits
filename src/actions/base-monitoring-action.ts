@@ -149,11 +149,20 @@ export abstract class BaseMonitoringAction<T extends Record<string, any>> extend
     }
 
     protected async drawPlaceholder(ev: any): Promise<void> {
-        const svg = this.renderer.renderPlaceholder(144, 144);
+        const svg = this.renderer.renderPlaceholder(this.themeName, 144, 144);
         const image = `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
         await ev.action.setImage(image);
 
-        const dialSvg = this.renderer.renderPlaceholder(200, 100);
+        const dialSvg = this.renderer.renderPlaceholder(this.themeName, 200, 100);
+        await this.updateDialFeedback(ev, dialSvg);
+    }
+
+    protected async drawMessage(ev: any, lines: string[]): Promise<void> {
+        const svg = this.renderer.renderMessage(lines, this.themeName, 144, 144);
+        const image = `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+        await ev.action.setImage(image);
+
+        const dialSvg = this.renderer.renderMessage(lines, this.themeName, 200, 100);
         await this.updateDialFeedback(ev, dialSvg);
     }
 

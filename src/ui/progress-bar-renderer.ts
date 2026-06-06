@@ -308,17 +308,34 @@ export class ProgressBarRenderer {
         `;
     }
 
-    renderPlaceholder(width: number, height: number): string {
-        const colors = this.themes.antigravity;
+    renderPlaceholder(theme: ServiceTheme = 'claude', width: number, height: number): string {
+        const colors = this.themes[theme];
         const centerX = width / 2;
         const centerY = height / 2;
 
         return `
         <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
             <rect width="${width}" height="${height}" fill="${colors.background}" />
-            
-            <text x="${centerX}" y="${centerY - 10}" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="600" fill="${colors.text}" text-anchor="middle">Open</text>
-            <text x="${centerX}" y="${centerY + 10}" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="600" fill="${colors.text}" text-anchor="middle">Antigravity</text>
+            <text x="${centerX}" y="${centerY + 5}" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="600" fill="${colors.text}" text-anchor="middle" opacity="0.7">Loading...</text>
+        </svg>
+        `;
+    }
+
+    renderMessage(lines: string[], theme: ServiceTheme = 'claude', width: number = 144, height: number = 144): string {
+        const colors = this.themes[theme];
+        const centerX = width / 2;
+        const centerY = height / 2;
+        const lineHeight = 20;
+        const startY = centerY - ((lines.length - 1) * lineHeight) / 2 + 5;
+
+        const texts = lines.map((line, i) =>
+            `<text x="${centerX}" y="${startY + i * lineHeight}" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="600" fill="${colors.text}" text-anchor="middle">${line}</text>`
+        ).join("\n            ");
+
+        return `
+        <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+            <rect width="${width}" height="${height}" fill="${colors.background}" />
+            ${texts}
         </svg>
         `;
     }

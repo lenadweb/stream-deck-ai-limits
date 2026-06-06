@@ -67,7 +67,7 @@ export class AntigravityProgressBars extends BaseMonitoringAction<AntigravitySet
             await this.provider.logout();
             this.lastResult = null;
             await this.sendStatusToPI(ev);
-            await this.drawPlaceholder(ev);
+            await this.drawMessage(ev, ["Open", "Antigravity"]);
             return;
         }
 
