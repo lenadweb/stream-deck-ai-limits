@@ -1,4 +1,4 @@
-export type ServiceTheme = 'claude' | 'codex' | 'antigravity' | 'gemini-cli' | 'minimax';
+export type ServiceTheme = 'claude' | 'codex' | 'antigravity' | 'gemini-cli' | 'minimax' | 'openrouter';
 
 export interface ThemeColors {
     primary: string;

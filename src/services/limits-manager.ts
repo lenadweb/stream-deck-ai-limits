@@ -1,5 +1,5 @@
 import streamDeck from "@elgato/streamdeck";
-import { LimitsClient, ProviderName, AntigravityProvider, GeminiProvider, Logger } from "@lenadweb/ai-limits";
+import { LimitsClient, ProviderName, AntigravityProvider, GeminiProvider, OpenRouterProvider, Logger } from "@lenadweb/ai-limits";
 
 export const streamDeckLogger: Logger = {
     log: (message: string) => streamDeck.logger.info(message),
@@ -29,5 +29,9 @@ export class LimitsManager {
 
     getGeminiProvider(): GeminiProvider {
         return this.client.getProvider<GeminiProvider>(ProviderName.Gemini);
+    }
+
+    getOpenRouterProvider(): OpenRouterProvider {
+        return this.client.getProvider<OpenRouterProvider>(ProviderName.OpenRouter);
     }
 }

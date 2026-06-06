@@ -102,6 +102,8 @@ export abstract class BaseMonitoringAction<T extends Record<string, any>> extend
         label2: string;
         resetTime1?: string | null;
         resetTime2?: string | null;
+        valueText1?: string;
+        valueText2?: string;
     };
 
     protected async draw(ev: any, result: StandardUsageResult): Promise<void> {
@@ -124,7 +126,9 @@ export abstract class BaseMonitoringAction<T extends Record<string, any>> extend
             data.resetTime2,
             data.label1,
             data.label2,
-            144, 144
+            144, 144,
+            data.valueText1,
+            data.valueText2
         );
         const image = `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
         await ev.action.setImage(image);
@@ -137,7 +141,9 @@ export abstract class BaseMonitoringAction<T extends Record<string, any>> extend
             data.resetTime2,
             data.label1,
             data.label2,
-            200, 100
+            200, 100,
+            data.valueText1,
+            data.valueText2
         );
         await this.updateDialFeedback(ev, dialSvg);
     }

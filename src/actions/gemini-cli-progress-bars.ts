@@ -84,7 +84,7 @@ export class GeminiCliProgressBars extends BaseMonitoringAction<GeminiSettings> 
         if (model) {
             const shortName = modelKey.replace(/^models\//, "").replace(/^gemini-/, "");
             return {
-                usage: model.usagePercent,
+                usage: model.usagePercent ?? 0,
                 resetTime: model.resetTime ?? null,
                 label: shortName
             };

@@ -151,7 +151,7 @@ export class AntigravityProgressBars extends BaseMonitoringAction<AntigravitySet
         const model = result.perModel?.[modelKey];
         if (model) {
             return {
-                usage: model.usagePercent,
+                usage: model.usagePercent ?? 0,
                 resetTime: model.resetTime ?? null,
                 label: this.shortLabel(model.displayName || modelKey)
             };

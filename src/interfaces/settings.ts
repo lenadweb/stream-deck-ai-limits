@@ -20,3 +20,12 @@ export interface MiniMaxSettings {
     apiKey?: string;
     [key: string]: any;
 }
+
+export type OpenRouterMetric = "limit" | "daily" | "weekly" | "monthly" | "total";
+
+export interface OpenRouterSettings {
+    apiKey?: string;
+    topMetric?: OpenRouterMetric;
+    bottomMetric?: OpenRouterMetric;
+    [key: string]: any;
+}
