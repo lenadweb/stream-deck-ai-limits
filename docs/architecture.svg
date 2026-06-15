@@ -1,0 +1,97 @@
+<svg width="1040" height="720" viewBox="0 0 1040 720" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <style>
+      .title { font-size: 28px; font-weight: 700; fill: #111827; }
+      .sub { font-size: 15px; fill: #64748b; }
+      .h { font-size: 17px; font-weight: 700; fill: #111827; }
+      .mono { font-size: 13px; font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
+      .desc { font-size: 13px; fill: #475569; }
+      .badge { font-size: 12px; font-weight: 700; letter-spacing: .04em; }
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#94a3b8"/>
+    </marker>
+    <marker id="arrowStart" markerWidth="10" markerHeight="10" refX="0" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M7,0 L0,3 L7,6 Z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1040" height="720" rx="18" fill="#f8fafc"/>
+  <rect x="0.5" y="0.5" width="1039" height="719" rx="18" fill="none" stroke="#e2e8f0"/>
+
+  <text x="520" y="52" text-anchor="middle" class="title">How AI Usage Limits works</text>
+  <text x="520" y="80" text-anchor="middle" class="sub">The Stream Deck plugin renders normalized quota data from provider APIs and local CLI credentials</text>
+
+  <rect x="30" y="112" width="300" height="150" rx="12" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="52" y="140" class="mono" fill="#6366f1">src/actions/*</text>
+  <text x="52" y="166" class="h">Provider actions</text>
+  <text x="52" y="190" class="desc">Claude, Codex, Antigravity, Gemini,</text>
+  <text x="52" y="212" class="desc">MiniMax, and OpenRouter map</text>
+  <text x="52" y="234" class="desc">usage data into display slots.</text>
+
+  <rect x="370" y="112" width="300" height="150" rx="12" fill="#ecfdf5" stroke="#10b981" stroke-width="1.5"/>
+  <text x="392" y="140" class="mono" fill="#059669">BaseMonitoringAction</text>
+  <text x="392" y="166" class="h">Refresh lifecycle</text>
+  <text x="392" y="190" class="desc">Draws cached data immediately,</text>
+  <text x="392" y="212" class="desc">refreshes stale results, and</text>
+  <text x="392" y="234" class="desc">handles loading and error states.</text>
+
+  <rect x="710" y="112" width="300" height="150" rx="12" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="732" y="140" class="mono" fill="#2563eb">ProgressBarRenderer</text>
+  <text x="732" y="166" class="h">Key and dial output</text>
+  <text x="732" y="190" class="desc">Creates themed SVG images and sends</text>
+  <text x="732" y="212" class="desc">them to Stream Deck keys and</text>
+  <text x="732" y="234" class="desc">Stream Deck+ feedback layouts.</text>
+
+  <path d="M330,170 H366" stroke="#94a3b8" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  <path d="M670,170 H706" stroke="#94a3b8" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  <path d="M520,262 V296" stroke="#94a3b8" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+
+  <rect x="150" y="300" width="740" height="96" rx="12" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="172" y="328" class="mono" fill="#d97706">LimitsManager + @lenadweb/ai-limits</text>
+  <text x="172" y="354" class="h">Provider client and normalized usage model</text>
+  <text x="172" y="378" class="desc">One SDK client owns provider setup and returns the same quota shape to every action.</text>
+
+  <path d="M520,396 V426" stroke="#94a3b8" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+
+  <rect x="150" y="430" width="740" height="86" rx="12" fill="#f8fafc" stroke="#64748b" stroke-width="1.5"/>
+  <text x="172" y="458" class="badge" fill="#64748b">DATA SOURCES</text>
+  <text x="172" y="484" class="h">Local credentials and provider APIs</text>
+  <text x="172" y="506" class="desc">CLI auth files, OAuth tokens, and pasted API keys unlock per-provider usage endpoints.</text>
+
+  <path d="M520,516 V546" stroke="#94a3b8" stroke-width="1.5" fill="none"/>
+  <path d="M120,546 H920" stroke="#94a3b8" stroke-width="1.5" fill="none"/>
+  <path d="M120,546 V574" stroke="#94a3b8" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  <path d="M280,546 V574" stroke="#94a3b8" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  <path d="M440,546 V574" stroke="#94a3b8" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  <path d="M600,546 V574" stroke="#94a3b8" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  <path d="M760,546 V574" stroke="#94a3b8" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  <path d="M920,546 V574" stroke="#94a3b8" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+
+  <rect x="30" y="578" width="140" height="78" rx="12" fill="#fff7ed" stroke="#f97316" stroke-width="1.5"/>
+  <text x="100" y="608" text-anchor="middle" class="h">Claude</text>
+  <text x="100" y="632" text-anchor="middle" class="desc">CLI creds</text>
+
+  <rect x="190" y="578" width="140" height="78" rx="12" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="260" y="608" text-anchor="middle" class="h">Codex</text>
+  <text x="260" y="632" text-anchor="middle" class="desc">auth.json</text>
+
+  <rect x="350" y="578" width="140" height="78" rx="12" fill="#faf5ff" stroke="#a855f7" stroke-width="1.5"/>
+  <text x="420" y="608" text-anchor="middle" class="h">Antigravity</text>
+  <text x="420" y="632" text-anchor="middle" class="desc">OAuth token</text>
+
+  <rect x="510" y="578" width="140" height="78" rx="12" fill="#f0fdfa" stroke="#14b8a6" stroke-width="1.5"/>
+  <text x="580" y="608" text-anchor="middle" class="h">Gemini CLI</text>
+  <text x="580" y="632" text-anchor="middle" class="desc">OAuth creds</text>
+
+  <rect x="670" y="578" width="140" height="78" rx="12" fill="#fdf2f8" stroke="#ec4899" stroke-width="1.5"/>
+  <text x="740" y="608" text-anchor="middle" class="h">MiniMax</text>
+  <text x="740" y="632" text-anchor="middle" class="desc">API key</text>
+
+  <rect x="830" y="578" width="180" height="78" rx="12" fill="#f1f5f9" stroke="#64748b" stroke-width="1.5"/>
+  <text x="920" y="608" text-anchor="middle" class="h">OpenRouter</text>
+  <text x="920" y="632" text-anchor="middle" class="desc">API key and spend data</text>
+
+  <rect x="180" y="674" width="680" height="28" rx="14" fill="#e2e8f0"/>
+  <text x="520" y="693" text-anchor="middle" class="desc">Provider results are cached between refreshes so keys stay current without unnecessary API calls.</text>
+</svg>

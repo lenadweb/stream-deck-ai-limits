@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="com.len.limits.sdPlugin/imgs/plugin/marketplace.png" alt="AI Usage Limits" width="200" />
+<img src="generated/provider-assets/claude/base-144.svg" alt="AI Usage Limits" width="200" />
 
 # AI Usage Limits - Stream Deck Plugin
 
@@ -103,18 +103,29 @@ For most providers the plugin simply reads the credentials your CLI already wrot
 
 ---
 
+## How it looks
+
+Each provider renders on both keys and Stream Deck+ dials, with a brand‑matched theme and a rounded usage bar that shows the reset countdown inside it.
+
+<div align="center">
+
+<img src="generated/provider-assets/claude/key@2x.png" alt="Claude" width="120" />&nbsp;<img src="generated/provider-assets/codex/key@2x.png" alt="Codex" width="120" />&nbsp;<img src="generated/provider-assets/antigravity/key@2x.png" alt="Antigravity" width="120" />
+
+<img src="generated/provider-assets/gemini-cli/key@2x.png" alt="Gemini CLI" width="120" />&nbsp;<img src="generated/provider-assets/minimax/key@2x.png" alt="MiniMax" width="120" />&nbsp;<img src="generated/provider-assets/openrouter/key@2x.png" alt="OpenRouter" width="120" />
+
+<img src="generated/provider-assets/claude/dial@2x.png" alt="Claude dial" width="220" />&nbsp;<img src="generated/provider-assets/openrouter/dial@2x.png" alt="OpenRouter dial" width="220" />
+
+**[See the full gallery — keys & dials for every provider →](docs/showcase.md)**
+
+</div>
+
+---
+
 ## How it works
 
-```
-+---------------------+     reads usage     +-----------------------+
-|   Stream Deck key /  |  <----------------  |  @lenadweb/ai-limits   |
-|  dial (this plugin)  |   progress + reset  |  (per-provider SDK)    |
-+---------------------+                     +----------+------------+
-          ^                                            | local creds / API
-          | renders bars + countdown                   v
-    color-coded SVG                         Claude, Codex, Antigravity,
-                                            Gemini CLI, MiniMax
-```
+<p align="center">
+  <img src="docs/architecture.svg" alt="AI Usage Limits architecture: Stream Deck keys and dials render normalized usage data from the plugin, @lenadweb/ai-limits, and provider credentials or APIs" width="100%">
+</p>
 
 The plugin is a thin rendering layer: it asks [`@lenadweb/ai-limits`](https://github.com/lenadweb/ai-limits) for a normalized usage summary per provider, then draws the progress bars and reset countdowns onto the key or dial.
 
