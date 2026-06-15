@@ -10,3 +10,4 @@ com.len.limits.streamDeckPlugin
 tmp/
 .vscode/
 .agents/
+.preview/

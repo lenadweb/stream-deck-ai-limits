@@ -1,60 +1,75 @@
 import { ServiceTheme, ThemeColors } from "../interfaces/theme";
 
+export interface Slot {
+    kind: "gauge" | "stat";
+    label: string;
+    percent?: number;
+    valueText?: string;
+    caption?: string;
+}
+
+export interface RenderOptions {
+    showName?: boolean;
+}
+
+const STATE_DANGER = "#F2564F";
+const STATE_WARN = "#E5A12E";
+
 export class ProgressBarRenderer {
     private themes: Record<ServiceTheme, ThemeColors> = {
         claude: {
-            primary: '#D97757',
+            primary: '#E08763',
             secondary: '#E8956B',
-            background: '#2F2724',
-            text: '#FFFFFF',
-            label: '#9D8B86',
-            barBg: '#4A3D39',
-            barFill: '#D97757'
+            background: '#221C1A',
+            text: '#FBF4F0',
+            label: '#A1908A',
+            barBg: '#352B27',
+            barFill: '#E5825B'
         },
         codex: {
-            primary: '#10B981',
+            primary: '#23C892',
             secondary: '#34D399',
-            background: '#18181B',
-            text: '#FFFFFF',
-            label: '#71717A',
-            barBg: '#27272A',
-            barFill: '#10B981'
+            background: '#101113',
+            text: '#F4F4F5',
+            label: '#75757D',
+            barBg: '#23242A',
+            barFill: '#2BD89A'
         },
         antigravity: {
-            primary: '#8B5CF6',
+            primary: '#9D7BFF',
             secondary: '#A78BFA',
-            background: '#1E1B2E',
-            text: '#FFFFFF',
-            label: '#9CA3AF',
-            barBg: '#2D2B40',
-            barFill: '#8B5CF6'
+            background: '#15121E',
+            text: '#F3EEFF',
+            label: '#928AAC',
+            barBg: '#27223A',
+            barFill: '#9D7BFF'
         },
         'gemini-cli': {
-            primary: '#4285F4',
+            primary: '#5B9BFF',
             secondary: '#8AB4F8',
-            background: '#131314',
-            text: '#E3E3E3',
-            label: '#C4C7C5',
-            barBg: '#444746',
-            barFill: '#4285F4'
+            background: '#0E0F11',
+            text: '#ECEDEF',
+            label: '#8E929A',
+            barBg: '#23272D',
+            barFill: '#5B9BFF'
         },
         minimax: {
-            primary: '#3B82F6',
+            primary: '#4D8BFF',
             secondary: '#60A5FA',
-            background: '#0F172A',
-            text: '#FFFFFF',
-            label: '#94A3B8',
-            barBg: '#1E293B',
-            barFill: '#3B82F6'
+            background: '#0B1120',
+            text: '#F1F5FB',
+            label: '#8492A8',
+            barBg: '#192234',
+            barFill: '#4D8BFF'
         },
         openrouter: {
-            primary: '#6467F2',
+            primary: '#7B7DFF',
             secondary: '#8B8DF6',
-            background: '#0E0E11',
-            text: '#FFFFFF',
-            label: '#9CA0A8',
-            barBg: '#23232B',
-            barFill: '#6467F2'
+            background: '#0B0B0E',
+            text: '#F5F5F8',
+            label: '#8A8D96',
+            barBg: '#1D1D25',
+            barFill: '#8284FF'
         }
     };
 
@@ -62,6 +77,9 @@ export class ProgressBarRenderer {
         'gemini-cli': 'Gemini',
         openrouter: 'OpenRouter'
     };
+
+    private static readonly SANS = "'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif";
+    private static readonly MONO = "'SF Mono', 'JetBrains Mono', 'Roboto Mono', ui-monospace, 'Menlo', monospace";
 
     private serviceName(theme: ServiceTheme): string {
         return ProgressBarRenderer.serviceLabels[theme] ?? theme.charAt(0).toUpperCase() + theme.slice(1);
@@ -78,186 +96,314 @@ export class ProgressBarRenderer {
         width: number = 144,
         height: number = 144,
         sessionValueText?: string,
-        weekValueText?: string
+        weekValueText?: string,
+        opts: RenderOptions = {}
     ): string {
-        const colors = this.themes[theme];
-        const sessionColor = this.getBarColor(session, theme);
-        const weekColor = this.getBarColor(week, theme);
-
-        return this.buildSvg(
-            session, sessionColor,
-            week, weekColor,
-            colors, theme,
-            sessionResetTime, weekResetTime,
-            sessionLabel, weekLabel,
-            width, height,
-            sessionValueText, weekValueText
-        );
+        const slots: Slot[] = [
+            {
+                kind: "gauge",
+                label: sessionLabel,
+                percent: session,
+                valueText: sessionValueText,
+                caption: sessionResetTime != null ? this.formatResetTime(sessionResetTime) : undefined
+            },
+            {
+                kind: "gauge",
+                label: weekLabel,
+                percent: week,
+                valueText: weekValueText,
+                caption: weekResetTime != null ? this.formatResetTime(weekResetTime) : undefined
+            }
+        ];
+        return this.renderSlots(slots, theme, width, height, opts);
     }
 
-    private getBarColor(value: number, theme: ServiceTheme): string {
+    renderSlots(slots: Slot[], theme: ServiceTheme = 'claude', width: number = 144, height: number = 144, opts: RenderOptions = {}): string {
         const colors = this.themes[theme];
-        if (value > 80) return '#EF4444';
-        if (value > 60) return '#F59E0B';
-        if (value === 0) return colors.barBg;
+        const isDial = this.isDial(width, height);
+        const showName = opts.showName !== false;
+        const geo = this.geometry(width, height, isDial, showName);
+
+        const chrome = this.background(width, height, colors) + this.header(this.serviceName(theme), colors, geo, isDial, showName);
+        const modules = slots.slice(0, 2).map((slot, i) =>
+            slot.kind === "stat"
+                ? this.statModule(slot, colors, theme, geo, geo.moduleTop[i], isDial)
+                : this.gaugeModule(slot, colors, theme, geo, geo.moduleTop[i], isDial)
+        ).join("");
+
+        return this.svg(width, height, chrome + modules);
+    }
+
+    private isDial(w: number, h: number): boolean {
+        return w === 200 && h === 100;
+    }
+
+    private geometry(width: number, height: number, isDial: boolean, showName: boolean) {
+        const margin = isDial ? 12 : 15;
+        const nameAxis = 13;
+        const left = isDial && showName ? 26 : margin;
+        const right = width - margin;
+
+        let moduleTop: number[];
+        if (isDial) {
+            moduleTop = [6, 52];
+        } else {
+            moduleTop = showName ? [24, 82] : [14, 72];
+        }
+
+        return {
+            margin,
+            width,
+            height,
+            nameAxis,
+            left,
+            right,
+            innerW: right - left,
+            headerY: 14,
+            labelRow: isDial ? 11 : 13,
+            percentSize: isDial ? 11 : 12.5,
+            labelSize: isDial ? 10.5 : 12,
+            barY: isDial ? 17 : 21,
+            barH: isDial ? 19 : 24,
+            barR: isDial ? 6 : 7,
+            headGap: isDial ? 13 : 17,
+            timeSize: isDial ? 12 : 14,
+            statLabelSize: isDial ? 12 : 11,
+            statValueRow: isDial ? 31 : 37,
+            statValueSize: isDial ? 17 : 23,
+            moduleTop
+        };
+    }
+
+    private svg(width: number, height: number, body: string): string {
+        return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${body}</svg>`;
+    }
+
+    private background(width: number, height: number, colors: ThemeColors): string {
+        return `<rect width="${width}" height="${height}" fill="${colors.background}" />`;
+    }
+
+    private header(name: string, colors: ThemeColors, geo: any, isDial: boolean, showName: boolean): string {
+        if (!showName) return "";
+        const upper = name.toUpperCase();
+        const text = this.escape(upper);
+        if (isDial) {
+            const axisX = geo.nameAxis;
+            const cy = geo.height / 2;
+            const size = this.fitFontSize(upper, 10, 6.5, ProgressBarRenderer.SANS, geo.height - 22, 1.5);
+            const ax = axisX + size * 0.34;
+            return `<text x="${this.round(ax)}" y="${this.round(cy)}" font-family="${ProgressBarRenderer.SANS}" font-size="${size}" font-weight="700" letter-spacing="1.5" fill="${colors.label}" text-anchor="middle" transform="rotate(-90 ${this.round(ax)} ${this.round(cy)})">${text}</text>`;
+        }
+        const fitted = this.fitText(upper, 10, ProgressBarRenderer.SANS, geo.innerW, 700, 2.5);
+        return this.txt((geo.left + geo.right) / 2, geo.headerY, fitted, 10, 700, colors.label, "middle", ProgressBarRenderer.SANS, 2.5);
+    }
+
+    private gaugeModule(slot: Slot, colors: ThemeColors, theme: ServiceTheme, geo: any, top: number, isDial: boolean): string {
+        const pct = this.clampPct(slot.percent ?? 0);
+        const color = this.barColor(pct, theme);
+        const time = slot.caption ? this.escape(slot.caption) : "";
+        const raw = slot.valueText ?? `${pct}%`;
+
+        const weight = 500;
+        const headSize = geo.percentSize;
+        const headGap = geo.headGap;
+        const m = raw.match(/^(\d+)(%)$/);
+        const percentText = m ? `${m[1]}${m[2]}` : raw;
+        const percentW = this.measure(percentText, headSize, ProgressBarRenderer.SANS, weight);
+
+        const labelMax = geo.innerW - percentW - headGap;
+        const label = this.fitText(slot.label, headSize, ProgressBarRenderer.SANS, labelMax, weight);
+
+        const barTop = top + geo.barY;
+        const r = geo.barR;
+        const fw = pct > 0 ? Math.max(geo.barH, (geo.innerW * pct) / 100) : 0;
+        const cx = (geo.left + geo.right) / 2;
+        const timeY = barTop + geo.barH / 2 + geo.timeSize * 0.35;
+        const onFill = color === STATE_WARN ? "#1A1505" : "#FFFFFF";
+
+        const labelW = this.measure(label, headSize, ProgressBarRenderer.SANS, weight);
+        const headRow = top + geo.labelRow;
+        const startX = cx - (percentW + headGap + labelW) / 2;
+
+        let out = "";
+        out += this.txt(startX, headRow, this.escape(percentText), headSize, weight, colors.text, "start", ProgressBarRenderer.SANS);
+        out += this.txt(startX + percentW + headGap, headRow, label, headSize, weight, colors.label, "start", ProgressBarRenderer.SANS);
+        out += `<rect x="${geo.left}" y="${barTop}" width="${this.round(geo.innerW)}" height="${geo.barH}" rx="${r}" fill="${colors.barBg}" />`;
+        if (fw > 0) {
+            out += `<rect x="${geo.left}" y="${barTop}" width="${this.round(fw)}" height="${geo.barH}" rx="${r}" fill="${color}" />`;
+        }
+        if (time) {
+            out += this.txt(cx, timeY, time, geo.timeSize, 500, colors.label, "middle", ProgressBarRenderer.SANS);
+            if (fw > 0) {
+                const clipId = `bar${this.round(barTop)}_${this.round(geo.left)}`;
+                out += `<defs><clipPath id="${clipId}"><rect x="${geo.left}" y="${barTop}" width="${this.round(fw)}" height="${geo.barH}" rx="${r}" /></clipPath></defs>`;
+                out += `<g clip-path="url(#${clipId})">${this.txt(cx, timeY, time, geo.timeSize, 500, onFill, "middle", ProgressBarRenderer.SANS)}</g>`;
+            }
+        }
+        return out;
+    }
+
+    private statModule(slot: Slot, colors: ThemeColors, theme: ServiceTheme, geo: any, top: number, isDial: boolean): string {
+        const value = slot.valueText ?? "—";
+        const cx = (geo.left + geo.right) / 2;
+
+        let out = "";
+        const label = this.fitText(slot.label, geo.statLabelSize, ProgressBarRenderer.SANS, geo.innerW, 600);
+        out += this.txt(cx, top + geo.labelRow, label, geo.statLabelSize, 600, colors.label, "middle", ProgressBarRenderer.SANS);
+        const font = this.fitFontSize(value, geo.statValueSize, 13, ProgressBarRenderer.SANS, geo.innerW);
+        out += this.txt(cx, top + geo.statValueRow, this.escape(value), font, 700, colors.primary, "middle", ProgressBarRenderer.SANS);
+        return out;
+    }
+
+    renderLoader(angle: number, theme: ServiceTheme = 'claude', width: number = 144, height: number = 144, opts: RenderOptions = {}): string {
+        const colors = this.themes[theme];
+        const isDial = this.isDial(width, height);
+        const showName = opts.showName !== false;
+        const geo = this.geometry(width, height, isDial, showName);
+        const cx = (geo.left + geo.right) / 2;
+        const cy = height / 2;
+        const r = isDial ? 17 : 22;
+        const sw = isDial ? 5 : 6;
+        const dash = 2 * Math.PI * r;
+
+        const ring = `<circle cx="${cx}" cy="${cy}" r="${r}" stroke="${colors.barBg}" stroke-width="${sw}" fill="none" />`
+            + `<circle cx="${cx}" cy="${cy}" r="${r}" stroke="${colors.primary}" stroke-width="${sw}" fill="none" stroke-linecap="round" `
+            + `stroke-dasharray="${this.round(dash * 0.28)} ${this.round(dash)}" transform="rotate(${angle} ${cx} ${cy})" />`;
+
+        const body = this.background(width, height, colors)
+            + this.header(this.serviceName(theme), colors, geo, isDial, showName)
+            + ring;
+        return this.svg(width, height, body);
+    }
+
+    renderError(message: string, theme: ServiceTheme = 'claude', width: number = 144, height: number = 144, opts: RenderOptions = {}): string {
+        const colors = this.themes[theme];
+        const isDial = this.isDial(width, height);
+        const showName = opts.showName !== false;
+        const geo = this.geometry(width, height, isDial, showName);
+        const cx = (geo.left + geo.right) / 2;
+        const top = isDial ? 26 : 42;
+
+        const r = 14;
+        const cyIcon = top + r;
+        const icon = `<circle cx="${cx}" cy="${cyIcon}" r="${r}" fill="none" stroke="${STATE_DANGER}" stroke-width="2" />`
+            + `<rect x="${cx - 1}" y="${cyIcon - 7}" width="2" height="8" rx="1" fill="${STATE_DANGER}" />`
+            + `<circle cx="${cx}" cy="${cyIcon + 5}" r="1.4" fill="${STATE_DANGER}" />`;
+
+        const lines = this.wrapText(message, isDial ? 12 : 13, ProgressBarRenderer.SANS, geo.innerW + 4, 2, 600);
+        const startY = cyIcon + r + (isDial ? 16 : 22);
+        const text = lines.map((l, i) => this.txt(cx, startY + i * 16, l, isDial ? 12 : 13, 600, colors.text, "middle", ProgressBarRenderer.SANS)).join("");
+
+        const body = this.background(width, height, colors)
+            + this.header(this.serviceName(theme), colors, geo, isDial, showName)
+            + icon + text;
+        return this.svg(width, height, body);
+    }
+
+    renderPlaceholder(theme: ServiceTheme = 'claude', width: number = 144, height: number = 144, opts: RenderOptions = {}): string {
+        return this.renderLoader(0, theme, width, height, opts);
+    }
+
+    renderMessage(lines: string[], theme: ServiceTheme = 'claude', width: number = 144, height: number = 144, opts: RenderOptions = {}): string {
+        const colors = this.themes[theme];
+        const isDial = this.isDial(width, height);
+        const showName = opts.showName !== false;
+        const geo = this.geometry(width, height, isDial, showName);
+        const cx = (geo.left + geo.right) / 2;
+        const cy = height / 2 + (isDial ? 5 : 8);
+        const lineH = isDial ? 19 : 22;
+        const startY = cy - ((lines.length - 1) * lineH) / 2;
+        const text = lines.map((line, i) =>
+            this.txt(cx, startY + i * lineH, this.escape(line), isDial ? 15 : 16, 700, colors.text, "middle", ProgressBarRenderer.SANS)
+        ).join("");
+        const body = this.background(width, height, colors)
+            + this.header(this.serviceName(theme), colors, geo, isDial, showName)
+            + text;
+        return this.svg(width, height, body);
+    }
+
+    private txt(x: number, y: number, content: string, size: number, weight: number, fill: string, anchor: string, family: string, tracking = 0): string {
+        const ls = tracking ? ` letter-spacing="${tracking}"` : "";
+        return `<text x="${this.round(x)}" y="${this.round(y)}" font-family="${family}" font-size="${size}" font-weight="${weight}" fill="${fill}" text-anchor="${anchor}"${ls}>${content}</text>`;
+    }
+
+    private barColor(value: number, theme: ServiceTheme): string {
+        const colors = this.themes[theme];
+        if (value > 88) return STATE_DANGER;
+        if (value > 70) return STATE_WARN;
         return colors.barFill || colors.primary;
     }
 
-    private buildSvg(
-        sessionVal: number,
-        sessionColor: string,
-        weekVal: number,
-        weekColor: string,
-        colors: ThemeColors,
-        theme: ServiceTheme,
-        sessionResetTime?: string | number | null,
-        weekResetTime?: string | number | null,
-        sessionLabel: string = "Session",
-        weekLabel: string = "Week",
-        width: number = 144,
-        height: number = 144,
-        sessionValueText?: string,
-        weekValueText?: string
-    ): string {
-        const serviceName = this.serviceName(theme);
-        const centerX = width / 2;
+    private clampPct(v: number): number {
+        if (!Number.isFinite(v)) return 0;
+        return Math.max(0, Math.min(100, Math.round(v)));
+    }
 
-        if (width === 200 && height === 100) {
-            const rectWidth = 180;
-            const rectX = centerX - (rectWidth / 2);
+    private factor(family: string, weight: number): number {
+        if (family === ProgressBarRenderer.MONO) return 0.6;
+        if (weight >= 800) return 0.64;
+        if (weight >= 600) return 0.57;
+        return 0.53;
+    }
 
-            const titleY = 20;
-            const bar1Y = 28;
-            const bar2Y = 62;
+    private measure(text: string, size: number, family: string, weight: number): number {
+        return text.length * size * this.factor(family, weight);
+    }
 
-            return `
-            <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-                <rect width="${width}" height="${height}" fill="${colors.background}" />
-
-                <text x="${centerX}" y="${titleY}" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="600" fill="${colors.label}" text-anchor="middle">${serviceName}</text>
-
-                ${this.renderDialBar(rectX, bar1Y, sessionVal, sessionColor, colors, sessionLabel, sessionResetTime, rectWidth, sessionValueText)}
-                ${this.renderDialBar(rectX, bar2Y, weekVal, weekColor, colors, weekLabel, weekResetTime, rectWidth, weekValueText)}
-            </svg>
-            `;
+    private fitText(text: string, size: number, family: string, maxWidth: number, weight = 600, tracking = 0): string {
+        const w = (s: string) => this.measure(s, size, family, weight) + Math.max(0, s.length - 1) * tracking;
+        const clean = text.trim();
+        if (w(clean) <= maxWidth) return this.escape(clean);
+        const ell = "…";
+        let lo = 0, hi = clean.length;
+        while (lo < hi) {
+            const mid = Math.ceil((lo + hi) / 2);
+            if (w(clean.slice(0, mid) + ell) <= maxWidth) lo = mid;
+            else hi = mid - 1;
         }
-
-        let rectWidth = 100;
-        let rectX = centerX - 50;
-        let textY = 18;
-        let group1Y = 44;
-        let group2Y = 100;
-
-        return `
-        <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-            <rect width="${width}" height="${height}" fill="${colors.background}" />
-
-            <text x="${centerX}" y="${textY}" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="${colors.label}" text-anchor="middle">${serviceName}</text>
-
-            ${this.renderBarGroup(centerX, group1Y, rectX, group1Y + 8, sessionVal, sessionColor, colors, sessionLabel, sessionResetTime, rectWidth, sessionValueText)}
-            ${this.renderBarGroup(centerX, group2Y, rectX, group2Y + 8, weekVal, weekColor, colors, weekLabel, weekResetTime, rectWidth, weekValueText)}
-        </svg>
-        `;
+        return this.escape(clean.slice(0, lo).trimEnd() + ell);
     }
 
-    renderLoader(angle: number, theme: ServiceTheme = 'claude', width: number = 144, height: number = 144): string {
-        const colors = this.themes[theme];
-        const cx = width / 2;
-        const cy = height / 2;
-
-        const isDial = width === 200 && height === 100;
-        const radius = isDial ? 20 : 25;
-        const strokeWidth = 5;
-        const spinnerY = isDial ? cy - 8 : cy;
-        const textY = isDial ? cy + 35 : 115;
-
-        // For Dial, we might want a different layout, e.g. text right, spinner left? 
-        // Or just centered. Let's stick to centered but properly positioned.
-
-        return `
-        <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-            <rect width="${width}" height="${height}" fill="${colors.background}" />
-            <text x="${cx}" y="${textY}" font-family="system-ui, -apple-system, sans-serif" font-size="${isDial ? 14 : 16}" fill="${colors.text}" text-anchor="middle" opacity="0.7">Loading...</text>
-            <circle cx="${cx}" cy="${spinnerY}" r="${radius}" stroke="${colors.barBg}" stroke-width="${strokeWidth}" fill="none" />
-            <g transform="rotate(${angle} ${cx} ${spinnerY})">
-                <path d="M${cx} ${spinnerY - radius} A${radius} ${radius} 0 0 1 ${cx + radius} ${spinnerY}" stroke="${colors.primary}" stroke-width="${strokeWidth}" fill="none" stroke-linecap="round" />
-            </g>
-        </svg>
-        `;
+    private fitFontSize(text: string, max: number, min: number, family: string, maxWidth: number, tracking = 0): number {
+        let size = max;
+        const w = (s: number) => this.measure(text, s, family, 700) + Math.max(0, text.length - 1) * tracking;
+        while (size > min && w(size) > maxWidth) size -= 0.5;
+        return Math.round(size * 10) / 10;
     }
 
-    private renderDialBar(
-        rectX: number,
-        rectY: number,
-        value: number,
-        color: string,
-        colors: ThemeColors,
-        label: string,
-        resetTime?: string | number | null,
-        barWidth: number = 180,
-        valueText?: string
-    ): string {
-        const timeText = resetTime ? this.formatResetTime(resetTime) : "";
-        const valueLabel = valueText ?? `${value}%`;
-
-        const barHeight = 24;
-        const textY = rectY + 16;
-
-        const textShadow = `style="text-shadow: 0px 1px 2px rgba(0,0,0,0.8)"`;
-
-        return `
-            <rect x="${rectX}" y="${rectY}" width="${barWidth}" height="${barHeight}" fill="${colors.barBg}" rx="4" />
-            <rect x="${rectX}" y="${rectY}" width="${value * (barWidth / 100)}" height="${barHeight}" fill="${color}" rx="4" />
-
-            <text x="${rectX + 6}" y="${textY}" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600" fill="${colors.text}" text-anchor="start" ${textShadow}>
-                ${label}
-                <tspan fill="#CCC" font-weight="400" font-size="12">
-                 ${valueLabel}
-                </tspan>
-            </text>
-            <text x="${rectX + barWidth - 6}" y="${textY}" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="500" fill="#DDD" text-anchor="end" ${textShadow}>${timeText}</text>
-        `;
+    private wrapText(text: string, size: number, family: string, maxWidth: number, maxLines: number, weight = 600): string[] {
+        const words = text.trim().split(/\s+/);
+        const lines: string[] = [];
+        let line = "";
+        for (const w of words) {
+            const next = line ? `${line} ${w}` : w;
+            if (this.measure(next, size, family, weight) <= maxWidth || !line) {
+                line = next;
+            } else {
+                lines.push(line);
+                line = w;
+                if (lines.length === maxLines - 1) break;
+            }
+        }
+        if (line && lines.length < maxLines) lines.push(line);
+        const last = lines.length - 1;
+        if (last >= 0 && this.measure(lines[last], size, family, weight) > maxWidth) {
+            return lines.slice(0, last).map((l) => this.escape(l)).concat(this.fitText(lines[last], size, family, maxWidth, weight));
+        }
+        return lines.map((l) => this.escape(l));
     }
 
-    private renderBarGroup(
-        textX: number,
-        textY: number,
-        rectX: number,
-        rectY: number,
-        value: number,
-        color: string,
-        colors: ThemeColors,
-        label: string,
-        resetTime?: string | number | null,
-        barWidth: number = 100,
-        valueText?: string
-    ): string {
-        const timeText = resetTime ? this.formatResetTime(resetTime) : "";
-        const valueLabel = valueText ?? `${value}%`;
+    private round(n: number): number {
+        return Math.round(n * 100) / 100;
+    }
 
-        return `
-            <text x="${textX}" y="${textY}" font-family="system-ui, -apple-system, sans-serif" text-anchor="middle">
-                <tspan font-size="15" font-weight="600" fill="${colors.text}">${valueLabel}</tspan>
-                <tspan font-size="15" fill="#999">  ${label}</tspan>
-            </text>
-            <rect x="${rectX}" y="${rectY}" width="${barWidth}" height="20" fill="${colors.barBg}" rx="6" />
-            <rect x="${rectX}" y="${rectY}" width="${value * (barWidth / 100)}" height="20" fill="${color}" rx="6" />
-            ${timeText ? `<text x="${textX}" y="${rectY + 17}" font-family="system-ui, -apple-system, sans-serif" font-size="15" font-weight="500" fill="#AAA" text-anchor="middle">${timeText}</text>` : ''}
-        `;
+    private escape(s: string): string {
+        return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
     }
 
     private formatResetTime(resetTime: string | number): string {
-        let resetDate: Date;
-
-        if (typeof resetTime === 'number') {
-            resetDate = new Date(resetTime * 1000);
-        } else {
-            resetDate = new Date(resetTime);
-        }
-
-        const now = new Date();
-        const diffMs = resetDate.getTime() - now.getTime();
-
+        const resetDate = typeof resetTime === 'number' ? new Date(resetTime * 1000) : new Date(resetTime);
+        const diffMs = resetDate.getTime() - Date.now();
         if (diffMs <= 0) return "now";
 
         const diffMinutes = Math.floor(diffMs / 60000);
@@ -268,75 +414,10 @@ export class ProgressBarRenderer {
             const hours = diffHours % 24;
             return hours > 0 ? `${diffDays}d ${hours}h` : `${diffDays}d`;
         }
-
         if (diffHours > 0) {
             const minutes = diffMinutes % 60;
             return minutes > 0 ? `${diffHours}h ${minutes}m` : `${diffHours}h`;
         }
-
         return `${diffMinutes}m`;
-    }
-
-    renderError(
-        message: string,
-        theme: ServiceTheme = 'claude',
-        width: number = 144,
-        height: number = 144
-    ): string {
-        const colors = this.themes[theme];
-        const serviceName = this.serviceName(theme);
-        const centerX = width / 2;
-
-        if (width === 200 && height === 100) {
-            return `
-            <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-                <rect width="${width}" height="${height}" fill="${colors.background}" />
-                <text x="${centerX}" y="30" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="600" fill="${colors.label}" text-anchor="middle">${serviceName}</text>
-                <rect x="10" y="42" width="180" height="36" fill="${colors.barBg}" rx="4" />
-                <text x="${centerX}" y="64" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600" fill="#EF4444" text-anchor="middle">${message}</text>
-            </svg>
-            `;
-        }
-
-        return `
-        <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-            <rect width="${width}" height="${height}" fill="${colors.background}" />
-            <text x="${centerX}" y="24" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="${colors.label}" text-anchor="middle">${serviceName}</text>
-            <text x="${centerX}" y="68" font-family="system-ui, -apple-system, sans-serif" font-size="15" font-weight="700" fill="#EF4444" text-anchor="middle">ERROR</text>
-            <text x="${centerX}" y="94" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="${colors.text}" text-anchor="middle">${message}</text>
-        </svg>
-        `;
-    }
-
-    renderPlaceholder(theme: ServiceTheme = 'claude', width: number, height: number): string {
-        const colors = this.themes[theme];
-        const centerX = width / 2;
-        const centerY = height / 2;
-
-        return `
-        <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-            <rect width="${width}" height="${height}" fill="${colors.background}" />
-            <text x="${centerX}" y="${centerY + 5}" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="600" fill="${colors.text}" text-anchor="middle" opacity="0.7">Loading...</text>
-        </svg>
-        `;
-    }
-
-    renderMessage(lines: string[], theme: ServiceTheme = 'claude', width: number = 144, height: number = 144): string {
-        const colors = this.themes[theme];
-        const centerX = width / 2;
-        const centerY = height / 2;
-        const lineHeight = 20;
-        const startY = centerY - ((lines.length - 1) * lineHeight) / 2 + 5;
-
-        const texts = lines.map((line, i) =>
-            `<text x="${centerX}" y="${startY + i * lineHeight}" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="600" fill="${colors.text}" text-anchor="middle">${line}</text>`
-        ).join("\n            ");
-
-        return `
-        <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-            <rect width="${width}" height="${height}" fill="${colors.background}" />
-            ${texts}
-        </svg>
-        `;
     }
 }

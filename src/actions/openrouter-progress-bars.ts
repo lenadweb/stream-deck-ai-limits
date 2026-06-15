@@ -3,14 +3,8 @@ import { LimitsClient, ProviderName, StandardUsageResult, OpenRouterProvider, Op
 import { OpenRouterMetric, OpenRouterSettings } from "../interfaces/settings";
 import { BaseMonitoringAction } from "./base-monitoring-action";
 import { ServiceTheme } from "../interfaces/theme";
+import { Slot } from "../ui/progress-bar-renderer";
 import { streamDeckLogger } from "../services/limits-manager";
-
-interface Bar {
-    value: number;
-    valueText: string;
-    label: string;
-    resetTime?: string | null;
-}
 
 const METRIC_LABELS: Record<OpenRouterMetric, string> = {
     limit: "Limit",
@@ -80,52 +74,67 @@ export class OpenRouterProgressBars extends BaseMonitoringAction<OpenRouterSetti
     }
 
     protected getDisplayData(ev: any, result: StandardUsageResult) {
-        const top = this.metricBar(this.topMetric);
-        const bottom = this.metricBar(this.bottomMetric);
+        const slots = [this.metricSlot(this.topMetric), this.metricSlot(this.bottomMetric)];
         return {
-            value1: top.value,
-            value2: bottom.value,
-            label1: top.label,
-            label2: bottom.label,
-            resetTime1: top.resetTime,
-            resetTime2: bottom.resetTime,
-            valueText1: top.valueText,
-            valueText2: bottom.valueText
+            value1: slots[0].percent ?? 0,
+            value2: slots[1].percent ?? 0,
+            label1: slots[0].label,
+            label2: slots[1].label,
+            slots
         };
     }
 
-    private metricBar(metric: OpenRouterMetric): Bar {
+    private metricSlot(metric: OpenRouterMetric): Slot {
         const label = METRIC_LABELS[metric];
         const d = this.details;
 
         if (metric === "limit") {
             if (d?.limit) {
                 return {
-                    value: d.limit.usagePercent,
-                    valueText: `${d.limit.usagePercent}%`,
+                    kind: "gauge",
                     label,
-                    resetTime: d.limit.resetTime
+                    percent: d.limit.usagePercent,
+                    valueText: `${d.limit.usagePercent}%`,
+                    caption: d.limit.resetTime ? formatResetTime(d.limit.resetTime) : undefined
                 };
             }
-            return { value: 0, valueText: "∞", label, resetTime: null };
+            return { kind: "stat", label: "Limit", valueText: "∞", caption: "no limit" };
         }
 
-        const window = metric === "total" ? null : metric;
         const amount = d ? d.spend[metric] : null;
-        // The bar only fills proportionally when the key's limit shares this window;
-        // otherwise the dollar amount is the meaningful value and the bar stays flat.
-        const matchesLimit = !!window && !!d?.limit && d.limit.interval === window;
+        const valueText = amount == null ? "—" : `$${formatSpend(amount)}`;
+
         return {
-            value: matchesLimit ? d!.limit!.usagePercent : 0,
-            valueText: amount == null ? "—" : `$${formatSpend(amount)}`,
+            kind: "stat",
             label,
-            resetTime: matchesLimit ? d!.limit!.resetTime : null
+            valueText,
+            caption: metric === "total" ? "All Time" : "spent"
         };
     }
 }
 
+function formatResetTime(resetTime: string): string {
+    const diffMs = new Date(resetTime).getTime() - Date.now();
+    if (!Number.isFinite(diffMs) || diffMs <= 0) return "now";
+    const minutes = Math.floor(diffMs / 60000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    if (days > 0) return hours % 24 > 0 ? `${days}d ${hours % 24}h` : `${days}d`;
+    if (hours > 0) return minutes % 60 > 0 ? `${hours}h ${minutes % 60}m` : `${hours}h`;
+    return `${minutes}m`;
+}
+
 function formatSpend(value: number): string {
     if (value === 0) return "0";
+    if (value >= 1_000_000) return `${trim(value / 1_000_000)}M`;
+    if (value >= 10_000) return `${trim(value / 1_000)}k`;
     const fixed = value < 1 ? value.toFixed(4) : value.toFixed(2);
-    return fixed.replace(/\.?0+$/, "");
+    const trimmed = fixed.replace(/\.?0+$/, "");
+    const [int, dec] = trimmed.split(".");
+    const grouped = int.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return dec ? `${grouped}.${dec}` : grouped;
+}
+
+function trim(value: number): string {
+    return value.toFixed(1).replace(/\.0$/, "");
 }
