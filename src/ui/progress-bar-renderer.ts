@@ -169,7 +169,6 @@ export class ProgressBarRenderer {
             headGap: isDial ? 9 : 12,
             timeSize: isDial ? 12 : 14,
             statLabelSize: isDial ? 12 : 11,
-            statInlineRow: isDial ? 30 : 30,
             statValueRow: isDial ? 31 : 37,
             statValueSize: isDial ? 17 : 23,
             moduleTop
@@ -246,22 +245,13 @@ export class ProgressBarRenderer {
 
     private statModule(slot: Slot, colors: ThemeColors, theme: ServiceTheme, geo: any, top: number, isDial: boolean): string {
         const value = slot.valueText ?? "—";
+        const cx = (geo.left + geo.right) / 2;
 
         let out = "";
-        if (isDial) {
-            const baseY = top + geo.statInlineRow;
-            const labelW = this.measure(slot.label, geo.statLabelSize, ProgressBarRenderer.SANS, 600);
-            const valueX = geo.left + labelW + 10;
-            const font = this.fitFontSize(value, geo.statValueSize, 12, ProgressBarRenderer.SANS, geo.right - valueX);
-            out += this.txt(geo.left, baseY, this.escape(slot.label), geo.statLabelSize, 600, colors.label, "start", ProgressBarRenderer.SANS);
-            out += this.txt(valueX, baseY, this.escape(value), font, 700, colors.primary, "start", ProgressBarRenderer.SANS);
-        } else {
-            const cx = (geo.left + geo.right) / 2;
-            const label = this.fitText(slot.label, geo.statLabelSize, ProgressBarRenderer.SANS, geo.innerW, 600);
-            out += this.txt(cx, top + geo.labelRow, label, geo.statLabelSize, 600, colors.label, "middle", ProgressBarRenderer.SANS);
-            const font = this.fitFontSize(value, geo.statValueSize, 13, ProgressBarRenderer.SANS, geo.innerW);
-            out += this.txt(cx, top + geo.statValueRow, this.escape(value), font, 700, colors.primary, "middle", ProgressBarRenderer.SANS);
-        }
+        const label = this.fitText(slot.label, geo.statLabelSize, ProgressBarRenderer.SANS, geo.innerW, 600);
+        out += this.txt(cx, top + geo.labelRow, label, geo.statLabelSize, 600, colors.label, "middle", ProgressBarRenderer.SANS);
+        const font = this.fitFontSize(value, geo.statValueSize, 13, ProgressBarRenderer.SANS, geo.innerW);
+        out += this.txt(cx, top + geo.statValueRow, this.escape(value), font, 700, colors.primary, "middle", ProgressBarRenderer.SANS);
         return out;
     }
 
