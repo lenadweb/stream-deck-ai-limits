@@ -39,6 +39,10 @@ export abstract class BaseMonitoringAction<T extends Record<string, any>> extend
         await this.refresh(ev);
     }
 
+    override async onDidReceiveSettings(ev: any): Promise<void> {
+        await this.redraw(ev);
+    }
+
     override async onDialUp(ev: any): Promise<void> {
         await this.refresh(ev);
     }
