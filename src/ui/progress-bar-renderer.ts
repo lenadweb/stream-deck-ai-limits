@@ -148,7 +148,7 @@ export class ProgressBarRenderer {
         if (isDial) {
             moduleTop = [6, 52];
         } else {
-            moduleTop = showName ? [30, 86] : [22, 80];
+            moduleTop = showName ? [24, 82] : [22, 80];
         }
 
         return {
@@ -159,7 +159,7 @@ export class ProgressBarRenderer {
             left,
             right,
             innerW: right - left,
-            headerY: 16,
+            headerY: 14,
             labelRow: isDial ? 11 : 13,
             percentSize: isDial ? 11 : 12.5,
             labelSize: isDial ? 10.5 : 12,
