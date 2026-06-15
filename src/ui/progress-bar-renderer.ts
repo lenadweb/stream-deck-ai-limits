@@ -166,7 +166,7 @@ export class ProgressBarRenderer {
             barY: isDial ? 17 : 21,
             barH: isDial ? 19 : 24,
             barR: isDial ? 6 : 7,
-            headGap: isDial ? 9 : 12,
+            headGap: isDial ? 13 : 17,
             timeSize: isDial ? 12 : 14,
             statLabelSize: isDial ? 12 : 11,
             statValueRow: isDial ? 31 : 37,
