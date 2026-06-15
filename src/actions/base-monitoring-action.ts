@@ -1,6 +1,6 @@
 import streamDeck, { SingletonAction, KeyDownEvent, WillAppearEvent, WillDisappearEvent } from "@elgato/streamdeck";
 import { ProviderName, StandardUsageResult } from "@lenadweb/ai-limits";
-import { ProgressBarRenderer } from "../ui/progress-bar-renderer";
+import { ProgressBarRenderer, Slot, RenderOptions } from "../ui/progress-bar-renderer";
 import { ServiceTheme } from "../interfaces/theme";
 import { LimitsManager } from "../services/limits-manager";
 
@@ -104,65 +104,68 @@ export abstract class BaseMonitoringAction<T extends Record<string, any>> extend
         resetTime2?: string | null;
         valueText1?: string;
         valueText2?: string;
+        slots?: Slot[];
     };
 
+    protected renderOptions(ev: any): RenderOptions {
+        return { showName: ev?.payload?.settings?.showProviderName !== false };
+    }
+
     protected async draw(ev: any, result: StandardUsageResult): Promise<void> {
+        const opts = this.renderOptions(ev);
         if (result.error) {
-            const svg = this.renderer.renderError(result.error.message, this.themeName, 144, 144);
+            const svg = this.renderer.renderError(result.error.message, this.themeName, 144, 144, opts);
             const image = `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
             await ev.action.setImage(image);
 
-            const dialSvg = this.renderer.renderError(result.error.message, this.themeName, 200, 100);
+            const dialSvg = this.renderer.renderError(result.error.message, this.themeName, 200, 100, opts);
             await this.updateDialFeedback(ev, dialSvg);
             return;
         }
 
         const data = this.getDisplayData(ev, result);
-        const svg = this.renderer.render(
-            data.value1,
-            data.value2,
-            this.themeName,
-            data.resetTime1,
-            data.resetTime2,
-            data.label1,
-            data.label2,
-            144, 144,
-            data.valueText1,
-            data.valueText2
-        );
+        const renderAt = (w: number, h: number) =>
+            data.slots
+                ? this.renderer.renderSlots(data.slots, this.themeName, w, h, opts)
+                : this.renderer.render(
+                    data.value1,
+                    data.value2,
+                    this.themeName,
+                    data.resetTime1,
+                    data.resetTime2,
+                    data.label1,
+                    data.label2,
+                    w, h,
+                    data.valueText1,
+                    data.valueText2,
+                    opts
+                );
+
+        const svg = renderAt(144, 144);
         const image = `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
         await ev.action.setImage(image);
 
-        const dialSvg = this.renderer.render(
-            data.value1,
-            data.value2,
-            this.themeName,
-            data.resetTime1,
-            data.resetTime2,
-            data.label1,
-            data.label2,
-            200, 100,
-            data.valueText1,
-            data.valueText2
-        );
+        const dialSvg = renderAt(200, 100);
         await this.updateDialFeedback(ev, dialSvg);
     }
 
     protected async drawPlaceholder(ev: any): Promise<void> {
-        const svg = this.renderer.renderPlaceholder(this.themeName, 144, 144);
+        const opts = this.renderOptions(ev);
+        const svg = this.renderer.renderPlaceholder(this.themeName, 144, 144, opts);
         const image = `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
         await ev.action.setImage(image);
 
-        const dialSvg = this.renderer.renderPlaceholder(this.themeName, 200, 100);
+        const dialSvg = this.renderer.renderPlaceholder(this.themeName, 200, 100, opts);
         await this.updateDialFeedback(ev, dialSvg);
     }
 
     protected async drawMessage(ev: any, lines: string[]): Promise<void> {
-        const svg = this.renderer.renderMessage(lines, this.themeName, 144, 144);
+        const opts = this.renderOptions(ev);
+        const svg = this.renderer.renderMessage(lines, this.themeName, 144, 144, opts);
         const image = `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
         await ev.action.setImage(image);
 
-        const dialSvg = this.renderer.renderMessage(lines, this.themeName, 200, 100);
+        const dialSvg = this.renderer.renderMessage(lines, this.themeName, 200, 100, opts);
         await this.updateDialFeedback(ev, dialSvg);
     }
 
