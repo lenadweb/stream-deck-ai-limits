@@ -54,13 +54,13 @@ export class ProgressBarRenderer {
             barFill: '#5B9BFF'
         },
         minimax: {
-            primary: '#4D8BFF',
-            secondary: '#60A5FA',
-            background: '#0B1120',
-            text: '#F1F5FB',
-            label: '#8492A8',
-            barBg: '#192234',
-            barFill: '#4D8BFF'
+            primary: '#F8068D',
+            secondary: '#FF54B0',
+            background: '#18090F',
+            text: '#FDEBF4',
+            label: '#A57E92',
+            barBg: '#2E1320',
+            barFill: '#FF1F99'
         },
         openrouter: {
             primary: '#7B7DFF',
