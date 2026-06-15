@@ -61,6 +61,17 @@ for (const [name, slots] of Object.entries(providers)) {
 
     render(dl, path.join(dir, 'dial.png'), 200, 100);
     render(dl, path.join(dir, 'dial@2x.png'), 400, 200);
+
+    const noName = { showName: false };
+    const sqN = path.join(dir, 'base-144-noname.svg');
+    const dlN = path.join(dir, 'base-dial-200x100-noname.svg');
+    fs.writeFileSync(sqN, renderer.renderSlots(slots, name, 144, 144, noName));
+    fs.writeFileSync(dlN, renderer.renderSlots(slots, name, 200, 100, noName));
+
+    render(sqN, path.join(dir, 'key-noname.png'), 72, 72);
+    render(sqN, path.join(dir, 'key-noname@2x.png'), 144, 144);
+    render(dlN, path.join(dir, 'dial-noname.png'), 200, 100);
+    render(dlN, path.join(dir, 'dial-noname@2x.png'), 400, 200);
 }
 
 fs.rmSync(distDir, { recursive: true, force: true });
