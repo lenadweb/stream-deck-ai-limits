@@ -23,12 +23,29 @@
         .link:hover {
             color: #357ae8;
         }
+        .checkbox {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: #ddd;
+            cursor: pointer;
+        }
+        .checkbox input {
+            width: 14px;
+            height: 14px;
+            cursor: pointer;
+        }
     </style>
 </head>
 
 <body>
     <sdpi-item label="API Key">
         <sdpi-textfield id="apiKey" type="password" placeholder="MiniMax API key"></sdpi-textfield>
+    </sdpi-item>
+
+    <sdpi-item label="Provider name">
+        <label class="checkbox"><input id="showProviderName" type="checkbox" /> Show on key</label>
     </sdpi-item>
 
     <div class="hint">This value is stored in the action settings and used for MiniMax API requests.</div>
@@ -66,11 +83,13 @@
         function applySettings() {
             const apiKey = document.getElementById("apiKey");
             apiKey.value = _settings.apiKey || "";
+            document.getElementById("showProviderName").checked = _settings.showProviderName !== false;
         }
 
         function saveSettings() {
             const apiKey = document.getElementById("apiKey");
             _settings.apiKey = apiKey.value || "";
+            _settings.showProviderName = document.getElementById("showProviderName").checked;
 
             if (_websocket && _uuid) {
                 _websocket.send(JSON.stringify({
@@ -95,6 +114,7 @@
         document.addEventListener("DOMContentLoaded", function () {
             const apiKey = document.getElementById("apiKey");
             apiKey.addEventListener("input", saveSettings);
+            document.getElementById("showProviderName").addEventListener("change", saveSettings);
             applySettings();
         });
     </script>

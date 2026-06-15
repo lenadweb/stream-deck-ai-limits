@@ -31,6 +31,19 @@
         .link:hover {
             color: #8B8DF6;
         }
+        .checkbox {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: #ddd;
+            cursor: pointer;
+        }
+        .checkbox input {
+            width: 14px;
+            height: 14px;
+            cursor: pointer;
+        }
     </style>
 </head>
 
@@ -57,6 +70,10 @@
             <option value="monthly">Spend This Month ($)</option>
             <option value="total">Spend All-Time ($)</option>
         </select>
+    </sdpi-item>
+
+    <sdpi-item label="Provider name">
+        <label class="checkbox"><input id="showProviderName" type="checkbox" /> Show on key</label>
     </sdpi-item>
 
     <div class="hint">Create a key at openrouter.ai/keys. The key limit bar fills when the key has a spend limit; spend bars show the dollar amount.</div>
@@ -95,12 +112,14 @@
             document.getElementById("apiKey").value = _settings.apiKey || "";
             document.getElementById("topMetric").value = _settings.topMetric || "limit";
             document.getElementById("bottomMetric").value = _settings.bottomMetric || "monthly";
+            document.getElementById("showProviderName").checked = _settings.showProviderName !== false;
         }
 
         function saveSettings() {
             _settings.apiKey = document.getElementById("apiKey").value || "";
             _settings.topMetric = document.getElementById("topMetric").value || "limit";
             _settings.bottomMetric = document.getElementById("bottomMetric").value || "monthly";
+            _settings.showProviderName = document.getElementById("showProviderName").checked;
 
             if (_websocket && _uuid) {
                 _websocket.send(JSON.stringify({
@@ -126,6 +145,7 @@
             document.getElementById("apiKey").addEventListener("input", saveSettings);
             document.getElementById("topMetric").addEventListener("change", saveSettings);
             document.getElementById("bottomMetric").addEventListener("change", saveSettings);
+            document.getElementById("showProviderName").addEventListener("change", saveSettings);
             applySettings();
         });
     </script>
