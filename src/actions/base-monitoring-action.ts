@@ -3,12 +3,13 @@ import { ProviderName, StandardUsageResult } from "@lenadweb/ai-limits";
 import { ProgressBarRenderer, Slot, RenderOptions } from "../ui/progress-bar-renderer";
 import { ServiceTheme } from "../interfaces/theme";
 import { LimitsManager } from "../services/limits-manager";
+import type { MonitoringResult } from "../interfaces/codexbar";
 
-export abstract class BaseMonitoringAction<T extends Record<string, any>> extends SingletonAction<T> {
+export abstract class BaseMonitoringAction<T extends Record<string, any>, TResult extends MonitoringResult = StandardUsageResult> extends SingletonAction<T> {
     protected controllers = new Map<string, string>();
     protected intervalId: NodeJS.Timeout | null = null;
     protected isMonitoring = false;
-    protected lastResult: StandardUsageResult | null = null;
+    protected lastResult: TResult | null = null;
     protected lastFetchTime = 0;
     protected readonly monitoringIntervalMs = 900000;
     protected readonly renderer = new ProgressBarRenderer();
@@ -95,11 +96,14 @@ export abstract class BaseMonitoringAction<T extends Record<string, any>> extend
         }
     }
 
-    protected async fetchProviderUsage(ev: any): Promise<StandardUsageResult> {
-        return this.limitsManager.getClient().fetchUsage(this.providerName);
+    protected async fetchProviderUsage(ev: any): Promise<TResult> {
+        // Default implementation returns the real StandardUsageResult; cast is
+        // sound because TResult defaults to StandardUsageResult, and concrete
+        // subclasses that return a different TResult override this method.
+        return this.limitsManager.getClient().fetchUsage(this.providerName) as Promise<TResult>;
     }
 
-    protected abstract getDisplayData(ev: any, result: StandardUsageResult): {
+    protected abstract getDisplayData(ev: any, result: TResult): {
         value1: number;
         value2: number;
         label1: string;
@@ -115,7 +119,7 @@ export abstract class BaseMonitoringAction<T extends Record<string, any>> extend
         return { showName: ev?.payload?.settings?.showProviderName !== false };
     }
 
-    protected async draw(ev: any, result: StandardUsageResult): Promise<void> {
+    protected async draw(ev: any, result: TResult): Promise<void> {
         const opts = this.renderOptions(ev);
         if (result.error) {
             const svg = this.renderer.renderError(result.error.message, this.themeName, 144, 144, opts);
