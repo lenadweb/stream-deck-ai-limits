@@ -1,3 +1,5 @@
+import type { StandardUsageResult } from "@lenadweb/ai-limits";
+
 // Mirrors CodexBar serve JSON (CodexBarCore Codable field names).
 // All fields optional/nullable for resilience — providers are heterogeneous.
 
@@ -49,6 +51,4 @@ export interface CodexBarGenericSettings {
 // Uses the real StandardUsageResult from @lenadweb/ai-limits (so the existing
 // 6 subclasses — which produce StandardUsageResult — satisfy the constraint
 // with no edits), alongside the CodexBar backend result.
-import type { StandardUsageResult } from "@lenadweb/ai-limits";
-
 export type MonitoringResult = StandardUsageResult | CodexBarResult;

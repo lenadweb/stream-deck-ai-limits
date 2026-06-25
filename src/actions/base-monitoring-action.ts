@@ -96,11 +96,25 @@ export abstract class BaseMonitoringAction<T extends Record<string, any>, TResul
         }
     }
 
+    /**
+     * Fetches usage for this action's provider.
+     *
+     * The default implementation queries the ai-limits `LimitsClient`, which
+     * returns `StandardUsageResult`. Subclasses that declare a non-default
+     * `TResult` (e.g. `CodexBarResult`) MUST override this method — the cast
+     * below is only valid when `TResult === StandardUsageResult`.
+     */
     protected async fetchProviderUsage(ev: any): Promise<TResult> {
-        // Default implementation returns the real StandardUsageResult; cast is
-        // sound because TResult defaults to StandardUsageResult, and concrete
-        // subclasses that return a different TResult override this method.
-        return this.limitsManager.getClient().fetchUsage(this.providerName) as Promise<TResult>;
+        const result = await this.limitsManager.getClient().fetchUsage(this.providerName);
+        // Guard against a subclass that changed TResult but forgot to override
+        // this method — fail loudly in non-production builds instead of
+        // silently rendering a blank key from an incompatible result shape.
+        if (process.env.NODE_ENV !== "production" && !("provider" in result)) {
+            throw new Error(
+                `${this.constructor.name} uses a non-StandardUsageResult TResult but did not override fetchProviderUsage`,
+            );
+        }
+        return result as TResult;
     }
 
     protected abstract getDisplayData(ev: any, result: TResult): {
