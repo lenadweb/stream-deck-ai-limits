@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <title>CodexBar Settings</title>
+    <meta charset="utf-8" />
+    <script src="https://sdpi-components.dev/releases/v4/sdpi-components.js"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        .info { padding: 8px 16px; font-size: 11px; color: #999; line-height: 1.4; }
+        .link { color: #4285F4; cursor: pointer; text-decoration: underline; }
+        .link:hover { color: #357ae8; }
+    </style>
+</head>
+<body>
+    <sdpi-item label="Provider">
+        <sdpi-select setting="providerId" id="providerId">
+            <option value="cursor">Cursor</option>
+            <option value="copilot">Copilot</option>
+            <option value="gemini">Gemini</option>
+            <option value="zai">z.ai</option>
+            <option value="augment">Augment</option>
+            <option value="windsurf">Windsurf</option>
+        </sdpi-select>
+    </sdpi-item>
+
+    <sdpi-item label="Top bar window">
+        <sdpi-select setting="window" id="window">
+            <option value="primary">Primary (session)</option>
+            <option value="secondary">Secondary (week)</option>
+        </sdpi-select>
+    </sdpi-item>
+
+    <sdpi-item label="Port">
+        <sdpi-range setting="port" id="port" min="1024" max="65535" step="1" default="8080" showvalue="true"></sdpi-range>
+    </sdpi-item>
+
+    <sdpi-item label="Display">
+        <sdpi-checkbox setting="showProviderName" id="showProviderName" label="Show provider name"></sdpi-checkbox>
+    </sdpi-item>
+
+    <div class="info">
+        Requires <b>CodexBar</b> running <code>codexbar serve</code> on macOS (default port 8080).
+        On Windows / when serve is off, this action shows a "macOS only" message.
+    </div>
+    <div class="info"><span class="link" onclick="openGitHub()">View source on GitHub</span></div>
+
+    <script>
+        function openGitHub() {
+            window.open("https://github.com/lenadweb/stream-deck-ai-limits", "_blank");
+        }
+    </script>
+</body>
+</html>
