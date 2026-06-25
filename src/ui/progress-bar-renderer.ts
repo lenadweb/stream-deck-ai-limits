@@ -70,6 +70,69 @@ export class ProgressBarRenderer {
             label: '#8A8D96',
             barBg: '#1D1D25',
             barFill: '#8284FF'
+        },
+        cursor: {
+            primary: '#A8B1FF',
+            secondary: '#C0C8FF',
+            background: '#0E0F18',
+            text: '#F2F3FB',
+            label: '#8A8FA6',
+            barBg: '#1F2030',
+            barFill: '#A8B1FF'
+        },
+        copilot: {
+            primary: '#8B5CF6',
+            secondary: '#A78BFA',
+            background: '#0F0B1A',
+            text: '#F3EEFF',
+            label: '#9288B0',
+            barBg: '#221A3A',
+            barFill: '#8B5CF6'
+        },
+        gemini: {
+            primary: '#5B9BFF',
+            secondary: '#8AB4F8',
+            background: '#0E0F11',
+            text: '#ECEDEF',
+            label: '#8E929A',
+            barBg: '#23272D',
+            barFill: '#5B9BFF'
+        },
+        zai: {
+            primary: '#4E8DFF',
+            secondary: '#7AA9FF',
+            background: '#0A0F1A',
+            text: '#EDF2FB',
+            label: '#8595AA',
+            barBg: '#16223A',
+            barFill: '#4E8DFF'
+        },
+        augment: {
+            primary: '#2DD4BF',
+            secondary: '#5EEAD4',
+            background: '#08191A',
+            text: '#E6FBFA',
+            label: '#7FA8A6',
+            barBg: '#0F2E2E',
+            barFill: '#2DD4BF'
+        },
+        windsurf: {
+            primary: '#22D3EE',
+            secondary: '#67E8F9',
+            background: '#06141A',
+            text: '#E6FCFF',
+            label: '#7AA5B0',
+            barBg: '#0E2A33',
+            barFill: '#22D3EE'
+        },
+        'codexbar-generic': {
+            primary: '#9CA3AF',
+            secondary: '#B0B6BF',
+            background: '#121212',
+            text: '#F5F5F5',
+            label: '#9CA3AF',
+            barBg: '#262626',
+            barFill: '#9CA3AF'
         }
     };
 
