@@ -59,7 +59,7 @@ export class CodexBarBackend {
     private probing: Promise<boolean> | null = null;
     private deps: TestDeps = {};
 
-    constructor() {}
+    private constructor() {}
 
     static getInstance(): CodexBarBackend {
         if (!CodexBarBackend.instance) CodexBarBackend.instance = new CodexBarBackend();

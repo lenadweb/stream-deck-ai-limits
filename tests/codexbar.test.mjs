@@ -73,7 +73,7 @@ function mockResponse(obj) {
 }
 
 test("backend probe reports unavailable when fetch throws", async () => {
-    const b = new CodexBarBackend();
+    const b = CodexBarBackend.getInstance();
     b.setTestDeps({ fetch: async () => { throw new Error("ECONNREFUSED"); }, platform: "darwin" });
     const avail = await b.probe(8080);
     assert.equal(avail, false);
@@ -81,7 +81,7 @@ test("backend probe reports unavailable when fetch throws", async () => {
 });
 
 test("backend probe reports available on healthy /health", async () => {
-    const b = new CodexBarBackend();
+    const b = CodexBarBackend.getInstance();
     b.setTestDeps({
         fetch: async (url) => url.endsWith("/health") ? mockResponse({ status: "ok", version: "0.37.2" }) : mockResponse(undefined),
         platform: "darwin",
@@ -91,7 +91,7 @@ test("backend probe reports available on healthy /health", async () => {
 });
 
 test("backend does not call fetch on non-darwin", async () => {
-    const b = new CodexBarBackend();
+    const b = CodexBarBackend.getInstance();
     let called = false;
     b.setTestDeps({ fetch: async () => { called = true; return mockResponse({}); }, platform: "win32" });
     const avail = await b.probe(8080);
@@ -100,7 +100,7 @@ test("backend does not call fetch on non-darwin", async () => {
 });
 
 test("backend fetchUsage returns error when payload has error", async () => {
-    const b = new CodexBarBackend();
+    const b = CodexBarBackend.getInstance();
     b.setTestDeps({
         fetch: async (url) => {
             if (url.endsWith("/health")) return mockResponse({ status: "ok" });
@@ -115,7 +115,7 @@ test("backend fetchUsage returns error when payload has error", async () => {
 });
 
 test("backend fetchUsage returns usage when present", async () => {
-    const b = new CodexBarBackend();
+    const b = CodexBarBackend.getInstance();
     b.setTestDeps({
         fetch: async (url) => {
             if (url.endsWith("/health")) return mockResponse({ status: "ok" });
@@ -130,4 +130,16 @@ test("backend fetchUsage returns usage when present", async () => {
     const res = await b.fetchUsage("cursor", 8080);
     assert.equal(res.error, null);
     assert.equal(res.usage?.primary?.usedPercent, 55);
+});
+
+test("backend probe caches result for 60s (no refetch)", async () => {
+    let calls = 0;
+    const b = CodexBarBackend.getInstance();
+    b.setTestDeps({
+        fetch: async (url) => { if (url.endsWith("/health")) calls++; return mockResponse({ status: "ok" }); },
+        platform: "darwin",
+    });
+    await b.probe(8080);
+    await b.probe(8080); // cached — must not refetch
+    assert.equal(calls, 1);
 });
