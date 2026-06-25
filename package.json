@@ -7,7 +7,9 @@
     "build": "rollup -c",
     "watch": "rollup -c -w --watch.onEnd=\"streamdeck restart com.len.limits\"",
     "version:bump": "node scripts/bump-version.mjs",
-    "release": "npm run version:bump && npm run build && streamdeck pack com.len.limits.sdPlugin --force --output ."
+    "release": "npm run version:bump && npm run build && streamdeck pack com.len.limits.sdPlugin --force --output .",
+    "test": "node scripts/test-compile.mjs && node --test tests/",
+    "test:run": "node --test tests/"
   },
   "repository": {
     "type": "git",

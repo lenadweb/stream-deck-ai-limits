@@ -11,3 +11,6 @@ tmp/
 .vscode/
 .agents/
 .preview/
+
+# Compiled test artifacts
+tests/.compiled/
