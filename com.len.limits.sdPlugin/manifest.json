@@ -158,6 +158,32 @@
           "TitleAlignment": "middle"
         }
       ]
+    },
+    {
+      "Name": "Progress Bars (CodexBar)",
+      "UUID": "com.len.limits.codexbar.generic",
+      "Icon": "imgs/actions/counter/icon",
+      "Tooltip": "Displays any CodexBar provider usage (requires codexbar serve on macOS).",
+      "PropertyInspectorPath": "ui/codexbar-settings.html",
+      "Controllers": [
+        "Keypad",
+        "Encoder"
+      ],
+      "Encoder": {
+        "layout": "layouts/full-view.json",
+        "StackColor": "#9CA3AF",
+        "TriggerDescription": {
+          "Rotate": "Refresh",
+          "Touch": "Refresh",
+          "Push": "Refresh"
+        }
+      },
+      "States": [
+        {
+          "Image": "imgs/actions/counter/key",
+          "TitleAlignment": "middle"
+        }
+      ]
     }
   ],
   "Category": "AI Usage Limits",
