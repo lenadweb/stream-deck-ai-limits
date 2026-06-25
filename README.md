@@ -103,6 +103,28 @@ For most providers the plugin simply reads the credentials your CLI already wrot
 
 ---
 
+## CodexBar backend (macOS, optional)
+
+A **Progress Bars (CodexBar)** action lets you display **any** provider that [CodexBar](https://github.com/steipete/CodexBar) supports (50+), without each one needing its own action.
+
+**How it works:** on macOS, if you run `codexbar serve` locally, this action fetches usage from its localhost HTTP API and renders it with the same progress-bar UI. It is purely additive — the six dedicated actions above keep working as-is, and this action has no effect on Windows.
+
+### Setup
+1. Install CodexBar: `brew install --cask codexbar`.
+2. Start the local server: `codexbar serve` (defaults to `127.0.0.1:8080`).
+3. Enable + configure the provider you want in CodexBar → Settings → Providers.
+4. In Stream Deck, drag **Progress Bars (CodexBar)** onto a key/dial and pick the provider in the Property Inspector.
+
+| Setting | What it does |
+|---|---|
+| **Provider** | Which CodexBar provider to display (Cursor, Copilot, Gemini, z.ai, Augment, Windsurf). |
+| **Top bar window** | Whether the top bar shows the primary (session) or secondary (week) usage window. |
+| **Port** | Port of `codexbar serve` (default 8080). |
+
+> No CodexBar installed or not on macOS? The action shows a clear message instead of data.
+
+---
+
 ## How it looks
 
 Each provider renders on both keys and Stream Deck+ dials, with a brand‑matched theme and a rounded usage bar that shows the reset countdown inside it.
