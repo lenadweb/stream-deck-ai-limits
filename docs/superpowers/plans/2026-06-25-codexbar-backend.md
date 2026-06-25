@@ -713,59 +713,66 @@ git commit -m "feat(codexbar): add CodexBarBackend singleton with probe/fetch + 
 
 ---
 
-## Task 7: Widen `BaseMonitoringAction` result type
+## Task 7: Make `BaseMonitoringAction` generic over result type
+
+> **Plan correction (2026-06-25):** The original Task 7 widened the result type to a `MonitoringResult` union. That fails typecheck for two reasons discovered during implementation: (1) the real `StandardUsageResult.perModel` uses `usagePercent: number | null`, not assignable to the union's hand-rolled shape; (2) widening `getDisplayData`'s parameter type breaks the 6 existing subclass overrides (parameter contravariance). The generic approach below fixes both **without touching the 6 existing actions** (they keep their current `StandardUsageResult` parameter verbatim).
 
 **Files:**
 - Modify: `src/interfaces/codexbar.ts` (add `MonitoringResult`)
-- Modify: `src/actions/base-monitoring-action.ts`
+- Modify: `src/actions/base-monitoring-action.ts` (add a `TResult` generic param)
 
 - [ ] **Step 1: Add the shared result type**
 
 Append to `src/interfaces/codexbar.ts`:
 
 ```ts
-// Union the base action understands: ai-limits result OR codexbar result.
-// Both expose an optional `error` with a `message` field.
+// Base of every result the base action can render. Both members expose an
+// optional `error` with a `message` field, which is all draw() reads.
 export type MonitoringResult = StandardUsageResultLike | CodexBarResult;
 
 interface StandardUsageResultLike {
     provider?: unknown;
     overallUsagePercent?: number | null;
     overallResetTime?: string | number | null;
-    perModel?: Record<string, { usagePercent?: number; resetTime?: string | null } | undefined> | null;
+    perModel?: Record<string, { usagePercent?: number | null; resetTime?: string | null } | undefined> | null;
     error?: { message: string; code?: string } | null;
     [k: string]: unknown;
 }
 ```
 
-- [ ] **Step 2: Widen base class types**
+> Note `usagePercent?: number | null` (the `| null` matches the real `ModelUsage` type from @lenadweb/ai-limits so `StandardUsageResult` is structurally assignable).
 
-In `src/actions/base-monitoring-action.ts`:
+- [ ] **Step 2: Genericize the base class**
 
-Add to the imports:
+In `src/actions/base-monitoring-action.ts`, READ the file first.
 
+Add the import:
 ```ts
 import type { MonitoringResult } from "../interfaces/codexbar";
 ```
 
-Change the `lastResult` declaration to:
+Change the class declaration to add a second generic param (default keeps existing actions working unchanged):
 
 ```ts
-    protected lastResult: MonitoringResult | null = null;
+export abstract class BaseMonitoringAction<T extends Record<string, any>, TResult extends MonitoringResult = StandardUsageResult> extends SingletonAction<T> {
 ```
 
-Change `fetchProviderUsage` to:
+(Keep `StandardUsageResult` imported in this file — the default generic param references it.)
+
+Change the member/method signatures from `StandardUsageResult` to `TResult`:
 
 ```ts
-    protected async fetchProviderUsage(ev: any): Promise<MonitoringResult> {
+    protected lastResult: TResult | null = null;
+```
+
+```ts
+    protected async fetchProviderUsage(ev: any): Promise<TResult> {
         return this.limitsManager.getClient().fetchUsage(this.providerName);
     }
 ```
 
-Change the abstract `getDisplayData` signature's result parameter type to `MonitoringResult`:
-
 ```ts
-    protected abstract getDisplayData(ev: any, result: MonitoringResult): {
+    protected abstract getDisplayData(ev: any, result: TResult): {
         value1: number;
         value2: number;
         label1: string;
@@ -778,28 +785,24 @@ Change the abstract `getDisplayData` signature's result parameter type to `Monit
     };
 ```
 
-Change the `draw` method's `result` parameter type to `MonitoringResult`:
-
 ```ts
-    protected async draw(ev: any, result: MonitoringResult): Promise<void> {
+    protected async draw(ev: any, result: TResult): Promise<void> {
 ```
 
-Leave all logic inside `draw`/`redraw`/`refresh` unchanged. The 6 existing actions still return `StandardUsageResult`, which satisfies `MonitoringResult` structurally.
+Leave all logic inside `draw`/`redraw`/`refresh` unchanged — `draw` only reads `result.error.message`, which is present on every `MonitoringResult` member, so it typechecks under `TResult extends MonitoringResult`.
 
-- [ ] **Step 3: Remove unused import if flagged**
+The 6 existing subclasses declare `extends BaseMonitoringAction<XxxSettings>` (one generic arg), so `TResult` defaults to `StandardUsageResult` — **their code and signatures are unchanged**. (They still write `result: StandardUsageResult` in `getDisplayData`, which now matches the inherited default.) No edits to the 6 subclass files.
 
-If `tsc` reports `StandardUsageResult` unused in `base-monitoring-action.ts`, remove it from that file's imports. (The 6 existing actions import it themselves.)
-
-- [ ] **Step 4: Verify build + tests**
+- [ ] **Step 3: Verify build + tests**
 
 Run: `npm run build && npm test`
-Expected: build OK; 12 tests still PASS.
+Expected: build OK (existing 6 actions unchanged, still typecheck); 13 tests still PASS.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
 git add src/interfaces/codexbar.ts src/actions/base-monitoring-action.ts
-git commit -m "refactor: widen BaseMonitoringAction result type to MonitoringResult union"
+git commit -m "refactor: genericize BaseMonitoringAction over result type (MonitoringResult)"
 ```
 
 ---
@@ -817,13 +820,13 @@ Create `src/actions/codexbar-generic-progress.ts`:
 import { action } from "@elgato/streamdeck";
 import { BaseMonitoringAction } from "./base-monitoring-action";
 import { ServiceTheme } from "../interfaces/theme";
-import type { CodexBarGenericSettings, CodexBarResult, MonitoringResult } from "../interfaces/codexbar";
+import type { CodexBarGenericSettings, CodexBarResult } from "../interfaces/codexbar";
 import { CodexBarBackend, normalizeCodexBarDisplay } from "../services/codexbar-backend";
 import { themeFor } from "../services/codexbar-provider-registry";
 import type { RenderOptions, Slot } from "../ui/progress-bar-renderer";
 
 @action({ UUID: "com.len.limits.codexbar.generic" })
-export class CodexBarGenericProgress extends BaseMonitoringAction<CodexBarGenericSettings> {
+export class CodexBarGenericProgress extends BaseMonitoringAction<CodexBarGenericSettings, CodexBarResult> {
     private settings: CodexBarGenericSettings = {};
     private providerId: string = "cursor";
 
@@ -855,13 +858,13 @@ export class CodexBarGenericProgress extends BaseMonitoringAction<CodexBarGeneri
         return backend.fetchUsage(this.providerId, this.settings.port ?? 8080);
     }
 
-    protected getDisplayData(_ev: any, result: MonitoringResult): {
+    protected getDisplayData(_ev: any, result: CodexBarResult): {
         value1: number; value2: number; label1: string; label2: string;
         resetTime1: string | null; resetTime2: string | null;
         valueText1?: string; valueText2?: string; slots?: Slot[];
     } {
         const win = this.settings.window === "secondary" ? "secondary" : "primary";
-        return normalizeCodexBarDisplay((result as CodexBarResult).usage ?? null, win);
+        return normalizeCodexBarDisplay(result.usage ?? null, win);
     }
 
     protected override renderOptions(_ev: any): RenderOptions {
@@ -869,6 +872,8 @@ export class CodexBarGenericProgress extends BaseMonitoringAction<CodexBarGeneri
     }
 }
 ```
+
+> Passing `CodexBarResult` as the second generic param means `getDisplayData`'s `result` is already typed `CodexBarResult` — no cast needed (`result.usage`). Existing 6 actions pass only one generic arg, so they keep `StandardUsageResult` by default.
 
 - [ ] **Step 2: Verify typecheck**
 
