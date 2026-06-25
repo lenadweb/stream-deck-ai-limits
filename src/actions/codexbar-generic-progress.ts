@@ -56,4 +56,14 @@ export class CodexBarGenericProgress extends BaseMonitoringAction<CodexBarGeneri
     protected override renderOptions(_ev: any): RenderOptions {
         return { showName: this.settings.showProviderName !== false };
     }
+
+    protected override async draw(ev: any, result: CodexBarResult): Promise<void> {
+        // "Unavailable" (no serve / non-mac) is a setup state, not a provider
+        // error — render it as a neutral message instead of a red error.
+        if (result.error?.code === "UNAVAILABLE") {
+            await this.drawMessage(ev, [this.providerId, "macOS + codexbar serve"]);
+            return;
+        }
+        await super.draw(ev, result);
+    }
 }

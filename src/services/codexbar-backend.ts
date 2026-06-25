@@ -126,13 +126,13 @@ export class CodexBarBackend {
     /** Fetches usage for a provider. Never throws — errors become { error }. */
     async fetchUsage(providerId: string, port = 8080): Promise<CodexBarResult> {
         if (this.platform !== "darwin" || !providerId) {
-            return { usage: null, error: { message: "CodexBar serve unavailable (macOS only)" } };
+            return { usage: null, error: { code: "UNAVAILABLE", message: "CodexBar serve is macOS-only" } };
         }
         if (!this.available) {
             await this.probe(port);
         }
         if (!this.available) {
-            return { usage: null, error: { message: "CodexBar serve 未运行(仅 macOS)" } };
+            return { usage: null, error: { code: "UNAVAILABLE", message: "Run `codexbar serve` on macOS to see usage" } };
         }
         try {
             const ctrl = new AbortController();

@@ -117,7 +117,7 @@ A **Progress Bars (CodexBar)** action lets you display **any** provider that [Co
 
 | Setting | What it does |
 |---|---|
-| **Provider** | Which CodexBar provider to display (Cursor, Copilot, Gemini, z.ai, Augment, Windsurf). |
+| **Provider** | A curated provider (Cursor, Copilot, Gemini, z.ai, Augment, Windsurf), or any CodexBar provider id in the "Custom provider id" field (e.g. <code>kiro</code>, <code>zed</code>). |
 | **Top bar window** | Whether the top bar shows the primary (session) or secondary (week) usage window. |
 | **Port** | Port of `codexbar serve` (default 8080). |
 

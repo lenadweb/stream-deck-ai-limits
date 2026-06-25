@@ -23,6 +23,12 @@
         </sdpi-select>
     </sdpi-item>
 
+    <div class="info">Pick a provider below, or enter a custom CodexBar provider id (e.g. <code>kiro</code>, <code>zed</code>, <code>copilot</code>) in the next field.</div>
+
+    <sdpi-item label="Custom provider id">
+        <sdpi-textfield setting="providerId" id="providerIdCustom" placeholder="e.g. kiro, zed, cursor" />
+    </sdpi-item>
+
     <sdpi-item label="Top bar window">
         <sdpi-select setting="window" id="window">
             <option value="primary">Primary (session)</option>
