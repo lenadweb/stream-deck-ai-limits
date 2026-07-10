@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "rollup -c",
+    "link": "streamdeck link com.len.limits.sdPlugin",
+    "unlink": "streamdeck unlink com.len.limits",
     "watch": "rollup -c -w --watch.onEnd=\"streamdeck restart com.len.limits\"",
     "version:bump": "node scripts/bump-version.mjs",
     "release": "npm run version:bump && npm run build && streamdeck pack com.len.limits.sdPlugin --force --output ."
@@ -34,7 +36,7 @@
   },
   "dependencies": {
     "@elgato/streamdeck": "^2.0.0",
-    "@lenadweb/ai-limits": "^1.1.1",
+    "@lenadweb/ai-limits": "^1.1.2",
     "google-auth-library": "^10.6.1",
     "strip-ansi": "^7.1.2"
   }
