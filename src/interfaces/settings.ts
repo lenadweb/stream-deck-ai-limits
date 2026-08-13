@@ -1,5 +1,11 @@
 export type ProgressBarSettings = Record<string, any>;
 
+export type CodexSecondaryMetric = "credits" | "resetCredits" | "none";
+
+export interface CodexSettings extends ProgressBarSettings {
+    secondaryMetric?: CodexSecondaryMetric;
+}
+
 export interface GeminiSettings {
     topModel?: string;
     bottomModel?: string;

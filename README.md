@@ -78,7 +78,7 @@ Each provider is a separate action. All of them work on **Keypad** (keys) and **
 | Action | What it shows | UUID |
 |---|---|---|
 | **Progress Bars (Claude)** | Claude Code session & weekly usage | `com.len.limits.progress` |
-| **Progress Bars (Codex)** | Codex / ChatGPT plan usage | `com.len.limits.codex.progress` |
+| **Progress Bars (Codex)** | Codex session usage plus usage limit resets or credits balance | `com.len.limits.codex.progress` |
 | **Progress Bars (Antigravity)** | Antigravity (Claude + Gemini) usage | `com.len.limits.antigravity` |
 | **Progress Bars (Gemini CLI)** | Gemini CLI quota usage | `com.len.limits.gemini-cli` |
 | **Progress Bars (MiniMax)** | MiniMax M-series coding-plan usage | `com.len.limits.minimax` |

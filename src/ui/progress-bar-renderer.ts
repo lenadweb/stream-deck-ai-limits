@@ -122,10 +122,11 @@ export class ProgressBarRenderer {
         const colors = this.themes[theme];
         const isDial = this.isDial(width, height);
         const showName = opts.showName !== false;
-        const geo = this.geometry(width, height, isDial, showName);
+        const displayedSlots = slots.slice(0, 2);
+        const geo = this.geometry(width, height, isDial, showName, displayedSlots.length);
 
         const chrome = this.background(width, height, colors) + this.header(this.serviceName(theme), colors, geo, isDial, showName);
-        const modules = slots.slice(0, 2).map((slot, i) =>
+        const modules = displayedSlots.map((slot, i) =>
             slot.kind === "stat"
                 ? this.statModule(slot, colors, theme, geo, geo.moduleTop[i], isDial)
                 : this.gaugeModule(slot, colors, theme, geo, geo.moduleTop[i], isDial)
@@ -138,14 +139,16 @@ export class ProgressBarRenderer {
         return w === 200 && h === 100;
     }
 
-    private geometry(width: number, height: number, isDial: boolean, showName: boolean) {
+    private geometry(width: number, height: number, isDial: boolean, showName: boolean, moduleCount = 2) {
         const margin = isDial ? 12 : 15;
         const nameAxis = 13;
         const left = isDial && showName ? 26 : margin;
         const right = width - margin;
 
         let moduleTop: number[];
-        if (isDial) {
+        if (moduleCount === 1) {
+            moduleTop = [isDial ? 27 : 43];
+        } else if (isDial) {
             moduleTop = [6, 52];
         } else {
             moduleTop = showName ? [24, 82] : [14, 72];

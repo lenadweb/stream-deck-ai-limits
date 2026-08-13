@@ -36,6 +36,15 @@
             height: 14px;
             cursor: pointer;
         }
+        select.sdpi-item-value {
+            width: 100%;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: #2d2d2d;
+            color: #ddd;
+            border: 1px solid #444;
+            font-size: 12px;
+        }
     </style>
 </head>
 
@@ -44,6 +53,15 @@
         <label class="checkbox"><input id="showProviderName" type="checkbox" /> Show provider name</label>
     </sdpi-item>
 
+    <sdpi-item label="Bottom section">
+        <select id="secondaryMetric" class="sdpi-item-value">
+            <option value="resetCredits">Usage limit resets</option>
+            <option value="credits">Credits balance</option>
+            <option value="none">Hide bottom section</option>
+        </select>
+    </sdpi-item>
+
+    <div class="info">The top section shows your session limit. Choose usage limit resets, credits balance, or hide the bottom section.</div>
     <div class="info">Credentials for Codex/ChatGPT are automatically loaded from your system (~/.codex/auth.json).</div>
     <div class="info"><span class="link" onclick="openGitHub()">View source on GitHub</span></div>
 
@@ -78,10 +96,12 @@
 
         function applySettings() {
             document.getElementById("showProviderName").checked = _settings.showProviderName !== false;
+            document.getElementById("secondaryMetric").value = _settings.secondaryMetric || "resetCredits";
         }
 
         function saveSettings() {
             _settings.showProviderName = document.getElementById("showProviderName").checked;
+            _settings.secondaryMetric = document.getElementById("secondaryMetric").value || "resetCredits";
             if (_websocket && _uuid) {
                 _websocket.send(JSON.stringify({
                     event: "setSettings",
@@ -104,6 +124,7 @@
 
         document.addEventListener("DOMContentLoaded", function () {
             document.getElementById("showProviderName").addEventListener("change", saveSettings);
+            document.getElementById("secondaryMetric").addEventListener("change", saveSettings);
             applySettings();
         });
     </script>
