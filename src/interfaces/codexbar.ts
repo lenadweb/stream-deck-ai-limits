@@ -50,12 +50,17 @@ export interface CodexBarProviderPayload {
     account?: string | null;
     source?: string;
     usage?: CodexBarUsageSnapshot | null;
-    error?: { code?: string | number; message?: string } | null;
+    error?: CodexBarError | null;
+}
+
+export interface CodexBarError {
+    code?: string | number;
+    message: string;
 }
 
 export interface CodexBarResult {
     payload?: CodexBarProviderPayload | null;
-    error?: { message: string } | null;
+    error?: CodexBarError | null;
 }
 
 export interface CodexBarMetricOption {
@@ -68,6 +73,7 @@ export interface CodexBarProviderOption {
     account: string;
     label: string;
     metrics: CodexBarMetricOption[];
+    error?: CodexBarError | null;
 }
 
 export interface CodexBarServerStatus {

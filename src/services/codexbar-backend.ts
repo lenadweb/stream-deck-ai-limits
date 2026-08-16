@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import type {
     CodexBarMetricOption,
     CodexBarDetailSection,
+    CodexBarError,
     CodexBarNamedRateWindow,
     CodexBarProviderOption,
     CodexBarProviderPayload,
@@ -23,7 +24,7 @@ const CODEXBAR_BINARIES = [
     "/Applications/CodexBar.app/Contents/Helpers/CodexBarCLI"
 ];
 
-type UsageResponse = CodexBarProviderPayload[] | { error: { message: string } };
+type UsageResponse = CodexBarProviderPayload[] | { error: CodexBarError };
 
 export function codexBarPort(value: unknown): number {
     const port = typeof value === "number" ? value : Number(value);
@@ -98,11 +99,12 @@ function addDetailRows(
     section: CodexBarDetailSection,
     sectionIndex: number
 ): void {
-    for (const [rowIndex, row] of (section.rows ?? []).entries()) {
+    const occurrences = new Map<string, number>();
+    for (const row of section.rows ?? []) {
         const valueText = displayValue(row.value);
         if (!row.label || valueText == null) continue;
         metrics.push({
-            id: `detail:${sectionIndex}:${rowIndex}`,
+            id: detailMetricId("detail", section.title, row.label, occurrences),
             label: detailLabel(section.title, row.label),
             valueText,
             ...(row.secondaryValue ? { caption: row.secondaryValue } : {})
@@ -116,11 +118,12 @@ function addChartPoints(
     sectionIndex: number
 ): void {
     const chart = section.chart;
-    for (const [pointIndex, point] of (chart?.points ?? []).entries()) {
+    const occurrences = new Map<string, number>();
+    for (const point of chart?.points ?? []) {
         const valueText = displayChartValue(point.value, chart?.unit);
         if (!point.label || valueText == null) continue;
         metrics.push({
-            id: `chart:${sectionIndex}:${pointIndex}`,
+            id: detailMetricId("chart", chart?.title ?? section.title, point.label, occurrences),
             label: detailLabel(chart?.title ?? section.title, point.label),
             valueText,
             ...(chart?.unit ? { caption: chart.unit } : {})
@@ -130,6 +133,18 @@ function addChartPoints(
 
 function detailLabel(section: string | undefined, label: string): string {
     return section ? `${section} · ${label}` : label;
+}
+
+function detailMetricId(
+    prefix: "detail" | "chart",
+    section: string | undefined,
+    label: string,
+    occurrences: Map<string, number>
+): string {
+    const base = `${prefix}:${encodeURIComponent(section ?? "")}:${encodeURIComponent(label)}`;
+    const occurrence = occurrences.get(base) ?? 0;
+    occurrences.set(base, occurrence + 1);
+    return occurrence === 0 ? base : `${base}:${occurrence}`;
 }
 
 function displayValue(value: string | number | null | undefined): string | null {
@@ -159,7 +174,7 @@ function genericWindowLabel(window: CodexBarRateWindow, fallback: string): strin
 
 export class CodexBarBackend {
     private static instance: CodexBarBackend | undefined;
-    private readonly starts = new Map<number, Promise<{ error?: { message: string } }>>();
+    private readonly starts = new Map<number, Promise<{ error?: CodexBarError }>>();
     private readonly managedServers = new Map<number, ChildProcess>();
 
     static getInstance(): CodexBarBackend {
@@ -189,7 +204,7 @@ export class CodexBarBackend {
         return { payload, error: null };
     }
 
-    async listProviders(port: unknown, autoStart = false): Promise<CodexBarProviderOption[] | { error: { message: string } }> {
+    async listProviders(port: unknown, autoStart = false): Promise<CodexBarProviderOption[] | { error: CodexBarError }> {
         const payloads = await this.requestUsageWithAutoStart(codexBarPort(port), autoStart);
         if (!Array.isArray(payloads)) return payloads;
 
@@ -220,7 +235,7 @@ export class CodexBarBackend {
         };
     }
 
-    async startServer(port: unknown): Promise<CodexBarServerStatus | { error: { message: string } }> {
+    async startServer(port: unknown): Promise<CodexBarServerStatus | { error: CodexBarError }> {
         const resolvedPort = codexBarPort(port);
         const current = await this.getServerStatus(resolvedPort);
         if (current.state === "running") return current;
@@ -230,15 +245,15 @@ export class CodexBarBackend {
         return this.getServerStatus(resolvedPort);
     }
 
-    async stopServer(port: unknown): Promise<CodexBarServerStatus | { error: { message: string } }> {
+    async stopServer(port: unknown): Promise<CodexBarServerStatus | { error: CodexBarError }> {
         const resolvedPort = codexBarPort(port);
         const child = this.managedServers.get(resolvedPort);
         if (!child || child.exitCode !== null || child.killed) {
-            return { error: { message: "Only a server started by this Stream Deck session can be stopped" } };
+            return { error: { code: "not-managed", message: "Only a server started by this Stream Deck session can be stopped" } };
         }
 
         if (!child.kill("SIGTERM")) {
-            return { error: { message: "Couldn't stop codexbar serve" } };
+            return { error: { code: "stop-failed", message: "Couldn't stop codexbar serve" } };
         }
 
         const deadline = Date.now() + 4_000;
@@ -246,7 +261,7 @@ export class CodexBarBackend {
             if (!(await this.isHealthy(resolvedPort))) return this.getServerStatus(resolvedPort);
             await new Promise((resolve) => setTimeout(resolve, 150));
         }
-        return { error: { message: "codexbar serve did not stop" } };
+        return { error: { code: "stop-timeout", message: "codexbar serve did not stop" } };
     }
 
     private async requestUsageWithAutoStart(port: number, autoStart: boolean): Promise<UsageResponse> {
@@ -262,9 +277,9 @@ export class CodexBarBackend {
         return this.requestUsage(port);
     }
 
-    private async ensureServerStarted(port: number): Promise<{ error?: { message: string } }> {
+    private async ensureServerStarted(port: number): Promise<{ error?: CodexBarError }> {
         if (process.platform !== "darwin") {
-            return { error: { message: "CodexBar auto-start is available only on macOS" } };
+            return { error: { code: "unsupported-platform", message: "CodexBar auto-start is available only on macOS" } };
         }
 
         const existing = this.starts.get(port);
@@ -279,10 +294,10 @@ export class CodexBarBackend {
         }
     }
 
-    private async spawnServer(port: number): Promise<{ error?: { message: string } }> {
+    private async spawnServer(port: number): Promise<{ error?: CodexBarError }> {
         const binary = CODEXBAR_BINARIES.find((path) => existsSync(path));
         if (!binary) {
-            return { error: { message: "CodexBar CLI was not found. Install it in CodexBar Preferences." } };
+            return { error: { code: "cli-not-found", message: "CodexBar CLI was not found" } };
         }
 
         let child: ChildProcess;
@@ -295,23 +310,23 @@ export class CodexBarBackend {
             child.unref();
             this.managedServers.set(port, child);
         } catch {
-            return { error: { message: "Couldn't start codexbar serve" } };
+            return { error: { code: "start-failed", message: "Couldn't start codexbar serve" } };
         }
 
-        let startError: string | undefined;
-        child.once("error", () => { startError = "Couldn't start codexbar serve"; });
+        let startError: CodexBarError | undefined;
+        child.once("error", () => { startError = { code: "start-failed", message: "Couldn't start codexbar serve" }; });
         child.once("exit", (code) => {
             if (this.managedServers.get(port) === child) this.managedServers.delete(port);
-            startError ??= `codexbar serve exited (${code ?? "unknown"})`;
+            startError ??= { code: "server-exited", message: `codexbar serve exited (${code ?? "unknown"})` };
         });
 
         const deadline = Date.now() + SERVER_STARTUP_TIMEOUT_MS;
         while (Date.now() < deadline) {
             if (await this.isHealthy(port)) return {};
-            if (startError) return { error: { message: startError } };
+            if (startError) return { error: startError };
             await new Promise((resolve) => setTimeout(resolve, 200));
         }
-        return { error: { message: "Timed out starting codexbar serve" } };
+        return { error: { code: "start-timeout", message: "Timed out starting codexbar serve" } };
     }
 
     private async isHealthy(port: number): Promise<boolean> {
@@ -336,15 +351,18 @@ export class CodexBarBackend {
         try {
             const response = await fetch(url, { signal: controller.signal });
             const text = await response.text();
-            if (!response.ok) return { error: { message: `CodexBar serve returned HTTP ${response.status}` } };
+            if (!response.ok) return { error: { code: "server-http", message: `CodexBar serve returned HTTP ${response.status}` } };
             const parsed = JSON.parse(text) as unknown;
-            if (!Array.isArray(parsed)) return { error: { message: "CodexBar returned an unexpected response" } };
+            if (!Array.isArray(parsed)) return { error: { code: "invalid-response", message: "CodexBar returned an unexpected response" } };
             return parsed as CodexBarProviderPayload[];
         } catch (error) {
-            const reason = error instanceof Error && error.name === "AbortError"
-                ? "Timed out waiting for codexbar serve"
-                : "Can't reach codexbar serve on 127.0.0.1";
-            return { error: { message: reason } };
+            const timedOut = error instanceof Error && error.name === "AbortError";
+            return {
+                error: {
+                    code: timedOut ? "timeout" : "unreachable",
+                    message: timedOut ? "Timed out waiting for codexbar serve" : "Can't reach codexbar serve on 127.0.0.1"
+                }
+            };
         } finally {
             clearTimeout(timer);
         }

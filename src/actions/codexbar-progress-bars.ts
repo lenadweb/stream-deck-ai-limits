@@ -1,7 +1,7 @@
 import streamDeck, { action, type PropertyInspectorDidAppearEvent, type WillAppearEvent } from "@elgato/streamdeck";
 import { BaseMonitoringAction } from "./base-monitoring-action";
 import type { CodexBarResult } from "../interfaces/codexbar";
-import { CodexBarSettings, TileLayout } from "../interfaces/settings";
+import { CodexBarSettings, CodexBarTheme, TileLayout } from "../interfaces/settings";
 import { ServiceTheme } from "../interfaces/theme";
 import { RenderOptions, Slot } from "../ui/progress-bar-renderer";
 import { CodexBarBackend, codexBarPort, detailForMetric, providerTitle, windowForMetric } from "../services/codexbar-backend";
@@ -18,18 +18,22 @@ interface CodexBarServerConfig {
     autoStart: boolean;
 }
 
+const CODEXBAR_THEMES: readonly CodexBarTheme[] = [
+    "codexbar", "codex", "claude", "gemini-cli", "antigravity", "minimax", "openrouter"
+];
+
 @action({ UUID: "com.len.limits.codexbar" })
 export class CodexBarProgressBars extends BaseMonitoringAction<CodexBarSettings, CodexBarResult> {
     protected readonly providerName = "codexbar";
     protected readonly themeName: ServiceTheme = "codexbar";
     private readonly backend = CodexBarBackend.getInstance();
+    private serverCacheKey = "unconfigured";
 
     protected override fetchKey(settings: CodexBarSettings | undefined): string {
         return JSON.stringify({
             provider: settings?.providerId?.trim() || "",
             account: settings?.account ?? "",
-            port: codexBarPort(settings?.port),
-            autoStart: settings?.autoStart === true
+            server: this.serverCacheKey
         });
     }
 
@@ -87,7 +91,6 @@ export class CodexBarProgressBars extends BaseMonitoringAction<CodexBarSettings,
         await this.sendServerConfig(server);
         await this.sendServerStatus(server);
         await this.sendProviders(server);
-        await this.sendServerStatus(server);
     }
 
     private async sendProviders(server: CodexBarServerConfig): Promise<void> {
@@ -104,7 +107,7 @@ export class CodexBarProgressBars extends BaseMonitoringAction<CodexBarSettings,
                         metrics: provider.metrics.map((metric) => ({ id: metric.id, label: metric.label }))
                     }))
                 }
-                : { event: "providerListError", message: providers.error.message };
+                : { event: "providerListError", code: providers.error.code, message: providers.error.message };
             await streamDeck.ui.sendToPropertyInspector(
                 message
             );
@@ -150,7 +153,11 @@ export class CodexBarProgressBars extends BaseMonitoringAction<CodexBarSettings,
         result: Awaited<ReturnType<CodexBarBackend["startServer"]>>
     ): Promise<void> {
         if ("error" in result) {
-            await streamDeck.ui.sendToPropertyInspector({ event: "serverStatusError", message: result.error.message });
+            await streamDeck.ui.sendToPropertyInspector({
+                event: "serverStatusError",
+                code: result.error.code,
+                message: result.error.message
+            });
             return;
         }
         await streamDeck.ui.sendToPropertyInspector({
@@ -173,7 +180,7 @@ export class CodexBarProgressBars extends BaseMonitoringAction<CodexBarSettings,
                 codexBarAutoStart: autoStart
             });
         }
-        return { port, autoStart };
+        return this.rememberServerConfig({ port, autoStart });
     }
 
     private async setServerConfig(port: unknown, autoStart: boolean): Promise<CodexBarServerConfig> {
@@ -184,6 +191,11 @@ export class CodexBarProgressBars extends BaseMonitoringAction<CodexBarSettings,
             codexBarPort: config.port,
             codexBarAutoStart: config.autoStart
         });
+        return this.rememberServerConfig(config);
+    }
+
+    private rememberServerConfig(config: CodexBarServerConfig): CodexBarServerConfig {
+        this.serverCacheKey = `${config.port}:${config.autoStart}`;
         return config;
     }
 
@@ -205,6 +217,11 @@ export class CodexBarProgressBars extends BaseMonitoringAction<CodexBarSettings,
             showName: settings.showProviderName !== false,
             serviceName: providerTitle(settings.providerId?.trim() || "codexbar")
         };
+    }
+
+    protected override themeForEvent(ev: any): ServiceTheme {
+        const theme = (ev?.payload?.settings ?? {}).theme;
+        return CODEXBAR_THEMES.includes(theme) ? theme : "codexbar";
     }
 
     private metricSlot(metricId: string | undefined, result: CodexBarResult): Slot {

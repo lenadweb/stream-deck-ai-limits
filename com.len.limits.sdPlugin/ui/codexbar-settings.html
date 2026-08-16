@@ -42,6 +42,13 @@
         .server-note { margin: 6px 0 0; color: #898989; font-size: 10px; line-height: 1.35; }
         .checkbox { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #ddd; cursor: pointer; }
         .checkbox input { width: 14px; height: 14px; cursor: pointer; }
+        .theme-picker { display: flex; align-items: center; gap: 8px; min-height: 28px; }
+        .theme-option { position: relative; display: grid; place-items: center; width: 24px; height: 24px; cursor: pointer; }
+        .theme-option input { position: absolute; opacity: 0; pointer-events: none; }
+        .theme-swatch { width: 18px; height: 18px; border: 2px solid transparent; border-radius: 50%; background: var(--swatch); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12); transition: transform 120ms ease, box-shadow 120ms ease; }
+        .theme-option:hover .theme-swatch { transform: scale(1.12); }
+        .theme-option input:checked + .theme-swatch { border-color: #f4f4f5; box-shadow: 0 0 0 2px var(--swatch), 0 0 0 3px #1b1b1b; }
+        .theme-option input:focus-visible + .theme-swatch { outline: 2px solid #8ba4ff; outline-offset: 3px; }
         .hidden { display: none; }
         .link { color: #A5B4FC; cursor: pointer; text-decoration: underline; }
     </style>
@@ -77,18 +84,29 @@
         <sdpi-item label="Display">
             <label class="checkbox"><input id="showProviderName" type="checkbox" /> Show provider name</label>
         </sdpi-item>
+        <sdpi-item label="Theme">
+            <div class="theme-picker" role="radiogroup" aria-label="Tile colour theme">
+                <label class="theme-option" title="CodexBar" aria-label="CodexBar"><input type="radio" name="theme" value="codexbar" /><span class="theme-swatch" style="--swatch: #A5B4FC"></span></label>
+                <label class="theme-option" title="Emerald" aria-label="Emerald"><input type="radio" name="theme" value="codex" /><span class="theme-swatch" style="--swatch: #23C892"></span></label>
+                <label class="theme-option" title="Claude" aria-label="Claude"><input type="radio" name="theme" value="claude" /><span class="theme-swatch" style="--swatch: #E5825B"></span></label>
+                <label class="theme-option" title="Gemini" aria-label="Gemini"><input type="radio" name="theme" value="gemini-cli" /><span class="theme-swatch" style="--swatch: #5B9BFF"></span></label>
+                <label class="theme-option" title="Antigravity" aria-label="Antigravity"><input type="radio" name="theme" value="antigravity" /><span class="theme-swatch" style="--swatch: #9D7BFF"></span></label>
+                <label class="theme-option" title="MiniMax" aria-label="MiniMax"><input type="radio" name="theme" value="minimax" /><span class="theme-swatch" style="--swatch: #FF1F99"></span></label>
+                <label class="theme-option" title="OpenRouter" aria-label="OpenRouter"><input type="radio" name="theme" value="openrouter" /><span class="theme-swatch" style="--swatch: #7B7DFF"></span></label>
+            </div>
+        </sdpi-item>
     </div>
     <details class="advanced">
         <summary>Advanced</summary>
         <div class="advanced-content">
-            <sdpi-item label="Port">
-                <input id="port" class="sdpi-item-value" type="number" min="1024" max="65535" step="1" />
-            </sdpi-item>
             <sdpi-item id="accountRow" class="hidden" label="Account">
                 <select id="account" class="sdpi-item-value" disabled><option value="">Loading providers…</option></select>
             </sdpi-item>
             <div class="advanced-section">
                 <p class="advanced-section-title">Server</p>
+                <sdpi-item label="Port">
+                    <input id="port" class="sdpi-item-value" type="number" min="1024" max="65535" step="1" />
+                </sdpi-item>
                 <div class="server-row">
                     <span id="serverStatus" class="server-status">Checking status</span>
                     <button id="startServer" class="server-button" type="button" disabled>Start</button>
@@ -146,8 +164,8 @@
                 document.getElementById("accountRow").classList.remove("hidden");
             } else if (payload.event === "providerListError") {
                 finishLoading();
-                setStatus("Couldn’t load CodexBar providers.", true);
-                showSetupHint("Start CodexBar with <code>codexbar serve</code>, or enable automatic start in Advanced, then refresh.");
+                setStatus(payload.message || "Couldn’t load CodexBar providers.", true);
+                showSetupHint(providerLoadHint(payload.code));
             } else if (payload.event === "serverStatus") {
                 _serverBusy = false;
                 setServerStatus(payload);
@@ -162,6 +180,9 @@
                 _serverBusy = false;
                 _reloadAfterServerCommand = null;
                 setServerStatus({ state: "stopped", message: payload.message });
+                if (payload.code === "cli-not-found" || payload.code === "unsupported-platform") {
+                    showSetupHint(serverStartHint(payload.code));
+                }
             } else if (payload.event === "serverConfig") {
                 applyServerConfig(payload);
             }
@@ -178,13 +199,26 @@
 
         function showSetupHint(message) {
             const hint = document.getElementById("setupHint");
-            hint.innerHTML = `${message} <span class="link" onclick="openCodexBar()">CodexBar setup</span>`;
+            hint.innerHTML = message;
             hint.classList.remove("hidden");
             document.getElementById("configurationPanel").classList.add("hidden");
             document.getElementById("accountRow").classList.add("hidden");
         }
 
         function hideSetupHint() { document.getElementById("setupHint").classList.add("hidden"); }
+
+        function documentationLink(label) { return `<span class="link" onclick="openCodexBarDocumentation()">${label}</span>`; }
+
+        function providerLoadHint(code) {
+            if (code === "cli-not-found") return `CodexBar is not installed. ${documentationLink("CodexBar setup instructions")}, then click Start.`;
+            if (code === "timeout") return "CodexBar is running but did not answer in time. Try Refresh, or restart the server.";
+            return `Start CodexBar with <code>codexbar serve</code>, or enable automatic start in Advanced. Not installed? ${documentationLink("CodexBar setup instructions")}.`;
+        }
+
+        function serverStartHint(code) {
+            if (code === "cli-not-found") return `CodexBar is not installed. ${documentationLink("CodexBar setup instructions")}, then return here and click Start.`;
+            return `Automatic start is available on macOS only. Start <code>codexbar serve</code> yourself, or see ${documentationLink("CodexBar setup instructions")}.`;
+        }
 
         function startLoading() {
             document.getElementById("refreshProviders").disabled = true;
@@ -303,6 +337,10 @@
             document.getElementById("port").value = _settings.port || 8080;
             document.getElementById("autoStart").checked = _settings.autoStart === true;
             document.getElementById("layout").value = _settings.layout || "bars";
+            const theme = _settings.theme || "codexbar";
+            document.querySelectorAll('input[name="theme"]').forEach((input) => {
+                input.checked = input.value === theme;
+            });
             document.getElementById("showProviderName").checked = _settings.showProviderName !== false;
             populateProviderSelect();
             populateAccountAndMetrics();
@@ -325,6 +363,7 @@
             _settings.metric = document.getElementById("metric").value || "primary";
             _settings.topMetric = document.getElementById("topMetric").value || "primary";
             _settings.bottomMetric = document.getElementById("bottomMetric").value || "secondary";
+            _settings.theme = document.querySelector('input[name="theme"]:checked')?.value || "codexbar";
             _settings.showProviderName = document.getElementById("showProviderName").checked;
             applyLayoutVisibility();
             if (_websocket && _uuid) _websocket.send(JSON.stringify({ event: "setSettings", context: _uuid, payload: _settings }));
@@ -360,8 +399,8 @@
             }));
         }
 
-        function openCodexBar() {
-            if (_websocket) _websocket.send(JSON.stringify({ event: "openUrl", payload: { url: "https://github.com/steipete/CodexBar" } }));
+        function openCodexBarDocumentation() {
+            if (_websocket) _websocket.send(JSON.stringify({ event: "openUrl", payload: { url: "https://github.com/lenadweb/stream-deck-ai-limits#codexbar-backend-optional" } }));
         }
 
         function openGitHub() {
@@ -384,6 +423,7 @@
                     if (id === "port" || id === "autoStart") loadProviders();
                 });
             });
+            document.querySelectorAll('input[name="theme"]').forEach((input) => input.addEventListener("change", saveSettings));
             document.getElementById("refreshProviders").addEventListener("click", loadProviders);
             document.getElementById("startServer").addEventListener("click", function () { serverCommand("startServer"); });
             document.getElementById("stopServer").addEventListener("click", function () {

@@ -221,14 +221,20 @@ export abstract class BaseMonitoringAction<
         return { showName: ev?.payload?.settings?.showProviderName !== false };
     }
 
+    /** Lets actions with per-tile presentation settings choose a theme at draw time. */
+    protected themeForEvent(_ev: any): ServiceTheme {
+        return this.themeName;
+    }
+
     protected async draw(ev: any, result: TResult): Promise<void> {
         const opts = this.renderOptions(ev);
+        const theme = this.themeForEvent(ev);
         if (result.error) {
-            const svg = this.renderer.renderError(result.error.message, this.themeName, 144, 144, opts);
+            const svg = this.renderer.renderError(result.error.message, theme, 144, 144, opts);
             const image = `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
             await ev.action.setImage(image);
 
-            const dialSvg = this.renderer.renderError(result.error.message, this.themeName, 200, 100, opts);
+            const dialSvg = this.renderer.renderError(result.error.message, theme, 200, 100, opts);
             await this.updateDialFeedback(ev, dialSvg);
             return;
         }
@@ -236,13 +242,13 @@ export abstract class BaseMonitoringAction<
         const data = this.getDisplayData(ev, result);
         const renderAt = (w: number, h: number) =>
             data.ring
-                ? this.renderer.renderRing(data.ring, this.themeName, w, h, opts)
+                ? this.renderer.renderRing(data.ring, theme, w, h, opts)
                 : data.slots
-                    ? this.renderer.renderSlots(data.slots, this.themeName, w, h, opts)
+                    ? this.renderer.renderSlots(data.slots, theme, w, h, opts)
                     : this.renderer.render(
                         data.value1 ?? 0,
                         data.value2 ?? 0,
-                        this.themeName,
+                        theme,
                         data.resetTime1,
                         data.resetTime2,
                         data.label1 ?? "",
@@ -263,21 +269,23 @@ export abstract class BaseMonitoringAction<
 
     protected async drawPlaceholder(ev: any): Promise<void> {
         const opts = this.renderOptions(ev);
-        const svg = this.renderer.renderPlaceholder(this.themeName, 144, 144, opts);
+        const theme = this.themeForEvent(ev);
+        const svg = this.renderer.renderPlaceholder(theme, 144, 144, opts);
         const image = `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
         await ev.action.setImage(image);
 
-        const dialSvg = this.renderer.renderPlaceholder(this.themeName, 200, 100, opts);
+        const dialSvg = this.renderer.renderPlaceholder(theme, 200, 100, opts);
         await this.updateDialFeedback(ev, dialSvg);
     }
 
     protected async drawMessage(ev: any, lines: string[]): Promise<void> {
         const opts = this.renderOptions(ev);
-        const svg = this.renderer.renderMessage(lines, this.themeName, 144, 144, opts);
+        const theme = this.themeForEvent(ev);
+        const svg = this.renderer.renderMessage(lines, theme, 144, 144, opts);
         const image = `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
         await ev.action.setImage(image);
 
-        const dialSvg = this.renderer.renderMessage(lines, this.themeName, 200, 100, opts);
+        const dialSvg = this.renderer.renderMessage(lines, theme, 200, 100, opts);
         await this.updateDialFeedback(ev, dialSvg);
     }
 
