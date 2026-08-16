@@ -2,10 +2,18 @@ import streamDeck, { SingletonAction, KeyDownEvent, WillAppearEvent, WillDisappe
 import { ProviderName, StandardUsageResult } from "@lenadweb/ai-limits";
 import { ProgressBarRenderer, Slot, RenderOptions } from "../ui/progress-bar-renderer";
 import { ServiceTheme } from "../interfaces/theme";
+import { TileLayout } from "../interfaces/settings";
 import { LimitsManager } from "../services/limits-manager";
 
+/** A single placed tile: its own controller kind and its own settings. */
+interface TileInstance<T> {
+    action: any;
+    controller: string;
+    settings: T;
+}
+
 export abstract class BaseMonitoringAction<T extends Record<string, any>> extends SingletonAction<T> {
-    protected controllers = new Map<string, string>();
+    protected instances = new Map<string, TileInstance<T>>();
     protected intervalId: NodeJS.Timeout | null = null;
     protected isMonitoring = false;
     protected lastResult: StandardUsageResult | null = null;
@@ -18,7 +26,7 @@ export abstract class BaseMonitoringAction<T extends Record<string, any>> extend
     protected abstract get themeName(): ServiceTheme;
 
     override async onWillAppear(ev: WillAppearEvent<T>): Promise<void> {
-        this.controllers.set(ev.action.id, ev.payload.controller);
+        this.track(ev, ev.payload.controller);
         // Draw cached data immediately so switching pages/folders never blanks the key
         await this.redraw(ev);
         if (!this.isMonitoring) {
@@ -28,8 +36,8 @@ export abstract class BaseMonitoringAction<T extends Record<string, any>> extend
     }
 
     override async onWillDisappear(ev: WillDisappearEvent<T>): Promise<void> {
-        this.controllers.delete(ev.action.id);
-        if (this.controllers.size === 0) {
+        this.instances.delete(ev.action.id);
+        if (this.instances.size === 0) {
             this.stopMonitoring();
             this.isMonitoring = false;
         }
@@ -55,6 +63,31 @@ export abstract class BaseMonitoringAction<T extends Record<string, any>> extend
         await this.refresh(ev);
     }
 
+    /**
+     * Remember the tile behind an event, along with its current settings. Every draw
+     * path funnels through here so the cache stays fresh even when a subclass
+     * overrides the event handlers without calling super.
+     */
+    protected track(ev: any, controller?: string): void {
+        const id = ev?.action?.id;
+        if (!id) return;
+
+        const existing = this.instances.get(id);
+        this.instances.set(id, {
+            action: ev.action,
+            controller: controller ?? existing?.controller ?? "Keypad",
+            settings: (ev.payload?.settings ?? existing?.settings ?? {}) as T
+        });
+    }
+
+    /** Event-shaped view of a tracked tile, so draw code can stay event-driven. */
+    protected asEvent(instance: TileInstance<T>): any {
+        return {
+            action: instance.action,
+            payload: { settings: instance.settings, controller: instance.controller }
+        };
+    }
+
     protected startMonitoring(ev: any): void {
         // Only hit the network on a cold start or when the cached data has gone stale,
         // so re-appearing after a page/folder switch doesn't trigger a visible refresh.
@@ -77,17 +110,31 @@ export abstract class BaseMonitoringAction<T extends Record<string, any>> extend
     }
 
     protected async refresh(ev: any): Promise<void> {
+        this.track(ev);
         try {
             const result = await this.fetchProviderUsage(ev);
             this.lastResult = result;
             this.lastFetchTime = Date.now();
-            await this.draw(ev, result);
+            // One fetch feeds every tile of this provider, each rendered with its own
+            // settings — several tiles can show different metrics of the same data.
+            await this.drawAll(result);
         } catch (err: any) {
             streamDeck.logger.error(`[${this.providerName}] Refresh failed: ${err}`);
         }
     }
 
+    protected async drawAll(result: StandardUsageResult): Promise<void> {
+        for (const instance of [...this.instances.values()]) {
+            try {
+                await this.draw(this.asEvent(instance), result);
+            } catch (err: any) {
+                streamDeck.logger.error(`[${this.providerName}] Draw failed: ${err}`);
+            }
+        }
+    }
+
     protected async redraw(ev: any): Promise<void> {
+        this.track(ev);
         if (this.lastResult) {
             await this.draw(ev, this.lastResult);
         } else {
@@ -100,16 +147,24 @@ export abstract class BaseMonitoringAction<T extends Record<string, any>> extend
     }
 
     protected abstract getDisplayData(ev: any, result: StandardUsageResult): {
-        value1: number;
-        value2: number;
-        label1: string;
-        label2: string;
+        value1?: number;
+        value2?: number;
+        label1?: string;
+        label2?: string;
         resetTime1?: string | null;
         resetTime2?: string | null;
         valueText1?: string;
         valueText2?: string;
         slots?: Slot[];
+        /** When set, the tile renders as a single ring gauge instead of bars. */
+        ring?: Slot;
     };
+
+    /** Package the slots a tile wants to show into the shape {@link draw} expects. */
+    protected tileDisplay(slots: (Slot | null)[], layout: TileLayout) {
+        const visible = slots.filter((slot): slot is Slot => slot !== null);
+        return layout === "ring" ? { ring: visible[0] } : { slots: visible };
+    }
 
     protected renderOptions(ev: any): RenderOptions {
         return { showName: ev?.payload?.settings?.showProviderName !== false };
@@ -129,21 +184,23 @@ export abstract class BaseMonitoringAction<T extends Record<string, any>> extend
 
         const data = this.getDisplayData(ev, result);
         const renderAt = (w: number, h: number) =>
-            data.slots
-                ? this.renderer.renderSlots(data.slots, this.themeName, w, h, opts)
-                : this.renderer.render(
-                    data.value1,
-                    data.value2,
-                    this.themeName,
-                    data.resetTime1,
-                    data.resetTime2,
-                    data.label1,
-                    data.label2,
-                    w, h,
-                    data.valueText1,
-                    data.valueText2,
-                    opts
-                );
+            data.ring
+                ? this.renderer.renderRing(data.ring, this.themeName, w, h, opts)
+                : data.slots
+                    ? this.renderer.renderSlots(data.slots, this.themeName, w, h, opts)
+                    : this.renderer.render(
+                        data.value1 ?? 0,
+                        data.value2 ?? 0,
+                        this.themeName,
+                        data.resetTime1,
+                        data.resetTime2,
+                        data.label1 ?? "",
+                        data.label2 ?? "",
+                        w, h,
+                        data.valueText1,
+                        data.valueText2,
+                        opts
+                    );
 
         const svg = renderAt(144, 144);
         const image = `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
@@ -174,7 +231,7 @@ export abstract class BaseMonitoringAction<T extends Record<string, any>> extend
     }
 
     protected async updateDialFeedback(ev: any, svg: string): Promise<void> {
-        const controller = this.controllers.get(ev.action.id);
+        const controller = this.instances.get(ev.action.id)?.controller ?? ev?.payload?.controller;
         if (controller === "Encoder") {
             const feedback = {
                 full_view: `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`

@@ -7,7 +7,7 @@
       "Name": "Progress Bars (Claude)",
       "UUID": "com.len.limits.progress",
       "Icon": "imgs/actions/counter/icon",
-      "Tooltip": "Displays Claude usage.",
+      "Tooltip": "Displays Claude usage: session, weekly or Sonnet weekly.",
       "PropertyInspectorPath": "ui/claude-settings.html",
       "Controllers": [
         "Keypad",
@@ -33,7 +33,7 @@
       "Name": "Progress Bars (Codex)",
       "UUID": "com.len.limits.codex.progress",
       "Icon": "imgs/actions/counter/icon",
-      "Tooltip": "Displays Codex usage.",
+      "Tooltip": "Displays Codex usage: session, weekly, usage limit resets or credits.",
       "PropertyInspectorPath": "ui/codex-settings.html",
       "Controllers": [
         "Keypad",

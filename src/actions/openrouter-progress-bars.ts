@@ -1,6 +1,6 @@
 import { action } from "@elgato/streamdeck";
 import { LimitsClient, ProviderName, StandardUsageResult, OpenRouterProvider, OpenRouterUsage } from "@lenadweb/ai-limits";
-import { OpenRouterMetric, OpenRouterSettings } from "../interfaces/settings";
+import { OpenRouterMetric, OpenRouterSettings, TileLayout } from "../interfaces/settings";
 import { BaseMonitoringAction } from "./base-monitoring-action";
 import { ServiceTheme } from "../interfaces/theme";
 import { Slot } from "../ui/progress-bar-renderer";
@@ -20,14 +20,6 @@ export class OpenRouterProgressBars extends BaseMonitoringAction<OpenRouterSetti
     protected readonly themeName: ServiceTheme = "openrouter";
     private settings: OpenRouterSettings = {};
     private details: OpenRouterUsage | null = null;
-
-    private get topMetric(): OpenRouterMetric {
-        return this.settings.topMetric ?? "limit";
-    }
-
-    private get bottomMetric(): OpenRouterMetric {
-        return this.settings.bottomMetric ?? "monthly";
-    }
 
     override async onWillAppear(ev: any): Promise<void> {
         this.settings = (ev.payload?.settings ?? {}) as OpenRouterSettings;
@@ -74,14 +66,17 @@ export class OpenRouterProgressBars extends BaseMonitoringAction<OpenRouterSetti
     }
 
     protected getDisplayData(ev: any, result: StandardUsageResult) {
-        const slots = [this.metricSlot(this.topMetric), this.metricSlot(this.bottomMetric)];
-        return {
-            value1: slots[0].percent ?? 0,
-            value2: slots[1].percent ?? 0,
-            label1: slots[0].label,
-            label2: slots[1].label,
-            slots
-        };
+        const settings = (ev?.payload?.settings ?? {}) as OpenRouterSettings;
+        const layout: TileLayout = settings.layout ?? "bars";
+
+        if (layout === "ring") {
+            return this.tileDisplay([this.metricSlot(settings.metric ?? "limit")], layout);
+        }
+
+        return this.tileDisplay([
+            this.metricSlot(settings.topMetric ?? "limit"),
+            this.metricSlot(settings.bottomMetric ?? "monthly")
+        ], layout);
     }
 
     private metricSlot(metric: OpenRouterMetric): Slot {

@@ -36,14 +36,58 @@
             height: 14px;
             cursor: pointer;
         }
+        select.sdpi-item-value {
+            width: 100%;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: #2d2d2d;
+            color: #ddd;
+            border: 1px solid #444;
+            font-size: 12px;
+        }
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 
 <body>
+    <sdpi-item label="Layout">
+        <select id="layout" class="sdpi-item-value">
+            <option value="ring">Ring (one metric)</option>
+            <option value="bars">Bars (two metrics)</option>
+        </select>
+    </sdpi-item>
+
+    <sdpi-item id="ringRow" label="Metric">
+        <select id="metric" class="sdpi-item-value">
+            <option value="session">Session (5h)</option>
+            <option value="weekly">Week (7d)</option>
+            <option value="weeklySonnet">Sonnet week (7d)</option>
+        </select>
+    </sdpi-item>
+
+    <sdpi-item id="topRow" label="Top">
+        <select id="topMetric" class="sdpi-item-value">
+            <option value="session">Session (5h)</option>
+            <option value="weekly">Week (7d)</option>
+            <option value="weeklySonnet">Sonnet week (7d)</option>
+        </select>
+    </sdpi-item>
+
+    <sdpi-item id="bottomRow" label="Bottom">
+        <select id="bottomMetric" class="sdpi-item-value">
+            <option value="session">Session (5h)</option>
+            <option value="weekly">Week (7d)</option>
+            <option value="weeklySonnet">Sonnet week (7d)</option>
+        </select>
+    </sdpi-item>
+
     <sdpi-item label="Display">
         <label class="checkbox"><input id="showProviderName" type="checkbox" /> Show provider name</label>
     </sdpi-item>
 
+    <div class="info">Place this action twice to watch two windows side by side, e.g. one tile on Session and one on Week.</div>
     <div class="info">Credentials for Claude are automatically loaded from your system (macOS Keychain or ~/.claude/.credentials.json).</div>
     <div class="info"><span class="link" onclick="openGitHub()">View source on GitHub</span></div>
 
@@ -78,10 +122,27 @@
 
         function applySettings() {
             document.getElementById("showProviderName").checked = _settings.showProviderName !== false;
+            document.getElementById("layout").value = _settings.layout || "bars";
+            document.getElementById("metric").value = _settings.metric || "session";
+            document.getElementById("topMetric").value = _settings.topMetric || "session";
+            document.getElementById("bottomMetric").value = _settings.bottomMetric || "weekly";
+            applyLayoutVisibility();
+        }
+
+        function applyLayoutVisibility() {
+            const isRing = document.getElementById("layout").value === "ring";
+            document.getElementById("ringRow").classList.toggle("hidden", !isRing);
+            document.getElementById("topRow").classList.toggle("hidden", isRing);
+            document.getElementById("bottomRow").classList.toggle("hidden", isRing);
         }
 
         function saveSettings() {
             _settings.showProviderName = document.getElementById("showProviderName").checked;
+            _settings.layout = document.getElementById("layout").value || "bars";
+            _settings.metric = document.getElementById("metric").value || "session";
+            _settings.topMetric = document.getElementById("topMetric").value || "session";
+            _settings.bottomMetric = document.getElementById("bottomMetric").value || "weekly";
+            applyLayoutVisibility();
             if (_websocket && _uuid) {
                 _websocket.send(JSON.stringify({
                     event: "setSettings",
@@ -103,7 +164,9 @@
         }
 
         document.addEventListener("DOMContentLoaded", function () {
-            document.getElementById("showProviderName").addEventListener("change", saveSettings);
+            ["showProviderName", "layout", "metric", "topMetric", "bottomMetric"].forEach(function (id) {
+                document.getElementById(id).addEventListener("change", saveSettings);
+            });
             applySettings();
         });
     </script>

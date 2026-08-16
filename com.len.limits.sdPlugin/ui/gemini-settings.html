@@ -44,17 +44,33 @@
             height: 14px;
             cursor: pointer;
         }
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 
 <body>
-    <sdpi-item label="Top Bar Model">
+    <sdpi-item label="Layout">
+        <select id="layout" class="sdpi-item-value">
+            <option value="ring">Ring (one model)</option>
+            <option value="bars">Bars (two models)</option>
+        </select>
+    </sdpi-item>
+
+    <sdpi-item id="ringRow" label="Model">
+        <select id="model" class="sdpi-item-value">
+            <option value="">Overall (Most Constrained)</option>
+        </select>
+    </sdpi-item>
+
+    <sdpi-item id="topRow" label="Top Bar Model">
         <select id="topModel" class="sdpi-item-value">
             <option value="">Overall (Most Constrained)</option>
         </select>
     </sdpi-item>
 
-    <sdpi-item label="Bottom Bar Model">
+    <sdpi-item id="bottomRow" label="Bottom Bar Model">
         <select id="bottomModel" class="sdpi-item-value">
             <option value="">Overall (Most Constrained)</option>
         </select>
@@ -125,26 +141,21 @@
             };
         }
 
+        const MODEL_SELECTS = ["model", "topModel", "bottomModel"];
+
         function populateModels(models) {
-            const topSelect = document.getElementById("topModel");
-            const bottomSelect = document.getElementById("bottomModel");
+            MODEL_SELECTS.forEach(function (id) {
+                const select = document.getElementById(id);
 
-            // Clear existing model options (keep first "Overall" option)
-            while (topSelect.options.length > 1) topSelect.remove(1);
-            while (bottomSelect.options.length > 1) bottomSelect.remove(1);
+                // Clear existing model options (keep first "Overall" option)
+                while (select.options.length > 1) select.remove(1);
 
-            models.forEach(function (modelId) {
-                const displayName = modelId.replace(/^models\//, "");
-
-                const opt1 = document.createElement("option");
-                opt1.value = modelId;
-                opt1.textContent = displayName;
-                topSelect.appendChild(opt1);
-
-                const opt2 = document.createElement("option");
-                opt2.value = modelId;
-                opt2.textContent = displayName;
-                bottomSelect.appendChild(opt2);
+                models.forEach(function (modelId) {
+                    const opt = document.createElement("option");
+                    opt.value = modelId;
+                    opt.textContent = modelId.replace(/^models\//, "");
+                    select.appendChild(opt);
+                });
             });
 
             // Restore saved selections
@@ -152,21 +163,28 @@
         }
 
         function applySettings() {
-            const topSelect = document.getElementById("topModel");
-            const bottomSelect = document.getElementById("bottomModel");
-
-            if (_settings.topModel !== undefined) topSelect.value = _settings.topModel;
-            if (_settings.bottomModel !== undefined) bottomSelect.value = _settings.bottomModel;
+            MODEL_SELECTS.forEach(function (id) {
+                if (_settings[id] !== undefined) document.getElementById(id).value = _settings[id];
+            });
+            document.getElementById("layout").value = _settings.layout || "bars";
             document.getElementById("showProviderName").checked = _settings.showProviderName !== false;
+            applyLayoutVisibility();
+        }
+
+        function applyLayoutVisibility() {
+            const isRing = document.getElementById("layout").value === "ring";
+            document.getElementById("ringRow").classList.toggle("hidden", !isRing);
+            document.getElementById("topRow").classList.toggle("hidden", isRing);
+            document.getElementById("bottomRow").classList.toggle("hidden", isRing);
         }
 
         function saveSettings() {
-            const topSelect = document.getElementById("topModel");
-            const bottomSelect = document.getElementById("bottomModel");
-
-            _settings.topModel = topSelect.value;
-            _settings.bottomModel = bottomSelect.value;
+            MODEL_SELECTS.forEach(function (id) {
+                _settings[id] = document.getElementById(id).value;
+            });
+            _settings.layout = document.getElementById("layout").value || "bars";
             _settings.showProviderName = document.getElementById("showProviderName").checked;
+            applyLayoutVisibility();
 
             if (_websocket && _uuid) {
                 const json = {
@@ -190,9 +208,10 @@
         }
 
         document.addEventListener("DOMContentLoaded", function () {
-            document.getElementById("topModel").addEventListener("change", saveSettings);
-            document.getElementById("bottomModel").addEventListener("change", saveSettings);
-            document.getElementById("showProviderName").addEventListener("change", saveSettings);
+            ["layout", "model", "topModel", "bottomModel", "showProviderName"].forEach(function (id) {
+                document.getElementById(id).addEventListener("change", saveSettings);
+            });
+            applySettings();
         });
     </script>
 </body>

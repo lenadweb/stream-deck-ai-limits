@@ -36,12 +36,52 @@
             height: 14px;
             cursor: pointer;
         }
+        select.sdpi-item-value {
+            width: 100%;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: #2d2d2d;
+            color: #ddd;
+            border: 1px solid #444;
+            font-size: 12px;
+        }
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 
 <body>
     <sdpi-item label="API Key">
         <sdpi-textfield id="apiKey" type="password" placeholder="MiniMax API key"></sdpi-textfield>
+    </sdpi-item>
+
+    <sdpi-item label="Layout">
+        <select id="layout" class="sdpi-item-value">
+            <option value="ring">Ring (one metric)</option>
+            <option value="bars">Bars (two metrics)</option>
+        </select>
+    </sdpi-item>
+
+    <sdpi-item id="ringRow" label="Metric">
+        <select id="metric" class="sdpi-item-value">
+            <option value="daily">Daily usage</option>
+            <option value="weekly">Weekly usage</option>
+        </select>
+    </sdpi-item>
+
+    <sdpi-item id="topRow" label="Top">
+        <select id="topMetric" class="sdpi-item-value">
+            <option value="daily">Daily usage</option>
+            <option value="weekly">Weekly usage</option>
+        </select>
+    </sdpi-item>
+
+    <sdpi-item id="bottomRow" label="Bottom">
+        <select id="bottomMetric" class="sdpi-item-value">
+            <option value="daily">Daily usage</option>
+            <option value="weekly">Weekly usage</option>
+        </select>
     </sdpi-item>
 
     <sdpi-item label="Display">
@@ -84,12 +124,29 @@
             const apiKey = document.getElementById("apiKey");
             apiKey.value = _settings.apiKey || "";
             document.getElementById("showProviderName").checked = _settings.showProviderName !== false;
+            document.getElementById("layout").value = _settings.layout || "bars";
+            document.getElementById("metric").value = _settings.metric || "daily";
+            document.getElementById("topMetric").value = _settings.topMetric || "daily";
+            document.getElementById("bottomMetric").value = _settings.bottomMetric || "weekly";
+            applyLayoutVisibility();
+        }
+
+        function applyLayoutVisibility() {
+            const isRing = document.getElementById("layout").value === "ring";
+            document.getElementById("ringRow").classList.toggle("hidden", !isRing);
+            document.getElementById("topRow").classList.toggle("hidden", isRing);
+            document.getElementById("bottomRow").classList.toggle("hidden", isRing);
         }
 
         function saveSettings() {
             const apiKey = document.getElementById("apiKey");
             _settings.apiKey = apiKey.value || "";
             _settings.showProviderName = document.getElementById("showProviderName").checked;
+            _settings.layout = document.getElementById("layout").value || "bars";
+            _settings.metric = document.getElementById("metric").value || "daily";
+            _settings.topMetric = document.getElementById("topMetric").value || "daily";
+            _settings.bottomMetric = document.getElementById("bottomMetric").value || "weekly";
+            applyLayoutVisibility();
 
             if (_websocket && _uuid) {
                 _websocket.send(JSON.stringify({
@@ -114,7 +171,9 @@
         document.addEventListener("DOMContentLoaded", function () {
             const apiKey = document.getElementById("apiKey");
             apiKey.addEventListener("input", saveSettings);
-            document.getElementById("showProviderName").addEventListener("change", saveSettings);
+            ["showProviderName", "layout", "metric", "topMetric", "bottomMetric"].forEach(function (id) {
+                document.getElementById(id).addEventListener("change", saveSettings);
+            });
             applySettings();
         });
     </script>

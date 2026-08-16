@@ -1,9 +1,16 @@
 import { action } from "@elgato/streamdeck";
 import { LimitsClient, ProviderName, StandardUsageResult } from "@lenadweb/ai-limits";
-import { MiniMaxSettings } from "../interfaces/settings";
+import { MiniMaxMetric, MiniMaxSettings, TileLayout } from "../interfaces/settings";
 import { BaseMonitoringAction } from "./base-monitoring-action";
 import { ServiceTheme } from "../interfaces/theme";
+import { Slot } from "../ui/progress-bar-renderer";
+import { formatTimeUntil } from "../utils/time-formatter";
 import { streamDeckLogger } from "../services/limits-manager";
+
+const METRICS: Record<MiniMaxMetric, { label: string; key: string }> = {
+    daily: { label: "Daily", key: "general" },
+    weekly: { label: "Week", key: "weekly_interval" }
+};
 
 @action({ UUID: "com.len.limits.minimax" })
 export class MiniMaxProgressBars extends BaseMonitoringAction<MiniMaxSettings> {
@@ -17,8 +24,14 @@ export class MiniMaxProgressBars extends BaseMonitoringAction<MiniMaxSettings> {
     }
 
     override async onDidReceiveSettings(ev: any): Promise<void> {
+        const previousKey = this.settings.apiKey;
         this.settings = (ev.payload?.settings ?? {}) as MiniMaxSettings;
-        await this.refresh(ev);
+        // Only the API key needs a new request; metric changes redraw from cache.
+        if (this.settings.apiKey !== previousKey) {
+            await this.refresh(ev);
+        } else {
+            await this.redraw(ev);
+        }
     }
 
     protected override async fetchProviderUsage(ev: any): Promise<StandardUsageResult> {
@@ -36,15 +49,32 @@ export class MiniMaxProgressBars extends BaseMonitoringAction<MiniMaxSettings> {
     }
 
     protected getDisplayData(ev: any, result: StandardUsageResult) {
-        const general = result.perModel?.["general"];
-        const weekly = result.perModel?.["weekly_interval"];
+        const settings = (ev?.payload?.settings ?? {}) as MiniMaxSettings;
+        const layout: TileLayout = settings.layout ?? "bars";
+
+        if (layout === "ring") {
+            return this.tileDisplay([this.metricSlot(settings.metric ?? "daily", result)], layout);
+        }
+
+        return this.tileDisplay([
+            this.metricSlot(settings.topMetric ?? "daily", result),
+            this.metricSlot(settings.bottomMetric ?? "weekly", result)
+        ], layout);
+    }
+
+    private metricSlot(metric: MiniMaxMetric, result: StandardUsageResult): Slot {
+        const definition = METRICS[metric] ?? METRICS.daily;
+        const bucket = result.perModel?.[definition.key];
+
+        if (!bucket) {
+            return { kind: "stat", label: definition.label, valueText: "—", caption: "no data", muted: true };
+        }
+
         return {
-            value1: general?.usagePercent ?? 0,
-            value2: weekly?.usagePercent ?? 0,
-            label1: "Daily",
-            label2: "Week",
-            resetTime1: general?.resetTime,
-            resetTime2: weekly?.resetTime
+            kind: "gauge",
+            label: definition.label,
+            percent: bucket.usagePercent ?? 0,
+            caption: bucket.resetTime ? formatTimeUntil(bucket.resetTime) : undefined
         };
     }
 }
