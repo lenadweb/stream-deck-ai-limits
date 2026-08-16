@@ -206,8 +206,12 @@ export class CodexBarProgressBars extends BaseMonitoringAction<CodexBarSettings,
             return this.tileDisplay([this.metricSlot(settings.metric, result)], layout);
         }
         return this.tileDisplay([
-            this.metricSlot(settings.topMetric ?? "primary", result),
-            settings.bottomMetric ? this.metricSlot(settings.bottomMetric, result) : null
+            settings.topMetric !== "none"
+                ? this.metricSlot(settings.topMetric ?? "primary", result)
+                : null,
+            settings.bottomMetric && settings.bottomMetric !== "none"
+                ? this.metricSlot(settings.bottomMetric, result)
+                : null
         ], layout);
     }
 

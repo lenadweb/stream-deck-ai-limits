@@ -314,8 +314,11 @@
             const metrics = selectedEntry()?.metrics || [];
             ["metric", "topMetric", "bottomMetric"].forEach((id) => {
                 const select = document.getElementById(id);
-                const selectableMetrics = id === "bottomMetric"
-                    ? metrics.filter((metric) => metric.id !== (_settings.topMetric || "primary"))
+                const selectableMetrics = id === "topMetric" || id === "bottomMetric"
+                    ? [
+                        { id: "none", label: "None" },
+                        ...metrics
+                    ]
                     : metrics;
                 const current = _settings[id] || (id === "bottomMetric" ? "secondary" : "primary");
                 select.innerHTML = "";
