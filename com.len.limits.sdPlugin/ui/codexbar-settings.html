@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <title>CodexBar backend settings</title>
+    <meta charset="utf-8" />
+    <script src="https://sdpi-components.dev/releases/v4/sdpi-components.js"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        select.sdpi-item-value, input.sdpi-item-value { width: 100%; padding: 4px 8px; border-radius: 4px; background: #2d2d2d; color: #ddd; border: 1px solid #444; font-size: 12px; box-sizing: border-box; }
+        .provider-control { display: flex; width: 100%; align-items: center; gap: 6px; }
+        .provider-control select { flex: 1; min-width: 0; }
+        .icon-button { display: grid; place-items: center; flex: 0 0 28px; width: 28px; height: 28px; padding: 0; border: 1px solid #4b4b4b; border-radius: 4px; background: #373737; color: #d4d4d4; cursor: pointer; }
+        .icon-button:hover:not(:disabled) { background: #454545; color: #f4f4f4; }
+        .icon-button:focus-visible { outline: 2px solid #6b8afd; outline-offset: 1px; }
+        .icon-button:disabled { opacity: 0.52; cursor: default; }
+        .icon-button svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+        .icon-button.loading svg { animation: refresh-spin 800ms linear infinite; }
+        @keyframes refresh-spin { to { transform: rotate(360deg); } }
+        .status { min-height: 16px; padding: 4px 16px 8px; font-size: 11px; color: #9CA3AF; line-height: 1.4; }
+        .status.error { color: #FCA5A5; }
+        .info { padding: 6px 16px; font-size: 11px; color: #999; line-height: 1.4; }
+        .setup-hint { margin: 2px 16px 12px; padding: 8px 10px; border: 1px solid #5b4545; border-radius: 4px; background: #342a2a; color: #d7b0b0; font-size: 11px; line-height: 1.45; }
+        .setup-hint code { color: #f0d0d0; }
+        .advanced { margin: 0 16px 10px; color: #aaa; font-size: 11px; }
+        .advanced summary { width: fit-content; cursor: pointer; color: #b8c6f5; user-select: none; }
+        .advanced summary:hover { color: #d6defb; }
+        .advanced-content { padding-top: 8px; }
+        .advanced-content sdpi-item { margin: 0; }
+        .advanced-section { margin-top: 12px; padding-top: 10px; border-top: 1px solid #474747; }
+        .advanced-section-title { margin: 0 0 7px; color: #c8c8c8; font-size: 11px; font-weight: 600; }
+        .server-row { display: flex; align-items: center; gap: 6px; }
+        .server-status { flex: 1; min-width: 0; color: #a5a5a5; font-size: 11px; }
+        .server-status::before { content: ""; display: inline-block; width: 7px; height: 7px; margin: 0 6px 1px 0; border-radius: 50%; background: #777; vertical-align: middle; }
+        .server-status.running { color: #b8e0c6; }
+        .server-status.running::before { background: #34b56c; }
+        .server-status.error { color: #f2adad; }
+        .server-status.error::before { background: #d85a5a; }
+        .server-button { height: 27px; padding: 0 8px; border: 1px solid #4b4b4b; border-radius: 4px; background: #373737; color: #e5e5e5; cursor: pointer; font-size: 11px; }
+        .server-button:hover:not(:disabled) { background: #454545; }
+        .server-button:focus-visible { outline: 2px solid #6b8afd; outline-offset: 1px; }
+        .server-button:disabled { opacity: 0.48; cursor: default; }
+        .server-note { margin: 6px 0 0; color: #898989; font-size: 10px; line-height: 1.35; }
+        .checkbox { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #ddd; cursor: pointer; }
+        .checkbox input { width: 14px; height: 14px; cursor: pointer; }
+        .theme-picker { display: flex; align-items: center; gap: 8px; min-height: 28px; }
+        .theme-option { position: relative; display: grid; place-items: center; width: 24px; height: 24px; cursor: pointer; }
+        .theme-option input { position: absolute; opacity: 0; pointer-events: none; }
+        .theme-swatch { width: 18px; height: 18px; border: 2px solid transparent; border-radius: 50%; background: var(--swatch); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12); transition: transform 120ms ease, box-shadow 120ms ease; }
+        .theme-option:hover .theme-swatch { transform: scale(1.12); }
+        .theme-option input:checked + .theme-swatch { border-color: #f4f4f5; box-shadow: 0 0 0 2px var(--swatch), 0 0 0 3px #1b1b1b; }
+        .theme-option input:focus-visible + .theme-swatch { outline: 2px solid #8ba4ff; outline-offset: 3px; }
+        .hidden { display: none; }
+        .link { color: #A5B4FC; cursor: pointer; text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <sdpi-item label="Provider">
+        <div class="provider-control">
+            <select id="providerId" class="sdpi-item-value" disabled><option value="">Loading providers…</option></select>
+            <button id="refreshProviders" class="icon-button loading" type="button" title="Refresh providers" aria-label="Refresh providers" disabled>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8.1 8.1 0 0 0-14.5-4.8L3 9m0-5v5h5M4 13a8.1 8.1 0 0 0 14.5 4.8L21 15m0 5v-5h-5" /></svg>
+            </button>
+        </div>
+    </sdpi-item>
+    <div id="providerStatus" class="status">Loading configured CodexBar providers…</div>
+    <div id="setupHint" class="setup-hint hidden"></div>
+
+    <div id="configurationPanel" class="hidden">
+        <sdpi-item label="Layout">
+            <select id="layout" class="sdpi-item-value">
+                <option value="ring">Ring (one metric)</option>
+                <option value="bars">Bars (two metrics)</option>
+            </select>
+        </sdpi-item>
+        <sdpi-item id="ringRow" label="Metric">
+            <select id="metric" class="sdpi-item-value"></select>
+        </sdpi-item>
+        <sdpi-item id="topRow" label="Top metric">
+            <select id="topMetric" class="sdpi-item-value"></select>
+        </sdpi-item>
+        <sdpi-item id="bottomRow" label="Bottom metric">
+            <select id="bottomMetric" class="sdpi-item-value"></select>
+        </sdpi-item>
+        <sdpi-item label="Display">
+            <label class="checkbox"><input id="showProviderName" type="checkbox" /> Show provider name</label>
+        </sdpi-item>
+        <sdpi-item label="Theme">
+            <div class="theme-picker" role="radiogroup" aria-label="Tile colour theme">
+                <label class="theme-option" title="CodexBar" aria-label="CodexBar"><input type="radio" name="theme" value="codexbar" /><span class="theme-swatch" style="--swatch: #A5B4FC"></span></label>
+                <label class="theme-option" title="Emerald" aria-label="Emerald"><input type="radio" name="theme" value="codex" /><span class="theme-swatch" style="--swatch: #23C892"></span></label>
+                <label class="theme-option" title="Claude" aria-label="Claude"><input type="radio" name="theme" value="claude" /><span class="theme-swatch" style="--swatch: #E5825B"></span></label>
+                <label class="theme-option" title="Gemini" aria-label="Gemini"><input type="radio" name="theme" value="gemini-cli" /><span class="theme-swatch" style="--swatch: #5B9BFF"></span></label>
+                <label class="theme-option" title="Antigravity" aria-label="Antigravity"><input type="radio" name="theme" value="antigravity" /><span class="theme-swatch" style="--swatch: #9D7BFF"></span></label>
+                <label class="theme-option" title="MiniMax" aria-label="MiniMax"><input type="radio" name="theme" value="minimax" /><span class="theme-swatch" style="--swatch: #FF1F99"></span></label>
+                <label class="theme-option" title="OpenRouter" aria-label="OpenRouter"><input type="radio" name="theme" value="openrouter" /><span class="theme-swatch" style="--swatch: #7B7DFF"></span></label>
+            </div>
+        </sdpi-item>
+    </div>
+    <details class="advanced">
+        <summary>Advanced</summary>
+        <div class="advanced-content">
+            <sdpi-item id="accountRow" class="hidden" label="Account">
+                <select id="account" class="sdpi-item-value" disabled><option value="">Loading providers…</option></select>
+            </sdpi-item>
+            <div class="advanced-section">
+                <p class="advanced-section-title">Server</p>
+                <sdpi-item label="Port">
+                    <input id="port" class="sdpi-item-value" type="number" min="1024" max="65535" step="1" />
+                </sdpi-item>
+                <div class="server-row">
+                    <span id="serverStatus" class="server-status">Checking status</span>
+                    <button id="startServer" class="server-button" type="button" disabled>Start</button>
+                    <button id="stopServer" class="server-button" type="button" disabled>Stop</button>
+                </div>
+                <label class="checkbox"><input id="autoStart" type="checkbox" /> Start CodexBar automatically if it isn't running</label>
+                <p id="serverNote" class="server-note">Start runs <code>codexbar serve</code> on the selected port.</p>
+            </div>
+        </div>
+    </details>
+    <div class="info"><span class="link" onclick="openGitHub()">View source on GitHub</span></div>
+
+    <script>
+        let _websocket = null;
+        let _uuid = null;
+        let _settings = {};
+        let _providers = [];
+        let _serverBusy = false;
+        let _reloadAfterServerCommand = null;
+
+        function connectElgatoStreamDeckSocket(port, uuid, registerEvent, info, actionInfo) {
+            _uuid = uuid;
+            if (actionInfo) _settings = JSON.parse(actionInfo)?.payload?.settings || {};
+            _websocket = new WebSocket("ws://127.0.0.1:" + port);
+            _websocket.onopen = function () {
+                _websocket.send(JSON.stringify({ event: registerEvent, uuid: uuid }));
+                applySettings();
+                startLoading();
+            };
+            _websocket.onmessage = function (evt) {
+                const data = JSON.parse(evt.data);
+                if (data.event === "didReceiveSettings") {
+                    _settings = data.payload?.settings || {};
+                    applySettings();
+                }
+                if (data.event === "sendToPropertyInspector") handlePluginMessage(data.payload || {});
+            };
+        }
+
+        function handlePluginMessage(payload) {
+            if (payload.event === "providerList") {
+                _providers = Array.isArray(payload.providers) ? payload.providers : [];
+                finishLoading();
+                if (!_providers.length) {
+                    showSetupHint("CodexBar is running, but has no enabled providers. Configure a provider in CodexBar, then refresh.");
+                    setStatus("No configured providers found.", true);
+                    return;
+                }
+                hideSetupHint();
+                hideStatus();
+                populateProviderSelect();
+                populateAccountAndMetrics();
+                saveSettings();
+                document.getElementById("configurationPanel").classList.remove("hidden");
+                document.getElementById("accountRow").classList.remove("hidden");
+            } else if (payload.event === "providerListError") {
+                finishLoading();
+                setStatus(payload.message || "Couldn’t load CodexBar providers.", true);
+                showSetupHint(providerLoadHint(payload.code));
+            } else if (payload.event === "serverStatus") {
+                _serverBusy = false;
+                setServerStatus(payload);
+                if (payload.state === "running" && _reloadAfterServerCommand === "start") {
+                    _reloadAfterServerCommand = null;
+                    loadProviders();
+                } else if (payload.state === "stopped" && _reloadAfterServerCommand === "stop") {
+                    _reloadAfterServerCommand = null;
+                    loadProviders();
+                }
+            } else if (payload.event === "serverStatusError") {
+                _serverBusy = false;
+                _reloadAfterServerCommand = null;
+                setServerStatus({ state: "stopped", message: payload.message });
+                if (payload.code === "cli-not-found" || payload.code === "unsupported-platform") {
+                    showSetupHint(serverStartHint(payload.code));
+                }
+            } else if (payload.event === "serverConfig") {
+                applyServerConfig(payload);
+            }
+        }
+
+        function setStatus(message, isError) {
+            const status = document.getElementById("providerStatus");
+            status.textContent = message;
+            status.classList.toggle("error", !!isError);
+            status.classList.remove("hidden");
+        }
+
+        function hideStatus() { document.getElementById("providerStatus").classList.add("hidden"); }
+
+        function showSetupHint(message) {
+            const hint = document.getElementById("setupHint");
+            hint.innerHTML = message;
+            hint.classList.remove("hidden");
+            document.getElementById("configurationPanel").classList.add("hidden");
+            document.getElementById("accountRow").classList.add("hidden");
+        }
+
+        function hideSetupHint() { document.getElementById("setupHint").classList.add("hidden"); }
+
+        function documentationLink(label) { return `<span class="link" onclick="openCodexBarDocumentation()">${label}</span>`; }
+
+        function providerLoadHint(code) {
+            if (code === "cli-not-found") return `CodexBar is not installed. ${documentationLink("CodexBar setup instructions")}, then click Start.`;
+            if (code === "timeout") return "CodexBar is running but did not answer in time. Try Refresh, or restart the server.";
+            return `Start CodexBar with <code>codexbar serve</code>, or enable automatic start in Advanced. Not installed? ${documentationLink("CodexBar setup instructions")}.`;
+        }
+
+        function serverStartHint(code) {
+            if (code === "cli-not-found") return `CodexBar is not installed. ${documentationLink("CodexBar setup instructions")}, then return here and click Start.`;
+            return `Automatic start is available on macOS only. Start <code>codexbar serve</code> yourself, or see ${documentationLink("CodexBar setup instructions")}.`;
+        }
+
+        function startLoading() {
+            document.getElementById("refreshProviders").disabled = true;
+            document.getElementById("refreshProviders").classList.add("loading");
+            document.getElementById("configurationPanel").classList.add("hidden");
+            document.getElementById("accountRow").classList.add("hidden");
+            hideSetupHint();
+            setStatus("Loading configured CodexBar providers…");
+        }
+
+        function finishLoading() {
+            document.getElementById("refreshProviders").disabled = false;
+            document.getElementById("refreshProviders").classList.remove("loading");
+        }
+
+        function setServerStatus(server) {
+            const status = document.getElementById("serverStatus");
+            const start = document.getElementById("startServer");
+            const stop = document.getElementById("stopServer");
+            const note = document.getElementById("serverNote");
+            const running = server.state === "running";
+            const managed = server.managed === true;
+            status.classList.toggle("running", running);
+            status.classList.toggle("error", !!server.message);
+            status.textContent = server.message || (running
+                ? `Running on ${server.port}${managed && server.pid ? ` (PID ${server.pid})` : ""}`
+                : "Stopped");
+            start.disabled = _serverBusy || running;
+            stop.disabled = _serverBusy || !running || !managed;
+            note.textContent = managed
+                ? "Started by this Stream Deck session."
+                : running
+                    ? "Running outside this Stream Deck session. It cannot be stopped here."
+                    : "Start runs codexbar serve on the selected port.";
+        }
+
+        function applyServerConfig(server) {
+            _settings.port = server.port;
+            _settings.autoStart = server.autoStart === true;
+            document.getElementById("port").value = _settings.port;
+            document.getElementById("autoStart").checked = _settings.autoStart;
+        }
+
+        function selectedProvider() { return document.getElementById("providerId").value; }
+        function accountOptions() { return _providers.filter((entry) => entry.provider === selectedProvider()); }
+        function selectedEntry() {
+            const entries = accountOptions();
+            const selectedAccount = document.getElementById("account").value || "";
+            return entries.find((entry) => entry.account === selectedAccount) || entries[0] || null;
+        }
+
+        function populateProviderSelect() {
+            const select = document.getElementById("providerId");
+            const ids = [...new Set(_providers.map((entry) => entry.provider))];
+            select.innerHTML = "";
+            select.disabled = ids.length === 0;
+            if (!ids.length) {
+                select.appendChild(new Option("No providers found", ""));
+                return;
+            }
+            ids.forEach((id) => {
+                const option = document.createElement("option");
+                option.value = id;
+                option.textContent = displayName(id);
+                select.appendChild(option);
+            });
+            const provider = ids.includes(_settings.providerId) ? _settings.providerId : ids[0];
+            select.value = provider;
+            _settings.providerId = provider;
+        }
+
+        function populateAccountAndMetrics() {
+            const account = document.getElementById("account");
+            const currentAccount = _settings.account || "";
+            const entries = accountOptions();
+            account.innerHTML = "";
+            account.disabled = entries.length === 0;
+            if (!entries.length) {
+                account.appendChild(new Option("No accounts found", ""));
+            }
+            entries.forEach((entry) => {
+                const option = document.createElement("option");
+                option.value = entry.account;
+                option.textContent = entry.account || "Default account";
+                account.appendChild(option);
+            });
+            const activeAccount = entries.some((entry) => entry.account === currentAccount)
+                ? currentAccount
+                : (entries[0]?.account || "");
+            account.value = activeAccount;
+            _settings.account = activeAccount;
+
+            const metrics = selectedEntry()?.metrics || [];
+            ["metric", "topMetric", "bottomMetric"].forEach((id) => {
+                const select = document.getElementById(id);
+                const selectableMetrics = id === "bottomMetric"
+                    ? metrics.filter((metric) => metric.id !== (_settings.topMetric || "primary"))
+                    : metrics;
+                const current = _settings[id] || (id === "bottomMetric" ? "secondary" : "primary");
+                select.innerHTML = "";
+                selectableMetrics.forEach((metric) => {
+                    const option = document.createElement("option");
+                    option.value = metric.id;
+                    option.textContent = metric.label;
+                    select.appendChild(option);
+                });
+                select.disabled = selectableMetrics.length === 0;
+                if (!selectableMetrics.length) {
+                    select.appendChild(new Option(id === "bottomMetric" ? "No other metrics" : "No CodexBar data", ""));
+                    if (id === "bottomMetric") _settings.bottomMetric = "";
+                    return;
+                }
+                select.value = [...select.options].some((option) => option.value === current) ? current : selectableMetrics[0].id;
+            });
+        }
+
+        function displayName(id) { return id.replace(/[-_]+/g, " ").replace(/\b\w/g, (char) => char.toUpperCase()); }
+
+        function applySettings() {
+            document.getElementById("port").value = _settings.port || 8080;
+            document.getElementById("autoStart").checked = _settings.autoStart === true;
+            document.getElementById("layout").value = _settings.layout || "bars";
+            const theme = _settings.theme || "codexbar";
+            document.querySelectorAll('input[name="theme"]').forEach((input) => {
+                input.checked = input.value === theme;
+            });
+            document.getElementById("showProviderName").checked = _settings.showProviderName !== false;
+            populateProviderSelect();
+            populateAccountAndMetrics();
+            applyLayoutVisibility();
+        }
+
+        function applyLayoutVisibility() {
+            const isRing = document.getElementById("layout").value === "ring";
+            document.getElementById("ringRow").classList.toggle("hidden", !isRing);
+            document.getElementById("topRow").classList.toggle("hidden", isRing);
+            document.getElementById("bottomRow").classList.toggle("hidden", isRing);
+        }
+
+        function saveSettings() {
+            _settings.providerId = selectedProvider() || undefined;
+            _settings.account = document.getElementById("account").value || "";
+            _settings.port = Number(document.getElementById("port").value) || 8080;
+            _settings.autoStart = document.getElementById("autoStart").checked;
+            _settings.layout = document.getElementById("layout").value || "bars";
+            _settings.metric = document.getElementById("metric").value || "primary";
+            _settings.topMetric = document.getElementById("topMetric").value || "primary";
+            _settings.bottomMetric = document.getElementById("bottomMetric").value || "";
+            _settings.theme = document.querySelector('input[name="theme"]:checked')?.value || "codexbar";
+            _settings.showProviderName = document.getElementById("showProviderName").checked;
+            applyLayoutVisibility();
+            if (_websocket && _uuid) _websocket.send(JSON.stringify({ event: "setSettings", context: _uuid, payload: _settings }));
+        }
+
+        function loadProviders() {
+            if (!_websocket || !_uuid) return;
+            startLoading();
+            _websocket.send(JSON.stringify({
+                event: "sendToPlugin",
+                context: _uuid,
+                payload: {
+                    event: "loadProviders",
+                    port: Number(document.getElementById("port").value) || 8080,
+                    autoStart: document.getElementById("autoStart").checked
+                }
+            }));
+        }
+
+        function serverCommand(event) {
+            if (!_websocket || !_uuid) return;
+            _serverBusy = true;
+            _reloadAfterServerCommand = event === "startServer" ? "start" : "stop";
+            setServerStatus({ state: "stopped", message: event === "startServer" ? "Starting…" : "Stopping…" });
+            _websocket.send(JSON.stringify({
+                event: "sendToPlugin",
+                context: _uuid,
+                payload: {
+                    event,
+                    port: Number(document.getElementById("port").value) || 8080,
+                    autoStart: document.getElementById("autoStart").checked
+                }
+            }));
+        }
+
+        function openCodexBarDocumentation() {
+            if (_websocket) _websocket.send(JSON.stringify({ event: "openUrl", payload: { url: "https://github.com/lenadweb/stream-deck-ai-limits#codexbar-backend-optional" } }));
+        }
+
+        function openGitHub() {
+            if (_websocket) _websocket.send(JSON.stringify({ event: "openUrl", payload: { url: "https://github.com/lenadweb/stream-deck-ai-limits" } }));
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            ["providerId", "account", "port", "autoStart", "layout", "metric", "topMetric", "bottomMetric", "showProviderName"].forEach((id) => {
+                document.getElementById(id).addEventListener("change", function () {
+                    if (id === "providerId") {
+                        _settings.providerId = selectedProvider();
+                        _settings.account = "";
+                        populateAccountAndMetrics();
+                    }
+                    if (id === "account") {
+                        _settings.account = document.getElementById("account").value || "";
+                        populateAccountAndMetrics();
+                    }
+                    if (id === "topMetric") {
+                        _settings.topMetric = document.getElementById("topMetric").value || "primary";
+                        populateAccountAndMetrics();
+                    }
+                    saveSettings();
+                    if (id === "port" || id === "autoStart") loadProviders();
+                });
+            });
+            document.querySelectorAll('input[name="theme"]').forEach((input) => input.addEventListener("change", saveSettings));
+            document.getElementById("refreshProviders").addEventListener("click", loadProviders);
+            document.getElementById("startServer").addEventListener("click", function () { serverCommand("startServer"); });
+            document.getElementById("stopServer").addEventListener("click", function () {
+                document.getElementById("autoStart").checked = false;
+                saveSettings();
+                serverCommand("stopServer");
+            });
+            applySettings();
+        });
+    </script>
+</body>
+</html>

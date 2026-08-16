@@ -69,3 +69,26 @@ export interface OpenRouterSettings {
     bottomMetric?: OpenRouterMetric;
     [key: string]: any;
 }
+
+/** A CodexBar window id: primary/secondary/tertiary or an `extra:<id>` window. */
+export type CodexBarMetric = string;
+
+/** The existing provider palettes available to a generic CodexBar tile. */
+export type CodexBarTheme = "codexbar" | "codex" | "claude" | "gemini-cli" | "antigravity" | "minimax" | "openrouter";
+
+export interface CodexBarSettings {
+    /** Provider identifier as reported by CodexBar; it is selected from the discovered list. */
+    providerId?: string;
+    /** CodexBar's optional account label for providers with multiple accounts. */
+    account?: string;
+    port?: number;
+    /** Explicit opt-in to start a locally installed CodexBar CLI when its server is unavailable. */
+    autoStart?: boolean;
+    layout?: TileLayout;
+    metric?: CodexBarMetric;
+    topMetric?: CodexBarMetric;
+    bottomMetric?: CodexBarMetric;
+    theme?: CodexBarTheme;
+    showProviderName?: boolean;
+    [key: string]: any;
+}

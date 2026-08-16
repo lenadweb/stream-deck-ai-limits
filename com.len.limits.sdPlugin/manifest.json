@@ -4,7 +4,7 @@
   "Author": "len",
   "Actions": [
     {
-      "Name": "Claude",
+      "Name": "Claude (Native)",
       "UUID": "com.len.limits.progress",
       "Icon": "imgs/actions/counter/icon",
       "Tooltip": "Displays Claude usage: session, weekly or Sonnet weekly.",
@@ -30,7 +30,7 @@
       ]
     },
     {
-      "Name": "Codex",
+      "Name": "Codex (Native)",
       "UUID": "com.len.limits.codex.progress",
       "Icon": "imgs/actions/counter/icon",
       "Tooltip": "Displays Codex usage: session, weekly, usage limit resets or credits.",
@@ -56,7 +56,7 @@
       ]
     },
     {
-      "Name": "Antigravity",
+      "Name": "Antigravity (Native)",
       "UUID": "com.len.limits.antigravity",
       "Icon": "imgs/actions/counter/icon",
       "Tooltip": "Displays Antigravity usage.",
@@ -82,7 +82,7 @@
       ]
     },
     {
-      "Name": "Gemini CLI",
+      "Name": "Gemini CLI (Native)",
       "UUID": "com.len.limits.gemini-cli",
       "Icon": "imgs/actions/counter/icon",
       "Tooltip": "Displays Gemini CLI usage.",
@@ -108,7 +108,7 @@
       ]
     },
     {
-      "Name": "MiniMax",
+      "Name": "MiniMax (Native)",
       "UUID": "com.len.limits.minimax",
       "Icon": "imgs/actions/counter/icon",
       "Tooltip": "Displays MiniMax M* usage.",
@@ -134,7 +134,7 @@
       ]
     },
     {
-      "Name": "OpenRouter",
+      "Name": "OpenRouter (Native)",
       "UUID": "com.len.limits.openrouter",
       "Icon": "imgs/actions/counter/icon",
       "Tooltip": "Displays OpenRouter key limit and spend.",
@@ -158,12 +158,33 @@
           "TitleAlignment": "middle"
         }
       ]
+    },
+    {
+      "Name": "CodexBar backend",
+      "UUID": "com.len.limits.codexbar",
+      "Icon": "imgs/actions/counter/icon",
+      "Tooltip": "Displays any provider configured in a local CodexBar server.",
+      "PropertyInspectorPath": "ui/codexbar-settings.html",
+      "Controllers": [
+        "Keypad",
+        "Encoder"
+      ],
+      "Encoder": {
+        "layout": "layouts/full-view.json",
+        "StackColor": "#A5B4FC"
+      },
+      "States": [
+        {
+          "Image": "imgs/actions/counter/key",
+          "TitleAlignment": "middle"
+        }
+      ]
     }
   ],
   "Category": "AI Usage Limits",
   "CategoryIcon": "imgs/plugin/category-icon",
   "CodePath": "bin/plugin.js",
-  "Description": "Track AI usage limits and reset times for Claude, Codex, Antigravity, Gemini CLI, MiniMax, and OpenRouter.",
+  "Description": "Track AI usage limits and reset times for native providers or any provider configured in CodexBar.",
   "Icon": "imgs/plugin/plugin-icon",
   "SDKVersion": 3,
   "Software": {

@@ -14,6 +14,8 @@ export interface Slot {
 
 export interface RenderOptions {
     showName?: boolean;
+    /** Overrides the theme label, for generic backends such as CodexBar. */
+    serviceName?: string;
 }
 
 const STATE_DANGER = "#F2564F";
@@ -74,12 +76,22 @@ export class ProgressBarRenderer {
             label: '#8A8D96',
             barBg: '#1D1D25',
             barFill: '#8284FF'
+        },
+        codexbar: {
+            primary: '#A5B4FC',
+            secondary: '#C4B5FD',
+            background: '#12131B',
+            text: '#F5F5FF',
+            label: '#9CA3B8',
+            barBg: '#25283A',
+            barFill: '#A5B4FC'
         }
     };
 
     private static readonly serviceLabels: Partial<Record<ServiceTheme, string>> = {
         'gemini-cli': 'Gemini',
-        openrouter: 'OpenRouter'
+        openrouter: 'OpenRouter',
+        codexbar: 'CodexBar'
     };
 
     private static readonly SANS = "'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif";
@@ -129,7 +141,7 @@ export class ProgressBarRenderer {
         const displayedSlots = slots.slice(0, 2);
         const geo = this.geometry(width, height, isDial, showName, displayedSlots.length);
 
-        const chrome = this.background(width, height, colors) + this.header(this.serviceName(theme), colors, geo, isDial, showName);
+        const chrome = this.background(width, height, colors) + this.header(opts.serviceName ?? this.serviceName(theme), colors, geo, isDial, showName);
         const modules = displayedSlots.map((slot, i) =>
             slot.kind === "stat"
                 ? this.statModule(slot, colors, theme, geo, geo.moduleTop[i], isDial)
@@ -160,7 +172,7 @@ export class ProgressBarRenderer {
         const cy = this.round(ring.cy);
 
         let body = this.background(width, height, colors)
-            + this.header(this.serviceName(theme), colors, geo, isDial, showName);
+            + this.header(opts.serviceName ?? this.serviceName(theme), colors, geo, isDial, showName);
 
         body += `<circle cx="${cx}" cy="${cy}" r="${ring.r}" fill="none" stroke="${colors.barBg}" stroke-width="${ring.sw}" />`;
         if (isGauge && pct > 0) {
@@ -367,7 +379,7 @@ export class ProgressBarRenderer {
             + `stroke-dasharray="${this.round(dash * 0.28)} ${this.round(dash)}" transform="rotate(${angle} ${cx} ${cy})" />`;
 
         const body = this.background(width, height, colors)
-            + this.header(this.serviceName(theme), colors, geo, isDial, showName)
+            + this.header(opts.serviceName ?? this.serviceName(theme), colors, geo, isDial, showName)
             + ring;
         return this.svg(width, height, body);
     }
@@ -391,7 +403,7 @@ export class ProgressBarRenderer {
         const text = lines.map((l, i) => this.txt(cx, startY + i * 16, l, isDial ? 12 : 13, 600, colors.text, "middle", ProgressBarRenderer.SANS)).join("");
 
         const body = this.background(width, height, colors)
-            + this.header(this.serviceName(theme), colors, geo, isDial, showName)
+            + this.header(opts.serviceName ?? this.serviceName(theme), colors, geo, isDial, showName)
             + icon + text;
         return this.svg(width, height, body);
     }
@@ -413,7 +425,7 @@ export class ProgressBarRenderer {
             this.txt(cx, startY + i * lineH, this.escape(line), isDial ? 15 : 16, 700, colors.text, "middle", ProgressBarRenderer.SANS)
         ).join("");
         const body = this.background(width, height, colors)
-            + this.header(this.serviceName(theme), colors, geo, isDial, showName)
+            + this.header(opts.serviceName ?? this.serviceName(theme), colors, geo, isDial, showName)
             + text;
         return this.svg(width, height, body);
     }

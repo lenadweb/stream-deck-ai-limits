@@ -7,7 +7,7 @@ What it does:
 - Displays usage as dual progress bars on a single key.
 - Shows usage percentages and reset times.
 - Supports automatic periodic refresh plus manual refresh on demand.
-- Includes provider actions for Claude, Codex, Antigravity, Gemini CLI, MiniMax, and OpenRouter.
+- Includes native provider actions for Claude, Codex, Antigravity, Gemini CLI, MiniMax, and OpenRouter, plus an optional CodexBar backend for every provider enabled in CodexBar.
 - Works with Stream Deck dials (Encoder): push/touch/rotate can trigger refresh.
 
 How it looks:
@@ -28,6 +28,7 @@ Configuration:
 - Gemini CLI: open action settings and choose the models for top and bottom bars (or keep overall view).
 - MiniMax: open action settings and enter your API key.
 - OpenRouter: open action settings, enter your API key, and choose what each bar shows (key limit, or spend by day/week/month/total).
+- CodexBar backend: start `codexbar serve`, then load enabled providers from the action settings and choose an account and quota windows.
 - Other providers rely on locally available auth/session data from their respective tools/apps.
 
 Usage controls:
@@ -40,6 +41,7 @@ Notes:
 
 - If local auth data or API access is missing, that provider may not return values until credentials are available.
 - Antigravity usage depends on its local process being accessible.
+- The CodexBar backend connects only to a local `127.0.0.1` CodexBar server and is intended for macOS.
 - Works on macOS and Windows. On macOS, Claude credentials are read from the Keychain; on Windows they are read from the credential file written by Claude Code.
 
 If you want support for additional providers, send feedback and tell us which ones to add next.
