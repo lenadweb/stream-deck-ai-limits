@@ -4,7 +4,7 @@
   "Author": "len",
   "Actions": [
     {
-      "Name": "Progress Bars (Claude)",
+      "Name": "Claude",
       "UUID": "com.len.limits.progress",
       "Icon": "imgs/actions/counter/icon",
       "Tooltip": "Displays Claude usage: session, weekly or Sonnet weekly.",
@@ -30,7 +30,7 @@
       ]
     },
     {
-      "Name": "Progress Bars (Codex)",
+      "Name": "Codex",
       "UUID": "com.len.limits.codex.progress",
       "Icon": "imgs/actions/counter/icon",
       "Tooltip": "Displays Codex usage: session, weekly, usage limit resets or credits.",
@@ -56,7 +56,7 @@
       ]
     },
     {
-      "Name": "Progress Bars (Antigravity)",
+      "Name": "Antigravity",
       "UUID": "com.len.limits.antigravity",
       "Icon": "imgs/actions/counter/icon",
       "Tooltip": "Displays Antigravity usage.",
@@ -82,7 +82,7 @@
       ]
     },
     {
-      "Name": "Progress Bars (Gemini CLI)",
+      "Name": "Gemini CLI",
       "UUID": "com.len.limits.gemini-cli",
       "Icon": "imgs/actions/counter/icon",
       "Tooltip": "Displays Gemini CLI usage.",
@@ -108,7 +108,7 @@
       ]
     },
     {
-      "Name": "Progress Bars (MiniMax)",
+      "Name": "MiniMax",
       "UUID": "com.len.limits.minimax",
       "Icon": "imgs/actions/counter/icon",
       "Tooltip": "Displays MiniMax M* usage.",
@@ -134,7 +134,7 @@
       ]
     },
     {
-      "Name": "Progress Bars (OpenRouter)",
+      "Name": "OpenRouter",
       "UUID": "com.len.limits.openrouter",
       "Icon": "imgs/actions/counter/icon",
       "Tooltip": "Displays OpenRouter key limit and spend.",

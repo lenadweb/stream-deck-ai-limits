@@ -77,12 +77,12 @@ Each provider is a separate action. All of them work on **Keypad** (keys) and **
 
 | Action | What it shows | UUID |
 |---|---|---|
-| **Progress Bars (Claude)** | Claude Code session, weekly or Sonnet weekly usage | `com.len.limits.progress` |
-| **Progress Bars (Codex)** | Codex session or weekly usage, usage limit resets, credits balance | `com.len.limits.codex.progress` |
-| **Progress Bars (Antigravity)** | Antigravity (Claude + Gemini) usage, per model | `com.len.limits.antigravity` |
-| **Progress Bars (Gemini CLI)** | Gemini CLI quota usage, per model | `com.len.limits.gemini-cli` |
-| **Progress Bars (MiniMax)** | MiniMax M-series daily or weekly usage | `com.len.limits.minimax` |
-| **Progress Bars (OpenRouter)** | OpenRouter key spend limit & spend by day/week/month | `com.len.limits.openrouter` |
+| **Claude** | Claude Code session, weekly or Sonnet weekly usage | `com.len.limits.progress` |
+| **Codex** | Codex session or weekly usage, usage limit resets, credits balance | `com.len.limits.codex.progress` |
+| **Antigravity** | Antigravity (Claude + Gemini) usage, per model | `com.len.limits.antigravity` |
+| **Gemini CLI** | Gemini CLI quota usage, per model | `com.len.limits.gemini-cli` |
+| **MiniMax** | MiniMax M-series daily or weekly usage | `com.len.limits.minimax` |
+| **OpenRouter** | OpenRouter key spend limit & spend by day/week/month | `com.len.limits.openrouter` |
 
 ### One metric per tile
 
@@ -91,7 +91,7 @@ Every action has a **Layout** setting:
 - **Bars** (default) — the two-slot view, now with a metric picker for each slot.
 - **Ring** — one large ring gauge showing a single metric, with its reset countdown in the middle.
 
-Place the same action more than once to build a row of tiles, e.g. Claude Session, Claude Week, Codex Session and Codex Week side by side. Each tile keeps its own metric, and all tiles of a provider share a single API call, so extra tiles cost nothing. MiniMax and OpenRouter tiles carry their own API key, so there tiles are fetched once per distinct key — several tiles on the same key still cost one call, and tiles on different keys each show their own account.
+Place the same action more than once to build a row of tiles, e.g. Claude Session, Claude Week, Codex Session and Codex Week side by side. Each tile keeps its own metric, and all tiles of a provider share a single API call, so extra tiles cost nothing. MiniMax and OpenRouter tiles carry their own API key, so they are fetched once per distinct key — several tiles on the same key still cost one call, and tiles on different keys each show their own account.
 
 > **Codex note:** OpenAI currently exposes only a weekly window on Plus, Pro and Business plans ([issue #6](https://github.com/lenadweb/stream-deck-ai-limits/issues/6)). The plugin classifies windows by the duration the API reports, so the weekly usage lands on the **Weekly limit** metric even when the API delivers it in the primary slot. A tile set to **Session limit** shows `no data` until OpenAI brings the 5-hour window back.
 
