@@ -26,6 +26,9 @@ const CODEXBAR_BINARIES = [
 
 type UsageResponse = CodexBarProviderPayload[] | { error: CodexBarError };
 type CodexBarWindowId = "primary" | "secondary" | "tertiary";
+type DisplayMetric = CodexBarMetricOption & { valueText: string; caption?: string };
+
+const MAX_PAYLOAD_METRICS = 64;
 
 /**
  * Labels from CodexBar's ProviderMetadata (sessionLabel, weeklyLabel, opusLabel).
@@ -122,6 +125,19 @@ export function metricsForUsage(usage: CodexBarUsageSnapshot | null | undefined,
     return [...quotaMetricsForUsage(usage, providerId), ...detailMetricsForUsage(usage)];
 }
 
+/**
+ * CodexBar's provider payload deliberately grows as providers gain data. Keep the
+ * well-known quota/detail views, then expose every other displayable scalar as a
+ * stat metric so a new field does not require a plugin release.
+ */
+export function metricsForPayload(payload: CodexBarProviderPayload): CodexBarMetricOption[] {
+    return [
+        ...quotaMetricsForUsage(payload.usage, payload.provider),
+        ...detailMetricsForUsage(payload.usage),
+        ...payloadMetrics(payload)
+    ];
+}
+
 function quotaMetricsForUsage(usage: CodexBarUsageSnapshot | null | undefined, providerId?: string): CodexBarMetricOption[] {
     const metrics: CodexBarMetricOption[] = [];
     const add = (id: CodexBarWindowId, fallback: string, window: CodexBarRateWindow | null | undefined) => {
@@ -165,17 +181,17 @@ export function windowForMetric(
 }
 
 export function detailForMetric(
-    usage: CodexBarUsageSnapshot | null | undefined,
+    payload: CodexBarProviderPayload | null | undefined,
     metricId: string | undefined
 ): { label: string; valueText: string; caption?: string } | null {
     if (!metricId) return null;
-    return detailMetricsForUsage(usage).find((metric) => metric.id === metricId) ?? null;
+    return [...detailMetricsForUsage(payload?.usage), ...payloadMetrics(payload)].find((metric) => metric.id === metricId) ?? null;
 }
 
 function detailMetricsForUsage(
     usage: CodexBarUsageSnapshot | null | undefined
-): Array<CodexBarMetricOption & { valueText: string; caption?: string }> {
-    const metrics: Array<CodexBarMetricOption & { valueText: string; caption?: string }> = [];
+): DisplayMetric[] {
+    const metrics: DisplayMetric[] = [];
     for (const [sectionIndex, section] of (usage?.details ?? []).entries()) {
         addDetailRows(metrics, section, sectionIndex);
         addChartPoints(metrics, section, sectionIndex);
@@ -184,7 +200,7 @@ function detailMetricsForUsage(
 }
 
 function addDetailRows(
-    metrics: Array<CodexBarMetricOption & { valueText: string; caption?: string }>,
+    metrics: DisplayMetric[],
     section: CodexBarDetailSection,
     sectionIndex: number
 ): void {
@@ -202,7 +218,7 @@ function addDetailRows(
 }
 
 function addChartPoints(
-    metrics: Array<CodexBarMetricOption & { valueText: string; caption?: string }>,
+    metrics: DisplayMetric[],
     section: CodexBarDetailSection,
     sectionIndex: number
 ): void {
@@ -234,6 +250,100 @@ function detailMetricId(
     const occurrence = occurrences.get(base) ?? 0;
     occurrences.set(base, occurrence + 1);
     return occurrence === 0 ? base : `${base}:${occurrence}`;
+}
+
+function payloadMetrics(payload: CodexBarProviderPayload | null | undefined): DisplayMetric[] {
+    if (!payload) return [];
+
+    const metrics: DisplayMetric[] = [];
+    for (const [key, value] of Object.entries(payload as Record<string, unknown>)) {
+        if (["provider", "account", "version", "error", "usage"].includes(key)) continue;
+        collectPayloadMetrics(metrics, value, [key]);
+    }
+
+    const usage = payload.usage as unknown as Record<string, unknown> | null | undefined;
+    if (!usage) return metrics;
+    const hasStructuredIdentity = Boolean(usage.identity && typeof usage.identity === "object");
+    for (const [key, value] of Object.entries(usage)) {
+        if ([
+            "primary", "secondary", "tertiary", "extraRateWindows", "details", "updatedAt"
+        ].includes(key)) continue;
+        if (hasStructuredIdentity && ["accountEmail", "accountOrganization", "loginMethod"].includes(key)) continue;
+        collectPayloadMetrics(metrics, value, ["usage", key]);
+    }
+    return metrics;
+}
+
+function collectPayloadMetrics(metrics: DisplayMetric[], value: unknown, path: string[]): void {
+    if (metrics.length >= MAX_PAYLOAD_METRICS || shouldHidePayloadPath(path)) return;
+
+    const valueText = displayPayloadValue(value, path.at(-1) ?? "");
+    if (valueText != null) {
+        metrics.push({ id: payloadMetricId(path), label: payloadMetricLabel(path), valueText });
+        return;
+    }
+
+    if (Array.isArray(value)) {
+        if (value.length) {
+            metrics.push({
+                id: payloadMetricId([...path, "count"]),
+                label: payloadMetricLabel(path),
+                valueText: `${value.length} item${value.length === 1 ? "" : "s"}`
+            });
+        }
+        return;
+    }
+
+    if (!value || typeof value !== "object" || path.length >= 5) return;
+    for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+        collectPayloadMetrics(metrics, child, [...path, key]);
+    }
+}
+
+function shouldHidePayloadPath(path: string[]): boolean {
+    const field = path.at(-1)?.toLowerCase() ?? "";
+    return field === "url" || field === "updatedat" || field.endsWith("resetsat") || field.endsWith("expiresat") || field.endsWith("renewsat");
+}
+
+function displayPayloadValue(value: unknown, field: string): string | null {
+    if (typeof value === "string") return value.trim() || null;
+    if (typeof value === "boolean") return value ? "Yes" : "No";
+    if (typeof value !== "number" || !Number.isFinite(value)) return null;
+
+    const text = value.toLocaleString("en-US", { maximumFractionDigits: 2 });
+    if (field.toLowerCase().includes("percent")) return `${text}%`;
+    if (field.toLowerCase().endsWith("seconds")) return formatSeconds(value);
+    return text;
+}
+
+function formatSeconds(value: number): string {
+    const seconds = Math.max(0, Math.round(value));
+    if (seconds >= 86_400) return `${Math.floor(seconds / 86_400)}d`;
+    if (seconds >= 3_600) return `${Math.floor(seconds / 3_600)}h`;
+    if (seconds >= 60) return `${Math.floor(seconds / 60)}m`;
+    return `${seconds}s`;
+}
+
+function payloadMetricId(path: string[]): string {
+    return `payload:${path.map((part) => encodeURIComponent(part)).join(":")}`;
+}
+
+function payloadMetricLabel(path: string[]): string {
+    return path.map(humanizePayloadField).join(" · ");
+}
+
+function humanizePayloadField(value: string): string {
+    const text = value
+        .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+        .replace(/[-_]+/g, " ")
+        .trim();
+    const special = text.toLowerCase();
+    if (special === "open ai dashboard") return "OpenAI dashboard";
+    if (special === "api") return "API";
+    if (special === "id") return "ID";
+    if (special === "url") return "URL";
+    if (special === "usd") return "USD";
+    return text.replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function displayValue(value: string | number | null | undefined): string | null {
@@ -314,7 +424,7 @@ export class CodexBarBackend {
                 provider: payload.provider,
                 account: payload.account ?? "",
                 label: payload.account ? `${providerTitle(payload.provider)} — ${payload.account}` : providerTitle(payload.provider),
-                metrics: metricsForUsage(payload.usage, payload.provider)
+                metrics: metricsForPayload(payload)
             }))
             .sort((left, right) => left.label.localeCompare(right.label));
     }

@@ -43,6 +43,13 @@ export interface CodexBarUsageSnapshot {
     extraRateWindows?: CodexBarNamedRateWindow[] | null;
     details?: CodexBarDetailSection[] | null;
     updatedAt?: string;
+    identity?: {
+        accountEmail?: string | null;
+        accountOrganization?: string | null;
+        loginMethod?: string | null;
+        accountID?: string | null;
+    } | null;
+    dataConfidence?: string | null;
 }
 
 export interface CodexBarProviderPayload {
@@ -51,6 +58,8 @@ export interface CodexBarProviderPayload {
     source?: string;
     usage?: CodexBarUsageSnapshot | null;
     error?: CodexBarError | null;
+    /** CodexBar adds provider-specific fields over time; preserve them for metric discovery. */
+    [key: string]: unknown;
 }
 
 export interface CodexBarError {

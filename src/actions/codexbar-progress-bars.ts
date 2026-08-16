@@ -238,7 +238,7 @@ export class CodexBarProgressBars extends BaseMonitoringAction<CodexBarSettings,
     }
 
     private metricSlot(metricId: string | undefined, result: CodexBarResult): Slot | null {
-        const detail = detailForMetric(result.payload?.usage, metricId);
+        const detail = detailForMetric(result.payload, metricId);
         if (detail) {
             return {
                 kind: "stat",
