@@ -26,6 +26,8 @@ const CODEXBAR_THEMES: readonly CodexBarTheme[] = [
 export class CodexBarProgressBars extends BaseMonitoringAction<CodexBarSettings, CodexBarResult> {
     protected readonly providerName = "codexbar";
     protected readonly themeName: ServiceTheme = "codexbar";
+    /** Matches CodexBar serve's default 60-second snapshot cache TTL. */
+    protected override readonly monitoringIntervalMs = 60_000;
     private readonly backend = CodexBarBackend.getInstance();
     private serverCacheKey = "unconfigured";
 

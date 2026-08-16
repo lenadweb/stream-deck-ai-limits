@@ -29,7 +29,7 @@ export abstract class BaseMonitoringAction<
     protected intervalId: NodeJS.Timeout | null = null;
     protected isMonitoring = false;
     protected usage = new Map<string, CachedUsage<TResult>>();
-    protected readonly monitoringIntervalMs = 900000;
+    protected readonly monitoringIntervalMs: number = 900000;
     protected readonly renderer = new ProgressBarRenderer();
     protected readonly limitsManager = LimitsManager.getInstance();
 

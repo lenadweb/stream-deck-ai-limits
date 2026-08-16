@@ -171,7 +171,12 @@
       ],
       "Encoder": {
         "layout": "layouts/full-view.json",
-        "StackColor": "#A5B4FC"
+        "StackColor": "#A5B4FC",
+        "TriggerDescription": {
+          "Rotate": "Refresh",
+          "Touch": "Refresh",
+          "Push": "Refresh"
+        }
       },
       "States": [
         {

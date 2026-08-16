@@ -289,9 +289,10 @@ export class CodexBarBackend {
         const id = providerId.trim();
         if (!id) return { error: { message: "Choose a CodexBar provider" } };
 
-        // A full serve snapshot is cached by CodexBar. A provider-filtered request uses
-        // a distinct cache key and can trigger a slow cold refresh, so select locally.
-        const payloads = await this.requestUsageWithAutoStart(codexBarPort(port), autoStart);
+        // CodexBar serves an expired unfiltered snapshot while rebuilding it in the
+        // background. A per-provider request waits for that provider's current data,
+        // which keeps a monitoring tile from being one cache cycle behind.
+        const payloads = await this.requestUsageWithAutoStart(codexBarPort(port), autoStart, id);
         if (!Array.isArray(payloads)) return payloads;
 
         const matches = payloads.filter((payload) => payload.provider === id);
@@ -363,8 +364,12 @@ export class CodexBarBackend {
         return { error: { code: "stop-timeout", message: "codexbar serve did not stop" } };
     }
 
-    private async requestUsageWithAutoStart(port: number, autoStart: boolean): Promise<UsageResponse> {
-        const payloads = await this.requestUsage(port);
+    private async requestUsageWithAutoStart(
+        port: number,
+        autoStart: boolean,
+        providerId?: string
+    ): Promise<UsageResponse> {
+        const payloads = await this.requestUsage(port, providerId);
         if (Array.isArray(payloads) || !autoStart || payloads.error.message !== "Can't reach codexbar serve on 127.0.0.1") {
             return payloads;
         }
@@ -373,7 +378,7 @@ export class CodexBarBackend {
 
         const started = await this.ensureServerStarted(port);
         if (started.error) return { error: started.error };
-        return this.requestUsage(port);
+        return this.requestUsage(port, providerId);
     }
 
     private async ensureServerStarted(port: number): Promise<{ error?: CodexBarError }> {
