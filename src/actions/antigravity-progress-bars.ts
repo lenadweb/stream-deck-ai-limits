@@ -1,36 +1,26 @@
 import streamDeck, { action } from "@elgato/streamdeck";
 import { ProviderName, StandardUsageResult, AntigravityProvider } from "@lenadweb/ai-limits";
-import { AntigravitySettings } from "../interfaces/settings";
+import { AntigravitySettings, TileLayout } from "../interfaces/settings";
 import { BaseMonitoringAction } from "./base-monitoring-action";
 import { ServiceTheme } from "../interfaces/theme";
+import { Slot } from "../ui/progress-bar-renderer";
+import { formatTimeUntil } from "../utils/time-formatter";
 
 @action({ UUID: "com.len.limits.antigravity" })
 export class AntigravityProgressBars extends BaseMonitoringAction<AntigravitySettings> {
     protected readonly providerName = ProviderName.Antigravity;
     protected readonly themeName: ServiceTheme = "antigravity";
-    private topModel: string = "";
-    private bottomModel: string = "";
     private cachedLabels: Record<string, string> = {};
     private provider!: AntigravityProvider;
 
     override async onWillAppear(ev: any): Promise<void> {
         this.provider = this.limitsManager.getAntigravityProvider();
-        const settings = ev.payload?.settings as AntigravitySettings | undefined;
-        if (settings) {
-            this.topModel = settings.topModel || "";
-            this.bottomModel = settings.bottomModel || "";
-            this.cachedLabels = settings.availableModelLabels || {};
-        }
+        this.cachedLabels = { ...this.cachedLabels, ...(ev.payload?.settings?.availableModelLabels ?? {}) };
         await super.onWillAppear(ev);
     }
 
     override async onDidReceiveSettings(ev: any): Promise<void> {
-        const settings = ev.payload?.settings as AntigravitySettings | undefined;
-        if (settings) {
-            this.topModel = settings.topModel || "";
-            this.bottomModel = settings.bottomModel || "";
-            this.cachedLabels = settings.availableModelLabels || this.cachedLabels;
-        }
+        this.cachedLabels = { ...this.cachedLabels, ...(ev.payload?.settings?.availableModelLabels ?? {}) };
         await this.redraw(ev);
     }
 
@@ -129,8 +119,6 @@ export class AntigravityProgressBars extends BaseMonitoringAction<AntigravitySet
             ) {
                 await ev.action.setSettings({
                     ...currentSettings,
-                    topModel: this.topModel,
-                    bottomModel: this.bottomModel,
                     availableModels: models,
                     availableModelLabels: mergedLabels,
                     loggedInEmail: this.provider.getLoggedInEmail() || undefined
@@ -171,15 +159,26 @@ export class AntigravityProgressBars extends BaseMonitoringAction<AntigravitySet
     }
 
     protected getDisplayData(ev: any, result: StandardUsageResult) {
-        const top = this.getModelData(this.topModel, result);
-        const bottom = this.getModelData(this.bottomModel, result);
+        const settings = (ev?.payload?.settings ?? {}) as AntigravitySettings;
+        const layout: TileLayout = settings.layout ?? "bars";
+
+        if (layout === "ring") {
+            return this.tileDisplay([this.modelSlot(settings.model ?? "", result)], layout);
+        }
+
+        return this.tileDisplay([
+            this.modelSlot(settings.topModel ?? "", result),
+            this.modelSlot(settings.bottomModel ?? "", result)
+        ], layout);
+    }
+
+    private modelSlot(modelKey: string, result: StandardUsageResult): Slot {
+        const data = this.getModelData(modelKey, result);
         return {
-            value1: top.usage,
-            value2: bottom.usage,
-            label1: top.label,
-            label2: bottom.label,
-            resetTime1: top.resetTime,
-            resetTime2: bottom.resetTime
+            kind: "gauge",
+            label: data.label,
+            percent: data.usage,
+            caption: data.resetTime ? formatTimeUntil(data.resetTime) : undefined
         };
     }
 }

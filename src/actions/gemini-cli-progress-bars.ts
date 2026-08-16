@@ -1,33 +1,15 @@
-import streamDeck, { action } from "@elgato/streamdeck";
+import { action } from "@elgato/streamdeck";
 import { ProviderName, StandardUsageResult } from "@lenadweb/ai-limits";
-import { GeminiSettings } from "../interfaces/settings";
+import { GeminiSettings, TileLayout } from "../interfaces/settings";
 import { BaseMonitoringAction } from "./base-monitoring-action";
 import { ServiceTheme } from "../interfaces/theme";
+import { Slot } from "../ui/progress-bar-renderer";
+import { formatTimeUntil } from "../utils/time-formatter";
 
 @action({ UUID: "com.len.limits.gemini-cli" })
 export class GeminiCliProgressBars extends BaseMonitoringAction<GeminiSettings> {
     protected readonly providerName = ProviderName.Gemini;
     protected readonly themeName: ServiceTheme = "gemini-cli";
-    private topModel: string = "";
-    private bottomModel: string = "";
-
-    override async onWillAppear(ev: any): Promise<void> {
-        const settings = ev.payload?.settings as GeminiSettings | undefined;
-        if (settings) {
-            this.topModel = settings.topModel || "";
-            this.bottomModel = settings.bottomModel || "";
-        }
-        await super.onWillAppear(ev);
-    }
-
-    override async onDidReceiveSettings(ev: any): Promise<void> {
-        const settings = ev.payload?.settings as GeminiSettings | undefined;
-        if (settings) {
-            this.topModel = settings.topModel || "";
-            this.bottomModel = settings.bottomModel || "";
-        }
-        await this.redraw(ev);
-    }
 
     override async refresh(ev: any): Promise<void> {
         await super.refresh(ev);
@@ -56,17 +38,13 @@ export class GeminiCliProgressBars extends BaseMonitoringAction<GeminiSettings> 
         return Object.keys(this.lastResult.perModel);
     }
 
+    /** Cache the model list in the tile's settings so the picker works offline. */
     private async persistModelsToSettings(ev: any): Promise<void> {
         const models = this.getAvailableModels();
         try {
             const currentSettings = (ev.payload?.settings ?? {}) as GeminiSettings;
             if (JSON.stringify(currentSettings.availableModels) !== JSON.stringify(models)) {
-                await ev.action.setSettings({
-                    ...currentSettings,
-                    topModel: this.topModel,
-                    bottomModel: this.bottomModel,
-                    availableModels: models
-                });
+                await ev.action.setSettings({ ...currentSettings, availableModels: models });
             }
         } catch {}
     }
@@ -98,15 +76,26 @@ export class GeminiCliProgressBars extends BaseMonitoringAction<GeminiSettings> 
     }
 
     protected getDisplayData(ev: any, result: StandardUsageResult) {
-        const top = this.getModelData(this.topModel, result);
-        const bottom = this.getModelData(this.bottomModel, result);
+        const settings = (ev?.payload?.settings ?? {}) as GeminiSettings;
+        const layout: TileLayout = settings.layout ?? "bars";
+
+        if (layout === "ring") {
+            return this.tileDisplay([this.modelSlot(settings.model ?? "", result)], layout);
+        }
+
+        return this.tileDisplay([
+            this.modelSlot(settings.topModel ?? "", result),
+            this.modelSlot(settings.bottomModel ?? "", result)
+        ], layout);
+    }
+
+    private modelSlot(modelKey: string, result: StandardUsageResult): Slot {
+        const data = this.getModelData(modelKey, result);
         return {
-            value1: top.usage,
-            value2: bottom.usage,
-            label1: top.label,
-            label2: bottom.label,
-            resetTime1: top.resetTime,
-            resetTime2: bottom.resetTime
+            kind: "gauge",
+            label: data.label,
+            percent: data.usage,
+            caption: data.resetTime ? formatTimeUntil(data.resetTime) : undefined
         };
     }
 }

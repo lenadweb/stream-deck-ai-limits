@@ -45,23 +45,54 @@
             border: 1px solid #444;
             font-size: 12px;
         }
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 
 <body>
-    <sdpi-item label="Display">
-        <label class="checkbox"><input id="showProviderName" type="checkbox" /> Show provider name</label>
+    <sdpi-item label="Layout">
+        <select id="layout" class="sdpi-item-value">
+            <option value="ring">Ring (one metric)</option>
+            <option value="bars">Bars (two metrics)</option>
+        </select>
     </sdpi-item>
 
-    <sdpi-item label="Bottom section">
-        <select id="secondaryMetric" class="sdpi-item-value">
+    <sdpi-item id="ringRow" label="Metric">
+        <select id="metric" class="sdpi-item-value">
+            <option value="weekly">Weekly limit</option>
+            <option value="session">Session limit</option>
+            <option value="resetCredits">Usage limit resets</option>
+            <option value="credits">Credits balance</option>
+        </select>
+    </sdpi-item>
+
+    <sdpi-item id="topRow" label="Top">
+        <select id="topMetric" class="sdpi-item-value">
+            <option value="weekly">Weekly limit</option>
+            <option value="session">Session limit</option>
+            <option value="resetCredits">Usage limit resets</option>
+            <option value="credits">Credits balance</option>
+        </select>
+    </sdpi-item>
+
+    <sdpi-item id="bottomRow" label="Bottom">
+        <select id="bottomMetric" class="sdpi-item-value">
+            <option value="weekly">Weekly limit</option>
+            <option value="session">Session limit</option>
             <option value="resetCredits">Usage limit resets</option>
             <option value="credits">Credits balance</option>
             <option value="none">Hide bottom section</option>
         </select>
     </sdpi-item>
 
-    <div class="info">The top section shows your session limit. Choose usage limit resets, credits balance, or hide the bottom section.</div>
+    <sdpi-item label="Display">
+        <label class="checkbox"><input id="showProviderName" type="checkbox" /> Show provider name</label>
+    </sdpi-item>
+
+    <div class="info">Place this action twice to watch two metrics side by side, e.g. one tile on the weekly limit and one on credits.</div>
+    <div class="info">OpenAI currently exposes only a weekly window on Plus, Pro and Business plans. A tile set to the session limit shows "no data" until OpenAI brings the 5-hour window back.</div>
     <div class="info">Credentials for Codex/ChatGPT are automatically loaded from your system (~/.codex/auth.json).</div>
     <div class="info"><span class="link" onclick="openGitHub()">View source on GitHub</span></div>
 
@@ -95,13 +126,32 @@
         }
 
         function applySettings() {
+            // Mirrors the migration in codex-progress-bars.ts: tiles saved before the
+            // metric picker existed only carry secondaryMetric as their bottom slot.
+            const legacy = _settings.secondaryMetric;
             document.getElementById("showProviderName").checked = _settings.showProviderName !== false;
-            document.getElementById("secondaryMetric").value = _settings.secondaryMetric || "resetCredits";
+            document.getElementById("layout").value = _settings.layout || "bars";
+            document.getElementById("metric").value = _settings.metric || "weekly";
+            document.getElementById("topMetric").value = _settings.topMetric || "weekly";
+            document.getElementById("bottomMetric").value = _settings.bottomMetric || legacy || "resetCredits";
+            applyLayoutVisibility();
+        }
+
+        function applyLayoutVisibility() {
+            const isRing = document.getElementById("layout").value === "ring";
+            document.getElementById("ringRow").classList.toggle("hidden", !isRing);
+            document.getElementById("topRow").classList.toggle("hidden", isRing);
+            document.getElementById("bottomRow").classList.toggle("hidden", isRing);
         }
 
         function saveSettings() {
             _settings.showProviderName = document.getElementById("showProviderName").checked;
-            _settings.secondaryMetric = document.getElementById("secondaryMetric").value || "resetCredits";
+            _settings.layout = document.getElementById("layout").value || "bars";
+            _settings.metric = document.getElementById("metric").value || "weekly";
+            _settings.topMetric = document.getElementById("topMetric").value || "weekly";
+            _settings.bottomMetric = document.getElementById("bottomMetric").value || "resetCredits";
+            delete _settings.secondaryMetric;
+            applyLayoutVisibility();
             if (_websocket && _uuid) {
                 _websocket.send(JSON.stringify({
                     event: "setSettings",
@@ -123,8 +173,9 @@
         }
 
         document.addEventListener("DOMContentLoaded", function () {
-            document.getElementById("showProviderName").addEventListener("change", saveSettings);
-            document.getElementById("secondaryMetric").addEventListener("change", saveSettings);
+            ["showProviderName", "layout", "metric", "topMetric", "bottomMetric"].forEach(function (id) {
+                document.getElementById(id).addEventListener("change", saveSettings);
+            });
             applySettings();
         });
     </script>

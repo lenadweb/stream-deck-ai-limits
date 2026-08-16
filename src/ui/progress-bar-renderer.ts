@@ -3,9 +3,13 @@ import { ServiceTheme, ThemeColors } from "../interfaces/theme";
 export interface Slot {
     kind: "gauge" | "stat";
     label: string;
+    /** Used instead of {@link label} inside a ring, where horizontal space is tight. */
+    shortLabel?: string;
     percent?: number;
     valueText?: string;
     caption?: string;
+    /** Renders the value in the muted label colour, for placeholders like "no data". */
+    muted?: boolean;
 }
 
 export interface RenderOptions {
@@ -135,8 +139,97 @@ export class ProgressBarRenderer {
         return this.svg(width, height, chrome + modules);
     }
 
+    /**
+     * Single ring gauge filling the whole tile: label, value and reset time stacked
+     * inside the ring. Stat slots (credits, reset counts) keep the ring as a frame
+     * and simply show their value, so a mixed set of tiles still reads as one family.
+     */
+    renderRing(slot: Slot, theme: ServiceTheme = 'claude', width: number = 144, height: number = 144, opts: RenderOptions = {}): string {
+        const colors = this.themes[theme];
+        const isDial = this.isDial(width, height);
+        const showName = opts.showName !== false;
+        const geo = this.geometry(width, height, isDial, showName, 1);
+        const ring = this.ringGeometry(width, height, isDial, showName);
+
+        const isGauge = slot.kind !== "stat";
+        const pct = this.clampPct(slot.percent ?? 0);
+        const color = isGauge ? this.barColor(pct, theme) : colors.primary;
+        const value = slot.valueText ?? (isGauge ? `${pct}%` : "—");
+
+        const cx = this.round(ring.cx);
+        const cy = this.round(ring.cy);
+
+        let body = this.background(width, height, colors)
+            + this.header(this.serviceName(theme), colors, geo, isDial, showName);
+
+        body += `<circle cx="${cx}" cy="${cy}" r="${ring.r}" fill="none" stroke="${colors.barBg}" stroke-width="${ring.sw}" />`;
+        if (isGauge && pct > 0) {
+            const circumference = 2 * Math.PI * ring.r;
+            const filled = (circumference * pct) / 100;
+            body += `<circle cx="${cx}" cy="${cy}" r="${ring.r}" fill="none" stroke="${color}" stroke-width="${ring.sw}"`
+                + ` stroke-linecap="round" stroke-dasharray="${this.round(filled)} ${this.round(circumference)}"`
+                + ` transform="rotate(-90 ${cx} ${cy})" />`;
+        }
+
+        const labelText = slot.shortLabel ?? slot.label;
+        if (labelText) {
+            const max = this.chord(ring.inner, ring.labelDy, ring.labelSize);
+            // Model names can be long; shrink before falling back to an ellipsis.
+            const size = this.fitFontSize(labelText, ring.labelSize, ring.labelSize - 2.5, ProgressBarRenderer.SANS, max);
+            const label = this.fitText(labelText, size, ProgressBarRenderer.SANS, max, 600);
+            body += this.txt(ring.cx, ring.cy + ring.labelDy, label, size, 600, colors.label, "middle", ProgressBarRenderer.SANS);
+        }
+
+        const valueMax = this.chord(ring.inner, ring.valueDy, ring.valueSize);
+        const valueSize = this.fitFontSize(value, ring.valueSize, ring.valueMin, ProgressBarRenderer.SANS, valueMax);
+        const valueColor = slot.muted ? colors.label : color;
+        body += this.txt(ring.cx, ring.cy + ring.valueDy, this.escape(value), valueSize, 700, valueColor, "middle", ProgressBarRenderer.SANS);
+
+        // A clipped caption carries no information, so drop it rather than ellipsise it.
+        if (slot.caption) {
+            const max = this.chord(ring.inner, ring.captionDy, ring.captionSize);
+            if (this.measure(slot.caption, ring.captionSize, ProgressBarRenderer.SANS, 500) <= max) {
+                body += this.txt(ring.cx, ring.cy + ring.captionDy, this.escape(slot.caption), ring.captionSize, 500, colors.label, "middle", ProgressBarRenderer.SANS);
+            }
+        }
+
+        return this.svg(width, height, body);
+    }
+
     private isDial(w: number, h: number): boolean {
         return w === 200 && h === 100;
+    }
+
+    private ringGeometry(width: number, height: number, isDial: boolean, showName: boolean) {
+        const margin = isDial ? 12 : 15;
+        const left = isDial && showName ? 26 : margin;
+        const cx = (left + (width - margin)) / 2;
+
+        if (isDial) {
+            const r = 40, sw = 9;
+            return {
+                cx, cy: height / 2, r, sw, inner: r - sw / 2 - 2.5,
+                labelSize: 10, labelDy: -15,
+                valueSize: 24, valueMin: 13, valueDy: 8,
+                captionSize: 10, captionDy: 22
+            };
+        }
+
+        const r = showName ? 46 : 50;
+        const sw = showName ? 10 : 11;
+        return {
+            cx, cy: showName ? 84 : 72, r, sw, inner: r - sw / 2 - 3,
+            labelSize: 11, labelDy: -18,
+            valueSize: 30, valueMin: 15, valueDy: 9,
+            captionSize: 11, captionDy: 26
+        };
+    }
+
+    /** Widest line of text that still fits inside the ring at a given vertical offset. */
+    private chord(inner: number, dy: number, size: number): number {
+        const y = Math.max(Math.abs(dy), Math.abs(dy - size * 0.72));
+        if (y >= inner) return 0;
+        return 2 * Math.sqrt(inner * inner - y * y);
     }
 
     private geometry(width: number, height: number, isDial: boolean, showName: boolean, moduleCount = 2) {
