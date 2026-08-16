@@ -40,7 +40,12 @@ export class CodexBarProgressBars extends BaseMonitoringAction<CodexBarSettings,
     }
 
     override async onWillAppear(ev: WillAppearEvent<CodexBarSettings>): Promise<void> {
-        await this.getServerConfig(ev.payload.settings);
+        // The server config is global and remains valid between page/folder changes.
+        // Avoid awaiting settings I/O before BaseMonitoringAction redraws its cached
+        // SVG, otherwise Stream Deck briefly falls back to the default action image.
+        if (this.serverCacheKey === "unconfigured") {
+            await this.getServerConfig(ev.payload.settings);
+        }
         await super.onWillAppear(ev);
     }
 
