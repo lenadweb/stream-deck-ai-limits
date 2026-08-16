@@ -65,14 +65,17 @@ export abstract class BaseMonitoringAction<T extends Record<string, any>> extend
 
     /**
      * Remember the tile behind an event, along with its current settings. Every draw
-     * path funnels through here so the cache stays fresh even when a subclass
-     * overrides the event handlers without calling super.
+     * path funnels through here so the cache stays fresh. Only onWillAppear registers
+     * a tile (it passes the controller); other paths refresh what is already tracked,
+     * so a stale event cannot resurrect a tile that has disappeared.
      */
     protected track(ev: any, controller?: string): void {
         const id = ev?.action?.id;
         if (!id) return;
 
         const existing = this.instances.get(id);
+        if (!existing && controller === undefined) return;
+
         this.instances.set(id, {
             action: ev.action,
             controller: controller ?? existing?.controller ?? "Keypad",
@@ -96,8 +99,9 @@ export abstract class BaseMonitoringAction<T extends Record<string, any>> extend
             this.refresh(ev);
         }
         this.intervalId = setInterval(() => {
-            if (this.isMonitoring) {
-                this.refresh(ev);
+            const active = this.instances.values().next().value;
+            if (this.isMonitoring && active) {
+                this.refresh(this.asEvent(active));
             }
         }, this.monitoringIntervalMs);
     }
