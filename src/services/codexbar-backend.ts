@@ -289,10 +289,10 @@ export class CodexBarBackend {
         const id = providerId.trim();
         if (!id) return { error: { message: "Choose a CodexBar provider" } };
 
-        // CodexBar serves an expired unfiltered snapshot while rebuilding it in the
-        // background. A per-provider request waits for that provider's current data,
-        // which keeps a monitoring tile from being one cache cycle behind.
-        const payloads = await this.requestUsageWithAutoStart(codexBarPort(port), autoStart, id);
+        // Keep every tile and the Property Inspector on CodexBar's one complete
+        // snapshot. Filtered endpoints have independent cache entries, which can
+        // otherwise make the same provider appear to move backwards between views.
+        const payloads = await this.requestUsageWithAutoStart(codexBarPort(port), autoStart);
         if (!Array.isArray(payloads)) return payloads;
 
         const matches = payloads.filter((payload) => payload.provider === id);
@@ -364,12 +364,8 @@ export class CodexBarBackend {
         return { error: { code: "stop-timeout", message: "codexbar serve did not stop" } };
     }
 
-    private async requestUsageWithAutoStart(
-        port: number,
-        autoStart: boolean,
-        providerId?: string
-    ): Promise<UsageResponse> {
-        const payloads = await this.requestUsage(port, providerId);
+    private async requestUsageWithAutoStart(port: number, autoStart: boolean): Promise<UsageResponse> {
+        const payloads = await this.requestUsage(port);
         if (Array.isArray(payloads) || !autoStart || payloads.error.message !== "Can't reach codexbar serve on 127.0.0.1") {
             return payloads;
         }
@@ -378,7 +374,7 @@ export class CodexBarBackend {
 
         const started = await this.ensureServerStarted(port);
         if (started.error) return { error: started.error };
-        return this.requestUsage(port, providerId);
+        return this.requestUsage(port);
     }
 
     private async ensureServerStarted(port: number): Promise<{ error?: CodexBarError }> {
