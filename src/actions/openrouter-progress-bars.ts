@@ -18,29 +18,15 @@ const METRIC_LABELS: Record<OpenRouterMetric, string> = {
 export class OpenRouterProgressBars extends BaseMonitoringAction<OpenRouterSettings> {
     protected readonly providerName = ProviderName.OpenRouter;
     protected readonly themeName: ServiceTheme = "openrouter";
-    private settings: OpenRouterSettings = {};
-    private details: OpenRouterUsage | null = null;
+    private readonly details = new Map<string, OpenRouterUsage | null>();
 
-    override async onWillAppear(ev: any): Promise<void> {
-        this.settings = (ev.payload?.settings ?? {}) as OpenRouterSettings;
-        await super.onWillAppear(ev);
-    }
-
-    override async onDidReceiveSettings(ev: any): Promise<void> {
-        this.settings = (ev.payload?.settings ?? {}) as OpenRouterSettings;
-        // Re-render from cached details without forcing a network call when only
-        // the selected metric changed; refresh only if we have no data yet.
-        if (this.details) {
-            await this.redraw(ev);
-        } else {
-            await this.refresh(ev);
-        }
+    protected override fetchKey(settings: OpenRouterSettings | undefined): string {
+        return settings?.apiKey?.trim() || "";
     }
 
     protected override async fetchProviderUsage(ev: any): Promise<StandardUsageResult> {
-        const apiKey = this.settings.apiKey?.trim() || "";
+        const apiKey = this.fetchKey(ev?.payload?.settings);
         if (!apiKey) {
-            this.details = null;
             return {
                 provider: this.providerName,
                 overallUsagePercent: null,
@@ -54,12 +40,12 @@ export class OpenRouterProgressBars extends BaseMonitoringAction<OpenRouterSetti
         const result = await provider.fetchUsage();
 
         if (result.error) {
-            this.details = null;
+            this.details.set(apiKey, null);
         } else {
             try {
-                this.details = await provider.fetchDetails();
+                this.details.set(apiKey, await provider.fetchDetails());
             } catch {
-                this.details = null;
+                this.details.set(apiKey, null);
             }
         }
         return result;
@@ -68,20 +54,20 @@ export class OpenRouterProgressBars extends BaseMonitoringAction<OpenRouterSetti
     protected getDisplayData(ev: any, result: StandardUsageResult) {
         const settings = (ev?.payload?.settings ?? {}) as OpenRouterSettings;
         const layout: TileLayout = settings.layout ?? "bars";
+        const details = this.details.get(this.fetchKey(settings)) ?? null;
 
         if (layout === "ring") {
-            return this.tileDisplay([this.metricSlot(settings.metric ?? "limit")], layout);
+            return this.tileDisplay([this.metricSlot(settings.metric ?? "limit", details)], layout);
         }
 
         return this.tileDisplay([
-            this.metricSlot(settings.topMetric ?? "limit"),
-            this.metricSlot(settings.bottomMetric ?? "monthly")
+            this.metricSlot(settings.topMetric ?? "limit", details),
+            this.metricSlot(settings.bottomMetric ?? "monthly", details)
         ], layout);
     }
 
-    private metricSlot(metric: OpenRouterMetric): Slot {
+    private metricSlot(metric: OpenRouterMetric, d: OpenRouterUsage | null): Slot {
         const label = METRIC_LABELS[metric];
-        const d = this.details;
 
         if (metric === "limit") {
             if (d?.limit) {

@@ -16,26 +16,13 @@ const METRICS: Record<MiniMaxMetric, { label: string; key: string }> = {
 export class MiniMaxProgressBars extends BaseMonitoringAction<MiniMaxSettings> {
     protected readonly providerName = ProviderName.MiniMax;
     protected readonly themeName: ServiceTheme = "minimax";
-    private settings: MiniMaxSettings = {};
 
-    override async onWillAppear(ev: any): Promise<void> {
-        this.settings = (ev.payload?.settings ?? {}) as MiniMaxSettings;
-        await super.onWillAppear(ev);
-    }
-
-    override async onDidReceiveSettings(ev: any): Promise<void> {
-        const previousKey = this.settings.apiKey;
-        this.settings = (ev.payload?.settings ?? {}) as MiniMaxSettings;
-        // Only the API key needs a new request; metric changes redraw from cache.
-        if (this.settings.apiKey !== previousKey) {
-            await this.refresh(ev);
-        } else {
-            await this.redraw(ev);
-        }
+    protected override fetchKey(settings: MiniMaxSettings | undefined): string {
+        return settings?.apiKey?.trim() || "";
     }
 
     protected override async fetchProviderUsage(ev: any): Promise<StandardUsageResult> {
-        const apiKey = this.settings.apiKey?.trim() || "";
+        const apiKey = this.fetchKey(ev?.payload?.settings);
         if (!apiKey) {
             return {
                 provider: this.providerName,

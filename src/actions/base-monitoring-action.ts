@@ -12,12 +12,16 @@ interface TileInstance<T> {
     settings: T;
 }
 
+interface CachedUsage {
+    result: StandardUsageResult;
+    fetchedAt: number;
+}
+
 export abstract class BaseMonitoringAction<T extends Record<string, any>> extends SingletonAction<T> {
     protected instances = new Map<string, TileInstance<T>>();
     protected intervalId: NodeJS.Timeout | null = null;
     protected isMonitoring = false;
-    protected lastResult: StandardUsageResult | null = null;
-    protected lastFetchTime = 0;
+    protected usage = new Map<string, CachedUsage>();
     protected readonly monitoringIntervalMs = 900000;
     protected readonly renderer = new ProgressBarRenderer();
     protected readonly limitsManager = LimitsManager.getInstance();
@@ -25,13 +29,34 @@ export abstract class BaseMonitoringAction<T extends Record<string, any>> extend
     protected abstract get providerName(): ProviderName;
     protected abstract get themeName(): ServiceTheme;
 
+    protected fetchKey(_settings: T | undefined): string {
+        return "";
+    }
+
+    protected get lastResult(): StandardUsageResult | null {
+        return this.usage.get("")?.result ?? null;
+    }
+
+    protected set lastResult(value: StandardUsageResult | null) {
+        if (value === null) {
+            this.usage.delete("");
+            return;
+        }
+        this.usage.set("", { result: value, fetchedAt: Date.now() });
+    }
+
     override async onWillAppear(ev: WillAppearEvent<T>): Promise<void> {
         this.track(ev, ev.payload.controller);
         // Draw cached data immediately so switching pages/folders never blanks the key
         await this.redraw(ev);
+        // Only hit the network on a cold start or when the cached data has gone stale,
+        // so re-appearing after a page/folder switch doesn't trigger a visible refresh.
+        if (this.isStale(ev)) {
+            this.refresh(ev);
+        }
         if (!this.isMonitoring) {
             this.isMonitoring = true;
-            this.startMonitoring(ev);
+            this.startMonitoring();
         }
     }
 
@@ -49,6 +74,9 @@ export abstract class BaseMonitoringAction<T extends Record<string, any>> extend
 
     override async onDidReceiveSettings(ev: any): Promise<void> {
         await this.redraw(ev);
+        if (!this.usage.has(this.fetchKey(ev?.payload?.settings))) {
+            await this.refresh(ev);
+        }
     }
 
     override async onDialUp(ev: any): Promise<void> {
@@ -91,17 +119,15 @@ export abstract class BaseMonitoringAction<T extends Record<string, any>> extend
         };
     }
 
-    protected startMonitoring(ev: any): void {
-        // Only hit the network on a cold start or when the cached data has gone stale,
-        // so re-appearing after a page/folder switch doesn't trigger a visible refresh.
-        const isStale = !this.lastResult || (Date.now() - this.lastFetchTime) >= this.monitoringIntervalMs;
-        if (isStale) {
-            this.refresh(ev);
-        }
+    protected isStale(ev: any): boolean {
+        const cached = this.usage.get(this.fetchKey(ev?.payload?.settings));
+        return !cached || (Date.now() - cached.fetchedAt) >= this.monitoringIntervalMs;
+    }
+
+    protected startMonitoring(): void {
         this.intervalId = setInterval(() => {
-            const active = this.instances.values().next().value;
-            if (this.isMonitoring && active) {
-                this.refresh(this.asEvent(active));
+            if (this.isMonitoring) {
+                this.refreshAll();
             }
         }, this.monitoringIntervalMs);
     }
@@ -115,20 +141,31 @@ export abstract class BaseMonitoringAction<T extends Record<string, any>> extend
 
     protected async refresh(ev: any): Promise<void> {
         this.track(ev);
+        const key = this.fetchKey(ev?.payload?.settings);
         try {
             const result = await this.fetchProviderUsage(ev);
-            this.lastResult = result;
-            this.lastFetchTime = Date.now();
-            // One fetch feeds every tile of this provider, each rendered with its own
-            // settings — several tiles can show different metrics of the same data.
-            await this.drawAll(result);
+            this.usage.set(key, { result, fetchedAt: Date.now() });
+            // One fetch feeds every tile sharing the same credentials, each rendered
+            // with its own settings — several tiles can show different metrics of it.
+            await this.drawAll(key, result);
         } catch (err: any) {
             streamDeck.logger.error(`[${this.providerName}] Refresh failed: ${err}`);
         }
     }
 
-    protected async drawAll(result: StandardUsageResult): Promise<void> {
+    protected async refreshAll(): Promise<void> {
+        const done = new Set<string>();
         for (const instance of [...this.instances.values()]) {
+            const key = this.fetchKey(instance.settings);
+            if (done.has(key)) continue;
+            done.add(key);
+            await this.refresh(this.asEvent(instance));
+        }
+    }
+
+    protected async drawAll(key: string, result: StandardUsageResult): Promise<void> {
+        for (const instance of [...this.instances.values()]) {
+            if (this.fetchKey(instance.settings) !== key) continue;
             try {
                 await this.draw(this.asEvent(instance), result);
             } catch (err: any) {
@@ -139,8 +176,9 @@ export abstract class BaseMonitoringAction<T extends Record<string, any>> extend
 
     protected async redraw(ev: any): Promise<void> {
         this.track(ev);
-        if (this.lastResult) {
-            await this.draw(ev, this.lastResult);
+        const cached = this.usage.get(this.fetchKey(ev?.payload?.settings))?.result ?? null;
+        if (cached) {
+            await this.draw(ev, cached);
         } else {
             await this.drawPlaceholder(ev);
         }
