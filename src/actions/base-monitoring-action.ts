@@ -12,32 +12,40 @@ interface TileInstance<T> {
     settings: T;
 }
 
-interface CachedUsage {
-    result: StandardUsageResult;
+interface MonitoringResult {
+    error?: { message: string } | null;
+}
+
+interface CachedUsage<TResult extends MonitoringResult> {
+    result: TResult;
     fetchedAt: number;
 }
 
-export abstract class BaseMonitoringAction<T extends Record<string, any>> extends SingletonAction<T> {
+export abstract class BaseMonitoringAction<
+    T extends Record<string, any>,
+    TResult extends MonitoringResult = StandardUsageResult
+> extends SingletonAction<T> {
     protected instances = new Map<string, TileInstance<T>>();
     protected intervalId: NodeJS.Timeout | null = null;
     protected isMonitoring = false;
-    protected usage = new Map<string, CachedUsage>();
+    protected usage = new Map<string, CachedUsage<TResult>>();
     protected readonly monitoringIntervalMs = 900000;
     protected readonly renderer = new ProgressBarRenderer();
     protected readonly limitsManager = LimitsManager.getInstance();
 
-    protected abstract get providerName(): ProviderName;
+    /** Used for logging; external backends may use an id outside ProviderName. */
+    protected abstract get providerName(): ProviderName | string;
     protected abstract get themeName(): ServiceTheme;
 
     protected fetchKey(_settings: T | undefined): string {
         return "";
     }
 
-    protected get lastResult(): StandardUsageResult | null {
+    protected get lastResult(): TResult | null {
         return this.usage.get("")?.result ?? null;
     }
 
-    protected set lastResult(value: StandardUsageResult | null) {
+    protected set lastResult(value: TResult | null) {
         if (value === null) {
             this.usage.delete("");
             return;
@@ -163,7 +171,7 @@ export abstract class BaseMonitoringAction<T extends Record<string, any>> extend
         }
     }
 
-    protected async drawAll(key: string, result: StandardUsageResult): Promise<void> {
+    protected async drawAll(key: string, result: TResult): Promise<void> {
         for (const instance of [...this.instances.values()]) {
             if (this.fetchKey(instance.settings) !== key) continue;
             try {
@@ -184,11 +192,12 @@ export abstract class BaseMonitoringAction<T extends Record<string, any>> extend
         }
     }
 
-    protected async fetchProviderUsage(ev: any): Promise<StandardUsageResult> {
-        return this.limitsManager.getClient().fetchUsage(this.providerName);
+    protected async fetchProviderUsage(_ev: any): Promise<TResult> {
+        const result = await this.limitsManager.getClient().fetchUsage(this.providerName as ProviderName);
+        return result as unknown as TResult;
     }
 
-    protected abstract getDisplayData(ev: any, result: StandardUsageResult): {
+    protected abstract getDisplayData(ev: any, result: TResult): {
         value1?: number;
         value2?: number;
         label1?: string;
@@ -212,7 +221,7 @@ export abstract class BaseMonitoringAction<T extends Record<string, any>> extend
         return { showName: ev?.payload?.settings?.showProviderName !== false };
     }
 
-    protected async draw(ev: any, result: StandardUsageResult): Promise<void> {
+    protected async draw(ev: any, result: TResult): Promise<void> {
         const opts = this.renderOptions(ev);
         if (result.error) {
             const svg = this.renderer.renderError(result.error.message, this.themeName, 144, 144, opts);

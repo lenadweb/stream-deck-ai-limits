@@ -6,7 +6,7 @@
 
 **See exactly how much of your AI coding quota is left, right on your Stream Deck keys and dials.**
 
-Track usage limits and reset times for **Claude**, **Codex**, **Antigravity**, **Gemini CLI**, **MiniMax**, and **OpenRouter** at a glance, without ever opening a terminal or a billing page.
+Track usage limits and reset times for **Claude**, **Codex**, **Antigravity**, **Gemini CLI**, **MiniMax**, **OpenRouter**, or any provider configured in **CodexBar** — at a glance, without opening a terminal or a billing page.
 
 [![Download on Elgato Marketplace](https://img.shields.io/badge/Elgato%20Marketplace-Download-2c2c2e?style=for-the-badge&logo=elgato&logoColor=white)](https://marketplace.elgato.com/product/ai-usage-limits-b78ef6c4-0165-4bf2-8ba8-889f723e915f)
 
@@ -22,7 +22,7 @@ Track usage limits and reset times for **Claude**, **Codex**, **Antigravity**, *
 
 ## Why you'll like it
 
-- **Six providers, one glance:** Claude, Codex, Antigravity, Gemini CLI, MiniMax and OpenRouter, each with its own action and brand-matched theme.
+- **Native providers plus CodexBar:** use focused native actions for Claude, Codex, Antigravity, Gemini CLI, MiniMax and OpenRouter; the optional CodexBar backend covers its configured providers from one action.
 - **Keys *and* dials:** every action renders on standard keys **and** on Stream Deck+ encoders with a full dial layout.
 - **Live progress bars:** color-coded usage (green, amber, red) plus human-friendly reset countdowns like `3h 33m` or `4d 3h`.
 - **Zero key juggling for most providers:** reuses the credentials your existing CLIs already created locally. Only MiniMax and OpenRouter need a key pasted in.
@@ -77,12 +77,13 @@ Each provider is a separate action. All of them work on **Keypad** (keys) and **
 
 | Action | What it shows | UUID |
 |---|---|---|
-| **Claude** | Claude Code session, weekly or Sonnet weekly usage | `com.len.limits.progress` |
-| **Codex** | Codex session or weekly usage, usage limit resets, credits balance | `com.len.limits.codex.progress` |
-| **Antigravity** | Antigravity (Claude + Gemini) usage, per model | `com.len.limits.antigravity` |
-| **Gemini CLI** | Gemini CLI quota usage, per model | `com.len.limits.gemini-cli` |
-| **MiniMax** | MiniMax M-series daily or weekly usage | `com.len.limits.minimax` |
-| **OpenRouter** | OpenRouter key spend limit & spend by day/week/month | `com.len.limits.openrouter` |
+| **Claude (Native)** | Claude Code session, weekly or Sonnet weekly usage | `com.len.limits.progress` |
+| **Codex (Native)** | Codex session or weekly usage, usage limit resets, credits balance | `com.len.limits.codex.progress` |
+| **Antigravity (Native)** | Antigravity (Claude + Gemini) usage, per model | `com.len.limits.antigravity` |
+| **Gemini CLI (Native)** | Gemini CLI quota usage, per model | `com.len.limits.gemini-cli` |
+| **MiniMax (Native)** | MiniMax M-series daily or weekly usage | `com.len.limits.minimax` |
+| **OpenRouter (Native)** | OpenRouter key spend limit & spend by day/week/month | `com.len.limits.openrouter` |
+| **CodexBar backend** | Any enabled CodexBar provider, account and quota window | `com.len.limits.codexbar` |
 
 ### One metric per tile
 
@@ -109,8 +110,22 @@ For most providers the plugin simply reads the credentials your CLI already wrot
 | **Antigravity** | One-time login | Click **Login** in the Property Inspector to start the Google OAuth2 flow; the token is saved to `~/.limits-streamdeck/antigravity_oauth.json` |
 | **MiniMax** | API key | Paste your key into the Property Inspector |
 | **OpenRouter** | API key | Paste a key from [openrouter.ai/keys](https://openrouter.ai/keys); pick what each bar shows (limit / spend by day, week, month, total) |
+| **CodexBar backend** | Local CodexBar server | Start `codexbar serve`; configured providers load automatically when opening this action's settings |
 
 > **Tip:** Make sure the matching CLI (Claude Code, Codex, Gemini CLI) is installed and logged in first; that is what creates the credential files the plugin reads.
+
+---
+
+## CodexBar backend (optional)
+
+The **CodexBar backend** action reads the local [`codexbar serve`](https://github.com/steipete/CodexBar) JSON API. It is useful for providers that do not have a dedicated native action here, while native actions remain independent and continue to work without CodexBar.
+
+1. Install and configure CodexBar for the providers you use.
+2. Start the local server: `codexbar serve` (the default address is `127.0.0.1:8080`).
+3. Drag **CodexBar backend** onto a key or dial.
+4. Its settings automatically load enabled providers. Choose a provider, account, and one or two quota windows; use the refresh icon if you change your CodexBar configuration. A non-default local port can be set in **Advanced** before loading.
+
+The plugin connects only to `127.0.0.1`; it does not send CodexBar data or credentials to a remote host. CodexBar's desktop app and this backend action are macOS-oriented.
 
 ---
 

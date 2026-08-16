@@ -69,3 +69,20 @@ export interface OpenRouterSettings {
     bottomMetric?: OpenRouterMetric;
     [key: string]: any;
 }
+
+/** A CodexBar window id: primary/secondary/tertiary or an `extra:<id>` window. */
+export type CodexBarMetric = string;
+
+export interface CodexBarSettings {
+    /** Provider identifier as reported by CodexBar; it is selected from the discovered list. */
+    providerId?: string;
+    /** CodexBar's optional account label for providers with multiple accounts. */
+    account?: string;
+    port?: number;
+    layout?: TileLayout;
+    metric?: CodexBarMetric;
+    topMetric?: CodexBarMetric;
+    bottomMetric?: CodexBarMetric;
+    showProviderName?: boolean;
+    [key: string]: any;
+}
