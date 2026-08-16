@@ -123,6 +123,7 @@
         let _websocket = null;
         let _uuid = null;
         let _settings = {};
+        let _serverConfig = { port: 8080, autoStart: false };
         let _providers = [];
         let _serverBusy = false;
         let _reloadAfterServerCommand = null;
@@ -256,10 +257,9 @@
         }
 
         function applyServerConfig(server) {
-            _settings.port = server.port;
-            _settings.autoStart = server.autoStart === true;
-            document.getElementById("port").value = _settings.port;
-            document.getElementById("autoStart").checked = _settings.autoStart;
+            _serverConfig = { port: server.port, autoStart: server.autoStart === true };
+            document.getElementById("port").value = _serverConfig.port;
+            document.getElementById("autoStart").checked = _serverConfig.autoStart;
         }
 
         function selectedProvider() { return document.getElementById("providerId").value; }
@@ -341,8 +341,8 @@
         function displayName(id) { return id.replace(/[-_]+/g, " ").replace(/\b\w/g, (char) => char.toUpperCase()); }
 
         function applySettings() {
-            document.getElementById("port").value = _settings.port || 8080;
-            document.getElementById("autoStart").checked = _settings.autoStart === true;
+            document.getElementById("port").value = _serverConfig.port;
+            document.getElementById("autoStart").checked = _serverConfig.autoStart;
             document.getElementById("layout").value = _settings.layout || "bars";
             const theme = _settings.theme || "codexbar";
             document.querySelectorAll('input[name="theme"]').forEach((input) => {
@@ -362,10 +362,10 @@
         }
 
         function saveSettings() {
+            delete _settings.port;
+            delete _settings.autoStart;
             _settings.providerId = selectedProvider() || undefined;
             _settings.account = document.getElementById("account").value || "";
-            _settings.port = Number(document.getElementById("port").value) || 8080;
-            _settings.autoStart = document.getElementById("autoStart").checked;
             _settings.layout = document.getElementById("layout").value || "bars";
             _settings.metric = document.getElementById("metric").value || "primary";
             _settings.topMetric = document.getElementById("topMetric").value || "primary";
@@ -417,6 +417,12 @@
         document.addEventListener("DOMContentLoaded", function () {
             ["providerId", "account", "port", "autoStart", "layout", "metric", "topMetric", "bottomMetric", "showProviderName"].forEach((id) => {
                 document.getElementById(id).addEventListener("change", function () {
+                    if (id === "port" || id === "autoStart") {
+                        _serverConfig = {
+                            port: Number(document.getElementById("port").value) || 8080,
+                            autoStart: document.getElementById("autoStart").checked
+                        };
+                    }
                     if (id === "providerId") {
                         _settings.providerId = selectedProvider();
                         _settings.account = "";

@@ -26,8 +26,6 @@ const CODEXBAR_THEMES: readonly CodexBarTheme[] = [
 export class CodexBarProgressBars extends BaseMonitoringAction<CodexBarSettings, CodexBarResult> {
     protected readonly providerName = "codexbar";
     protected readonly themeName: ServiceTheme = "codexbar";
-    /** Matches CodexBar serve's default 60-second snapshot cache TTL. */
-    protected override readonly monitoringIntervalMs = 60_000;
     private readonly backend = CodexBarBackend.getInstance();
     private serverCacheKey = "unconfigured";
 
@@ -51,7 +49,9 @@ export class CodexBarProgressBars extends BaseMonitoringAction<CodexBarSettings,
 
     override async onDidReceiveSettings(ev: any): Promise<void> {
         const settings = (ev?.payload?.settings ?? {}) as CodexBarSettings;
-        await this.setServerConfig(settings.port, settings.autoStart === true);
+        // Server configuration is global. Legacy per-tile settings are used only to
+        // initialise it once, never to overwrite a configuration chosen elsewhere.
+        await this.getServerConfig(settings);
         await super.onDidReceiveSettings(ev);
     }
 
@@ -178,9 +178,11 @@ export class CodexBarProgressBars extends BaseMonitoringAction<CodexBarSettings,
 
     private async getServerConfig(fallback?: CodexBarSettings): Promise<CodexBarServerConfig> {
         const global = await streamDeck.settings.getGlobalSettings<CodexBarGlobalSettings>();
-        const port = codexBarPort(global.codexBarPort ?? fallback?.port);
-        const autoStart = global.codexBarAutoStart ?? fallback?.autoStart === true;
-        if (global.codexBarPort === undefined || global.codexBarAutoStart === undefined) {
+        const hasPort = global.codexBarPort !== undefined;
+        const hasAutoStart = global.codexBarAutoStart !== undefined;
+        const port = codexBarPort(hasPort ? global.codexBarPort : fallback?.port);
+        const autoStart = hasAutoStart ? global.codexBarAutoStart === true : fallback?.autoStart === true;
+        if (!hasPort || !hasAutoStart) {
             await streamDeck.settings.setGlobalSettings({
                 ...global,
                 codexBarPort: port,
