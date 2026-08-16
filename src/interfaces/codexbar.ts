@@ -14,11 +14,34 @@ export interface CodexBarNamedRateWindow {
     usageKnown?: boolean;
 }
 
+/** Provider-specific information rendered by CodexBar below its quota windows. */
+export interface CodexBarDetailRow {
+    label?: string;
+    value?: string | number | null;
+    secondaryValue?: string | null;
+}
+
+export interface CodexBarDetailChartPoint {
+    label?: string;
+    value?: string | number | null;
+}
+
+export interface CodexBarDetailSection {
+    title?: string;
+    rows?: CodexBarDetailRow[];
+    chart?: {
+        title?: string;
+        unit?: string;
+        points?: CodexBarDetailChartPoint[];
+    };
+}
+
 export interface CodexBarUsageSnapshot {
     primary?: CodexBarRateWindow | null;
     secondary?: CodexBarRateWindow | null;
     tertiary?: CodexBarRateWindow | null;
     extraRateWindows?: CodexBarNamedRateWindow[] | null;
+    details?: CodexBarDetailSection[] | null;
     updatedAt?: string;
 }
 
@@ -45,4 +68,11 @@ export interface CodexBarProviderOption {
     account: string;
     label: string;
     metrics: CodexBarMetricOption[];
+}
+
+export interface CodexBarServerStatus {
+    state: "running" | "stopped";
+    /** True only when this Stream Deck plugin session spawned the process. */
+    managed: boolean;
+    pid?: number;
 }

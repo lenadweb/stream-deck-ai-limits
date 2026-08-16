@@ -79,6 +79,8 @@ export interface CodexBarSettings {
     /** CodexBar's optional account label for providers with multiple accounts. */
     account?: string;
     port?: number;
+    /** Explicit opt-in to start a locally installed CodexBar CLI when its server is unavailable. */
+    autoStart?: boolean;
     layout?: TileLayout;
     metric?: CodexBarMetric;
     topMetric?: CodexBarMetric;

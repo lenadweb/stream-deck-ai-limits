@@ -127,6 +127,10 @@ The **CodexBar backend** action reads the local [`codexbar serve`](https://githu
 
 The plugin connects only to `127.0.0.1`; it does not send CodexBar data or credentials to a remote host. CodexBar's desktop app and this backend action are macOS-oriented.
 
+In addition to quota windows, the action exposes every provider-specific value reported by CodexBar. For OpenRouter this includes credits, API-key budget and spend, and the reported rate limit; each can be selected as a ring or bar metric.
+
+In **Advanced**, you can start `codexbar serve`, see its status, and stop a server started by the current Stream Deck session. Server port and auto-start are shared by every CodexBar backend action, so multiple tiles use one server. You can also enable **Start CodexBar automatically if it isn't running**. This opt-in setting starts a locally installed CodexBar CLI only after the plugin cannot reach its configured loopback server.
+
 ---
 
 ## How it looks
