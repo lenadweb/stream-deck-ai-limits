@@ -25,6 +25,87 @@ const CODEXBAR_BINARIES = [
 ];
 
 type UsageResponse = CodexBarProviderPayload[] | { error: CodexBarError };
+type CodexBarWindowId = "primary" | "secondary" | "tertiary";
+
+/**
+ * Labels from CodexBar's ProviderMetadata (sessionLabel, weeklyLabel, opusLabel).
+ * CodexBar's serve API intentionally transports windows as primary/secondary/tertiary,
+ * so consumers need this presentation mapping to avoid exposing those transport names.
+ */
+const PROVIDER_WINDOW_LABELS: Record<string, Partial<Record<CodexBarWindowId, string>>> = {
+    abacus: { primary: "Credits", secondary: "Weekly" },
+    aiand: { primary: "Spend", secondary: "Spend" },
+    alibaba: { primary: "5-hour", secondary: "Weekly", tertiary: "Monthly" },
+    alibabatokenplan: { primary: "Credits", secondary: "Usage" },
+    amp: { primary: "Amp Free", secondary: "Balance" },
+    antigravity: { primary: "Gemini Models", secondary: "Claude and GPT" },
+    augment: { primary: "Credits", secondary: "Usage" },
+    azureopenai: { primary: "Status", secondary: "Deployment" },
+    bedrock: { primary: "Budget", secondary: "Cost" },
+    chutes: { primary: "4-hour quota", secondary: "Monthly quota" },
+    claude: { primary: "Session", secondary: "Weekly", tertiary: "Sonnet" },
+    clawrouter: { primary: "Monthly budget", secondary: "Requests" },
+    clinepass: { primary: "5-hour", secondary: "Weekly", tertiary: "Monthly" },
+    codebuff: { primary: "Credits", secondary: "Weekly" },
+    codex: { primary: "Session", secondary: "Weekly" },
+    commandcode: { primary: "5-hour", secondary: "Weekly", tertiary: "Monthly" },
+    copilot: { primary: "Premium", secondary: "Chat" },
+    crof: { primary: "Credits", secondary: "Credits" },
+    cursor: { primary: "Total", secondary: "Cursor", tertiary: "Third Party" },
+    deepinfra: { primary: "Balance", secondary: "Balance" },
+    deepseek: { primary: "Balance", secondary: "Balance" },
+    deepgram: { primary: "Requests", secondary: "Usage" },
+    devin: { primary: "Daily", secondary: "Weekly" },
+    doubao: { primary: "5-hour", secondary: "Weekly", tertiary: "Monthly" },
+    elevenlabs: { primary: "Credits", secondary: "Voices" },
+    factory: { primary: "Standard", secondary: "Premium" },
+    fireworks: { primary: "Spend", secondary: "Spend" },
+    gemini: { primary: "Pro", secondary: "Flash", tertiary: "Flash Lite" },
+    grok: { primary: "Credits", secondary: "On-demand" },
+    groq: { primary: "Requests", secondary: "Tokens" },
+    ibmbob: { primary: "Monthly Bobcoins", secondary: "Monthly Bobcoins" },
+    jetbrains: { primary: "Current", secondary: "Refill" },
+    kilo: { primary: "Credits", secondary: "Kilo Pass" },
+    kimi: { primary: "7-day usage", secondary: "5-hour usage" },
+    kiro: { primary: "Credits", secondary: "Bonus" },
+    llmproxy: { primary: "Quota", secondary: "Requests" },
+    litellm: { primary: "Personal budget", secondary: "Team budget" },
+    longcat: { primary: "Quota", secondary: "Fuel Pack" },
+    manus: { primary: "Monthly credits", secondary: "Daily refresh" },
+    mimo: { primary: "Credits", secondary: "Window" },
+    minimax: { primary: "Prompts", secondary: "Window" },
+    mistral: { primary: "Balance" },
+    moonshot: { primary: "Balance", secondary: "Balance" },
+    neuralwatt: { primary: "Subscription", secondary: "Key allowance" },
+    notion: { primary: "Rolling", secondary: "Monthly" },
+    ollama: { primary: "Session", secondary: "Weekly" },
+    openai: { primary: "Spend", secondary: "Requests" },
+    opencode: { primary: "5-hour", secondary: "Weekly" },
+    opencodego: { primary: "5-hour", secondary: "Weekly", tertiary: "Monthly" },
+    openrouter: { primary: "Credits", secondary: "Usage" },
+    perplexity: { primary: "Credits", secondary: "Bonus credits", tertiary: "Purchased" },
+    poe: { primary: "Points", secondary: "Points" },
+    qoder: { primary: "Credits", secondary: "Balance" },
+    qwencloud: { primary: "5-hour", secondary: "Weekly" },
+    sakana: { primary: "5-hour", secondary: "Weekly" },
+    stepfun: { primary: "5h Window", secondary: "Weekly Window" },
+    sub2api: { primary: "Quota", secondary: "Weekly quota", tertiary: "Monthly quota" },
+    synthetic: { primary: "Five-hour quota", secondary: "Weekly tokens", tertiary: "Search hourly" },
+    t3chat: { primary: "Base", secondary: "Overage" },
+    venice: { primary: "Balance", secondary: "Balance" },
+    vertexai: { primary: "Requests", secondary: "Tokens" },
+    warp: { primary: "Credits", secondary: "Add-on credits" },
+    wayfinder: { primary: "Savings", secondary: "Requests" },
+    windsurf: { primary: "Daily", secondary: "Weekly" },
+    xai: { primary: "Spend", secondary: "Spend" },
+    zai: { primary: "5-hour", secondary: "Weekly" },
+    zed: { primary: "Edit predictions", secondary: "Billing cycle" },
+    zenmux: { primary: "5-hour quota", secondary: "Weekly quota" },
+    zoommate: { primary: "Credits", secondary: "Credits" }
+};
+
+/** ProviderMetadata.balanceOnly from CodexBar's official descriptors. */
+const BALANCE_ONLY_PROVIDERS = new Set(["deepinfra", "deepseek", "mistral", "moonshot", "poe"]);
 
 export function codexBarPort(value: unknown): number {
     const port = typeof value === "number" ? value : Number(value);
@@ -37,20 +118,20 @@ export function providerTitle(providerId: string): string {
         .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-export function metricsForUsage(usage: CodexBarUsageSnapshot | null | undefined): CodexBarMetricOption[] {
-    return [...quotaMetricsForUsage(usage), ...detailMetricsForUsage(usage)];
+export function metricsForUsage(usage: CodexBarUsageSnapshot | null | undefined, providerId?: string): CodexBarMetricOption[] {
+    return [...quotaMetricsForUsage(usage, providerId), ...detailMetricsForUsage(usage)];
 }
 
-function quotaMetricsForUsage(usage: CodexBarUsageSnapshot | null | undefined): CodexBarMetricOption[] {
+function quotaMetricsForUsage(usage: CodexBarUsageSnapshot | null | undefined, providerId?: string): CodexBarMetricOption[] {
     const metrics: CodexBarMetricOption[] = [];
-    const add = (id: string, fallback: string, window: CodexBarRateWindow | null | undefined) => {
+    const add = (id: CodexBarWindowId, fallback: string, window: CodexBarRateWindow | null | undefined) => {
         if (!window || window.isSyntheticPlaceholder) return;
-        metrics.push({ id, label: genericWindowLabel(window, fallback) });
+        metrics.push({ id, label: providerWindowLabel(providerId, id, window, fallback) });
     };
 
-    add("primary", "Primary", usage?.primary);
-    add("secondary", "Secondary", usage?.secondary);
-    add("tertiary", "Tertiary", usage?.tertiary);
+    add("primary", "Usage", usage?.primary);
+    add("secondary", "Additional usage", usage?.secondary);
+    add("tertiary", "Additional usage", usage?.tertiary);
     for (const extra of usage?.extraRateWindows ?? []) {
         if (!extra?.id || !extra.window || extra.usageKnown === false) continue;
         metrics.push({ id: `extra:${extra.id}`, label: extra.title || extra.id });
@@ -60,19 +141,27 @@ function quotaMetricsForUsage(usage: CodexBarUsageSnapshot | null | undefined): 
 
 export function windowForMetric(
     usage: CodexBarUsageSnapshot | null | undefined,
-    metricId: string | undefined
-): { label: string; window: CodexBarRateWindow } | null {
-    const metrics = quotaMetricsForUsage(usage);
-    const selected = metrics.find((metric) => metric.id === metricId) ?? metrics[0];
+    metricId: string | undefined,
+    providerId?: string
+): { label: string; window: CodexBarRateWindow; presentation: "gauge" | "stat" } | null {
+    const metrics = quotaMetricsForUsage(usage, providerId);
+    const selected = metricId ? metrics.find((metric) => metric.id === metricId) : metrics[0];
     if (!selected) return null;
 
-    if (selected.id === "primary") return usage?.primary ? { label: selected.label, window: usage.primary } : null;
-    if (selected.id === "secondary") return usage?.secondary ? { label: selected.label, window: usage.secondary } : null;
-    if (selected.id === "tertiary") return usage?.tertiary ? { label: selected.label, window: usage.tertiary } : null;
+    const balanceOnly = providerId ? BALANCE_ONLY_PROVIDERS.has(providerId.toLowerCase()) : false;
+    const result = (window: CodexBarRateWindow) => ({
+        label: selected.label,
+        window,
+        presentation: balanceOnly && selected.id === "primary" ? "stat" as const : "gauge" as const
+    });
+
+    if (selected.id === "primary") return usage?.primary ? result(usage.primary) : null;
+    if (selected.id === "secondary") return usage?.secondary ? result(usage.secondary) : null;
+    if (selected.id === "tertiary") return usage?.tertiary ? result(usage.tertiary) : null;
 
     const extraId = selected.id.slice("extra:".length);
     const extra = (usage?.extraRateWindows ?? []).find((item: CodexBarNamedRateWindow) => item.id === extraId);
-    return extra ? { label: selected.label, window: extra.window } : null;
+    return extra ? result(extra.window) : null;
 }
 
 export function detailForMetric(
@@ -172,6 +261,16 @@ function genericWindowLabel(window: CodexBarRateWindow, fallback: string): strin
     return `${minutes}m`;
 }
 
+function providerWindowLabel(
+    providerId: string | undefined,
+    windowId: CodexBarWindowId,
+    window: CodexBarRateWindow,
+    fallback: string
+): string {
+    const mapped = providerId ? PROVIDER_WINDOW_LABELS[providerId.toLowerCase()]?.[windowId] : undefined;
+    return mapped || genericWindowLabel(window, fallback);
+}
+
 export class CodexBarBackend {
     private static instance: CodexBarBackend | undefined;
     private readonly starts = new Map<number, Promise<{ error?: CodexBarError }>>();
@@ -214,7 +313,7 @@ export class CodexBarBackend {
                 provider: payload.provider,
                 account: payload.account ?? "",
                 label: payload.account ? `${providerTitle(payload.provider)} — ${payload.account}` : providerTitle(payload.provider),
-                metrics: metricsForUsage(payload.usage)
+                metrics: metricsForUsage(payload.usage, payload.provider)
             }))
             .sort((left, right) => left.label.localeCompare(right.label));
     }

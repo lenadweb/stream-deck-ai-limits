@@ -207,7 +207,7 @@ export class CodexBarProgressBars extends BaseMonitoringAction<CodexBarSettings,
         }
         return this.tileDisplay([
             this.metricSlot(settings.topMetric ?? "primary", result),
-            this.metricSlot(settings.bottomMetric ?? "secondary", result)
+            settings.bottomMetric ? this.metricSlot(settings.bottomMetric, result) : null
         ], layout);
     }
 
@@ -224,7 +224,7 @@ export class CodexBarProgressBars extends BaseMonitoringAction<CodexBarSettings,
         return CODEXBAR_THEMES.includes(theme) ? theme : "codexbar";
     }
 
-    private metricSlot(metricId: string | undefined, result: CodexBarResult): Slot {
+    private metricSlot(metricId: string | undefined, result: CodexBarResult): Slot | null {
         const detail = detailForMetric(result.payload?.usage, metricId);
         if (detail) {
             return {
@@ -235,9 +235,20 @@ export class CodexBarProgressBars extends BaseMonitoringAction<CodexBarSettings,
             };
         }
 
-        const resolved = windowForMetric(result.payload?.usage, metricId);
+        const resolved = windowForMetric(result.payload?.usage, metricId, result.payload?.provider);
         if (!resolved) {
-            return { kind: "stat", label: "Quota", valueText: "—", caption: "no data", muted: true };
+            return null;
+        }
+
+        if (resolved.presentation === "stat") {
+            const balance = balanceDisplay(resolved.window.resetDescription);
+            return {
+                kind: "stat",
+                label: resolved.label,
+                valueText: balance.valueText,
+                caption: balance.caption,
+                muted: balance.valueText === "—"
+            };
         }
 
         return {
@@ -249,4 +260,14 @@ export class CodexBarProgressBars extends BaseMonitoringAction<CodexBarSettings,
                 : resolved.window.resetDescription ?? undefined
         };
     }
+}
+
+function balanceDisplay(description: string | null | undefined): { valueText: string; caption?: string } {
+    const text = description?.trim();
+    if (!text) return { valueText: "—" };
+
+    const parts = text.match(/^(.*?)\s*\((.+)\)$/);
+    return parts
+        ? { valueText: parts[1].trim(), caption: parts[2].trim() }
+        : { valueText: text };
 }

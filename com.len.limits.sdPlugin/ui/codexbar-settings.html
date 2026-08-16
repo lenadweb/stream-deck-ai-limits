@@ -314,20 +314,24 @@
             const metrics = selectedEntry()?.metrics || [];
             ["metric", "topMetric", "bottomMetric"].forEach((id) => {
                 const select = document.getElementById(id);
+                const selectableMetrics = id === "bottomMetric"
+                    ? metrics.filter((metric) => metric.id !== (_settings.topMetric || "primary"))
+                    : metrics;
                 const current = _settings[id] || (id === "bottomMetric" ? "secondary" : "primary");
                 select.innerHTML = "";
-                metrics.forEach((metric) => {
+                selectableMetrics.forEach((metric) => {
                     const option = document.createElement("option");
                     option.value = metric.id;
                     option.textContent = metric.label;
                     select.appendChild(option);
                 });
-                select.disabled = metrics.length === 0;
-                if (!metrics.length) {
-                    select.appendChild(new Option("No CodexBar data", ""));
+                select.disabled = selectableMetrics.length === 0;
+                if (!selectableMetrics.length) {
+                    select.appendChild(new Option(id === "bottomMetric" ? "No other metrics" : "No CodexBar data", ""));
+                    if (id === "bottomMetric") _settings.bottomMetric = "";
                     return;
                 }
-                select.value = [...select.options].some((option) => option.value === current) ? current : metrics[0].id;
+                select.value = [...select.options].some((option) => option.value === current) ? current : selectableMetrics[0].id;
             });
         }
 
@@ -362,7 +366,7 @@
             _settings.layout = document.getElementById("layout").value || "bars";
             _settings.metric = document.getElementById("metric").value || "primary";
             _settings.topMetric = document.getElementById("topMetric").value || "primary";
-            _settings.bottomMetric = document.getElementById("bottomMetric").value || "secondary";
+            _settings.bottomMetric = document.getElementById("bottomMetric").value || "";
             _settings.theme = document.querySelector('input[name="theme"]:checked')?.value || "codexbar";
             _settings.showProviderName = document.getElementById("showProviderName").checked;
             applyLayoutVisibility();
@@ -417,6 +421,10 @@
                     }
                     if (id === "account") {
                         _settings.account = document.getElementById("account").value || "";
+                        populateAccountAndMetrics();
+                    }
+                    if (id === "topMetric") {
+                        _settings.topMetric = document.getElementById("topMetric").value || "primary";
                         populateAccountAndMetrics();
                     }
                     saveSettings();
