@@ -27,7 +27,7 @@ export class AntigravityProgressBars extends BaseMonitoringAction<AntigravitySet
     override async refresh(ev: any): Promise<void> {
         await super.refresh(ev);
         if (this.lastResult && !this.lastResult.error) {
-            await this.persistModelsToSettings(ev);
+            await this.persistModelsToSettings();
         }
     }
 
@@ -105,26 +105,36 @@ export class AntigravityProgressBars extends BaseMonitoringAction<AntigravitySet
         return labels;
     }
 
-    private async persistModelsToSettings(ev: any): Promise<void> {
+    /**
+     * Cache the model list in every tile's settings so each picker works offline.
+     * Writing to the refreshing tile alone would leave the other tiles of this
+     * action without a list.
+     */
+    private async persistModelsToSettings(): Promise<void> {
         const models = this.getAvailableModels();
         const labels = this.getModelLabels();
         const mergedLabels = { ...this.cachedLabels, ...labels };
         this.cachedLabels = mergedLabels;
+        const email = this.provider.getLoggedInEmail() || undefined;
 
-        try {
-            const currentSettings = (ev.payload?.settings ?? {}) as AntigravitySettings;
+        for (const instance of [...this.instances.values()]) {
+            const settings = (instance.settings ?? {}) as AntigravitySettings;
             if (
-                JSON.stringify(currentSettings.availableModels) !== JSON.stringify(models) ||
-                JSON.stringify(currentSettings.availableModelLabels) !== JSON.stringify(mergedLabels)
+                JSON.stringify(settings.availableModels) === JSON.stringify(models) &&
+                JSON.stringify(settings.availableModelLabels) === JSON.stringify(mergedLabels) &&
+                settings.loggedInEmail === email
             ) {
-                await ev.action.setSettings({
-                    ...currentSettings,
+                continue;
+            }
+            try {
+                await instance.action.setSettings({
+                    ...settings,
                     availableModels: models,
                     availableModelLabels: mergedLabels,
-                    loggedInEmail: this.provider.getLoggedInEmail() || undefined
+                    loggedInEmail: email
                 });
-            }
-        } catch {}
+            } catch {}
+        }
     }
 
     private getModelData(modelKey: string, result: StandardUsageResult): { usage: number; resetTime: string | null; label: string } {

@@ -13,7 +13,7 @@ export class GeminiCliProgressBars extends BaseMonitoringAction<GeminiSettings> 
 
     override async refresh(ev: any): Promise<void> {
         await super.refresh(ev);
-        await this.persistModelsToSettings(ev);
+        await this.persistModelsToSettings();
     }
 
     override async onSendToPlugin(ev: any): Promise<void> {
@@ -38,15 +38,20 @@ export class GeminiCliProgressBars extends BaseMonitoringAction<GeminiSettings> 
         return Object.keys(this.lastResult.perModel);
     }
 
-    /** Cache the model list in the tile's settings so the picker works offline. */
-    private async persistModelsToSettings(ev: any): Promise<void> {
+    /**
+     * Cache the model list in every tile's settings so each picker works offline.
+     * Writing to the refreshing tile alone would leave the other tiles of this
+     * action without a list.
+     */
+    private async persistModelsToSettings(): Promise<void> {
         const models = this.getAvailableModels();
-        try {
-            const currentSettings = (ev.payload?.settings ?? {}) as GeminiSettings;
-            if (JSON.stringify(currentSettings.availableModels) !== JSON.stringify(models)) {
-                await ev.action.setSettings({ ...currentSettings, availableModels: models });
-            }
-        } catch {}
+        for (const instance of [...this.instances.values()]) {
+            const settings = (instance.settings ?? {}) as GeminiSettings;
+            if (JSON.stringify(settings.availableModels) === JSON.stringify(models)) continue;
+            try {
+                await instance.action.setSettings({ ...settings, availableModels: models });
+            } catch {}
+        }
     }
 
     private getModelData(modelKey: string, result: StandardUsageResult): { usage: number; resetTime: string | null; label: string } {
