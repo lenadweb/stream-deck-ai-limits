@@ -3,7 +3,13 @@ export type ProgressBarSettings = Record<string, any>;
 /** How a single tile lays out its data: one ring gauge, or the two-slot bar view. */
 export type TileLayout = "ring" | "bars";
 
-export type ClaudeMetric = "session" | "weekly" | "weeklySonnet";
+/**
+ * A weekly limit scoped to one model, e.g. `scoped:Fable`. Anthropic reports
+ * these per account, so they cannot be enumerated up front.
+ */
+export type ClaudeScopedMetric = `scoped:${string}`;
+
+export type ClaudeMetric = "session" | "weekly" | "weeklySonnet" | ClaudeScopedMetric;
 
 export interface ClaudeSettings extends ProgressBarSettings {
     layout?: TileLayout;
@@ -12,6 +18,8 @@ export interface ClaudeSettings extends ProgressBarSettings {
     /** Metrics shown by the bars layout. */
     topMetric?: ClaudeMetric;
     bottomMetric?: ClaudeMetric;
+    /** Scoped limits seen on the last fetch, so the picker works offline. */
+    availableScopes?: string[];
 }
 
 export type CodexMetric = "session" | "weekly" | "resetCredits" | "credits" | "none";
