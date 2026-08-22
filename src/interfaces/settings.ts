@@ -3,7 +3,18 @@ export type ProgressBarSettings = Record<string, any>;
 /** How a single tile lays out its data: one ring gauge, or the two-slot bar view. */
 export type TileLayout = "ring" | "bars";
 
-export type ClaudeMetric = "session" | "weekly" | "weeklySonnet";
+/**
+ * One of the fixed windows, or the bucket key of a weekly limit scoped to a single
+ * model, e.g. `7d_fable_quota`. Anthropic reports the scoped ones per account, so
+ * they cannot be enumerated up front.
+ */
+export type ClaudeMetric = "session" | "weekly" | "weeklySonnet" | (string & {});
+
+/** A model-scoped weekly limit as the picker lists it: its bucket key and a name. */
+export interface ClaudeScope {
+    key: string;
+    label: string;
+}
 
 export interface ClaudeSettings extends ProgressBarSettings {
     layout?: TileLayout;
@@ -12,6 +23,8 @@ export interface ClaudeSettings extends ProgressBarSettings {
     /** Metrics shown by the bars layout. */
     topMetric?: ClaudeMetric;
     bottomMetric?: ClaudeMetric;
+    /** Scoped limits seen on the last fetch, so the picker works offline. */
+    availableScopes?: ClaudeScope[];
 }
 
 export type CodexMetric = "session" | "weekly" | "resetCredits" | "credits" | "none";

@@ -108,24 +108,80 @@
 
             _websocket.onopen = function () {
                 _websocket.send(JSON.stringify({ event: registerEvent, uuid: uuid }));
-                applySettings();
+
+                // Ask the plugin which model-scoped limits this account reports
+                _websocket.send(JSON.stringify({
+                    action: "com.len.limits.progress",
+                    event: "sendToPlugin",
+                    context: uuid,
+                    payload: { event: "getScopes" }
+                }));
+
+                populateScopes(_settings.availableScopes || []);
             };
 
             _websocket.onmessage = function (evt) {
                 const data = JSON.parse(evt.data);
+
+                if (data.event === "sendToPropertyInspector"
+                    && data.payload?.event === "scopeList"
+                    && Array.isArray(data.payload.scopes)) {
+                    populateScopes(data.payload.scopes);
+                }
+
                 if (data.event === "didReceiveSettings") {
                     _settings = data.payload?.settings || {};
-                    applySettings();
+                    populateScopes(_settings.availableScopes || []);
                 }
             };
+        }
+
+        const METRIC_SELECTS = ["metric", "topMetric", "bottomMetric"];
+
+        // A scope is { key, label }: the bucket key the plugin reads, and the model name.
+        function scopeOption(scope) {
+            const option = document.createElement("option");
+            option.value = scope.key;
+            option.textContent = scope.label + " week (7d)";
+            option.dataset.scope = scope.key;
+            return option;
+        }
+
+        // Replaces the scoped options and leaves the fixed windows in the markup alone.
+        function populateScopes(scopes) {
+            METRIC_SELECTS.forEach(function (id) {
+                const select = document.getElementById(id);
+
+                select.querySelectorAll("option[data-scope]").forEach(function (option) {
+                    option.remove();
+                });
+
+                scopes.forEach(function (scope) {
+                    select.appendChild(scopeOption(scope));
+                });
+            });
+
+            applySettings();
+        }
+
+        // A saved scoped metric may not be in the list yet when this runs, and
+        // assigning an unknown value would silently reset the select, so add it.
+        function setMetric(id, value) {
+            const select = document.getElementById(id);
+            const known = Array.prototype.some.call(select.options, function (o) { return o.value === value; });
+            if (!known) {
+                const cached = (_settings.availableScopes || []).find(function (s) { return s.key === value; });
+                select.appendChild(scopeOption(cached || { key: value, label: value }));
+            }
+            select.value = value;
         }
 
         function applySettings() {
             document.getElementById("showProviderName").checked = _settings.showProviderName !== false;
             document.getElementById("layout").value = _settings.layout || "bars";
-            document.getElementById("metric").value = _settings.metric || "session";
-            document.getElementById("topMetric").value = _settings.topMetric || "session";
-            document.getElementById("bottomMetric").value = _settings.bottomMetric || "weekly";
+            setMetric("metric", _settings.metric || "session");
+            setMetric("topMetric", _settings.topMetric || "session");
+            setMetric("bottomMetric", _settings.bottomMetric || "weekly");
             applyLayoutVisibility();
         }
 
