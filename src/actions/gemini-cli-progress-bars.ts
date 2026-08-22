@@ -13,7 +13,9 @@ export class GeminiCliProgressBars extends BaseMonitoringAction<GeminiSettings> 
 
     override async refresh(ev: any): Promise<void> {
         await super.refresh(ev);
-        await this.persistModelsToSettings();
+        if (this.lastResult && !this.lastResult.error) {
+            await this.persistModelsToSettings();
+        }
     }
 
     override async onSendToPlugin(ev: any): Promise<void> {
