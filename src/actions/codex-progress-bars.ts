@@ -100,15 +100,11 @@ export class CodexProgressBars extends BaseMonitoringAction<CodexSettings> {
             return { kind: "stat", label: "Usage limit resets", shortLabel: "Resets", valueText: "None" };
         }
 
-        const { availableCount, applicableAvailableCount } = resets;
         return {
             kind: "stat",
             label: "Usage limit resets",
             shortLabel: "Resets",
-            valueText: availableCount === applicableAvailableCount
-                ? String(availableCount)
-                : `${applicableAvailableCount}/${availableCount}`,
-            caption: availableCount === applicableAvailableCount ? "available" : "applicable / total"
+            valueText: String(resets.availableCount)
         };
     }
 
