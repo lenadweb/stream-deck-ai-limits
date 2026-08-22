@@ -137,13 +137,13 @@
         }
 
         const METRIC_SELECTS = ["metric", "topMetric", "bottomMetric"];
-        const SCOPE_PREFIX = "scoped:";
 
-        function scopeOption(model) {
+        // A scope is { key, label }: the bucket key the plugin reads, and the model name.
+        function scopeOption(scope) {
             const option = document.createElement("option");
-            option.value = SCOPE_PREFIX + model;
-            option.textContent = model + " week (7d)";
-            option.dataset.scope = model;
+            option.value = scope.key;
+            option.textContent = scope.label + " week (7d)";
+            option.dataset.scope = scope.key;
             return option;
         }
 
@@ -156,8 +156,8 @@
                     option.remove();
                 });
 
-                scopes.forEach(function (model) {
-                    select.appendChild(scopeOption(model));
+                scopes.forEach(function (scope) {
+                    select.appendChild(scopeOption(scope));
                 });
             });
 
@@ -169,8 +169,9 @@
         function setMetric(id, value) {
             const select = document.getElementById(id);
             const known = Array.prototype.some.call(select.options, function (o) { return o.value === value; });
-            if (!known && value.indexOf(SCOPE_PREFIX) === 0) {
-                select.appendChild(scopeOption(value.slice(SCOPE_PREFIX.length)));
+            if (!known) {
+                const cached = (_settings.availableScopes || []).find(function (s) { return s.key === value; });
+                select.appendChild(scopeOption(cached || { key: value, label: value }));
             }
             select.value = value;
         }

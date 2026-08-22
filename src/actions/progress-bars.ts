@@ -1,9 +1,8 @@
-import streamDeck, { action } from "@elgato/streamdeck";
-import { ClaudeProvider, ModelUsage, ProviderName, StandardUsageResult } from "@lenadweb/ai-limits";
-import { ClaudeMetric, ClaudeSettings, TileLayout } from "../interfaces/settings";
+import { action } from "@elgato/streamdeck";
+import { ModelUsage, ProviderName, StandardUsageResult } from "@lenadweb/ai-limits";
+import { ClaudeMetric, ClaudeScope, ClaudeSettings, TileLayout } from "../interfaces/settings";
 import { BaseMonitoringAction } from "./base-monitoring-action";
 import { ServiceTheme } from "../interfaces/theme";
-import { SONNET_MODEL, mapClaudeUsage, scopedKey, scopedNames, scopeName } from "../services/claude-limits";
 import { Slot } from "../ui/progress-bar-renderer";
 import { formatTimeUntil } from "../utils/time-formatter";
 
@@ -11,34 +10,16 @@ import { formatTimeUntil } from "../utils/time-formatter";
 const METRICS: Record<string, { label: string; keys: string[] }> = {
     session: { label: "Session", keys: ["five_hour", "5h_quota"] },
     weekly: { label: "Week", keys: ["seven_day", "7d_quota"] },
-    // Newer accounts report Sonnet as a scoped limit, which keeps this option working.
-    weeklySonnet: { label: SONNET_MODEL, keys: ["seven_day_sonnet", "7d_sonnet_quota", scopedKey(SONNET_MODEL)] }
+    weeklySonnet: { label: "Sonnet", keys: ["seven_day_sonnet", "7d_sonnet_quota"] }
 };
 
-/** Models a fixed metric already covers, so the picker never lists them twice. */
-const BUILT_IN_SCOPES = [SONNET_MODEL];
+/** The bucket the built-in Sonnet metric already covers, scoped or legacy alike. */
+const SONNET_KEY = "7d_sonnet_quota";
 
 @action({ UUID: "com.len.limits.progress" })
 export class ProgressBars extends BaseMonitoringAction<ClaudeSettings> {
     protected readonly providerName = ProviderName.Claude;
     protected readonly themeName: ServiceTheme = "claude";
-
-    /**
-     * Anthropic reports model-scoped weekly limits in a `limits` array that
-     * @lenadweb/ai-limits does not map yet, so read the raw response and fall back
-     * to the library whenever its shape is not the one we expect.
-     */
-    protected override async fetchProviderUsage(ev: any): Promise<StandardUsageResult> {
-        try {
-            const provider = this.limitsManager.getClient().getProvider<ClaudeProvider>(ProviderName.Claude);
-            const mapped = mapClaudeUsage(await provider.fetchRawUsage());
-            if (mapped) return mapped;
-            streamDeck.logger.debug("[claude] Raw usage held no limits array, using the library mapping");
-        } catch (err: any) {
-            streamDeck.logger.warn(`[claude] Raw usage unavailable, using the library mapping: ${err?.message ?? err}`);
-        }
-        return super.fetchProviderUsage(ev);
-    }
 
     protected override async refresh(ev: any): Promise<void> {
         await super.refresh(ev);
@@ -58,8 +39,15 @@ export class ProgressBars extends BaseMonitoringAction<ClaudeSettings> {
         } catch {}
     }
 
-    private scopes(): string[] {
-        return scopedNames(this.lastResult).filter((model) => !BUILT_IN_SCOPES.includes(model));
+    /**
+     * The model-scoped weekly limits this account reports. Anthropic names them per
+     * account, so the picker is built from whatever the last fetch returned rather
+     * than from a fixed list.
+     */
+    private scopes(): ClaudeScope[] {
+        return Object.entries(this.lastResult?.perModel ?? {})
+            .filter(([key, bucket]) => bucket.scope && key !== SONNET_KEY)
+            .map(([key, bucket]) => ({ key, label: scopeLabel(key, bucket) }));
     }
 
     /**
@@ -83,24 +71,25 @@ export class ProgressBars extends BaseMonitoringAction<ClaudeSettings> {
         const layout: TileLayout = settings.layout ?? "bars";
 
         if (layout === "ring") {
-            return this.tileDisplay([this.metricSlot(settings.metric ?? "session", result)], layout);
+            return this.tileDisplay([this.metricSlot(settings.metric ?? "session", result, settings)], layout);
         }
 
         return this.tileDisplay([
-            this.metricSlot(settings.topMetric ?? "session", result),
-            this.metricSlot(settings.bottomMetric ?? "weekly", result)
+            this.metricSlot(settings.topMetric ?? "session", result, settings),
+            this.metricSlot(settings.bottomMetric ?? "weekly", result, settings)
         ], layout);
     }
 
-    private metricSlot(metric: ClaudeMetric, result: StandardUsageResult): Slot {
-        const model = scopeName(metric);
-        if (model) return this.slot(model, result.perModel?.[metric]);
+    /** A metric is either one of the fixed windows or the bucket key of a scoped limit. */
+    private metricSlot(metric: ClaudeMetric, result: StandardUsageResult, settings: ClaudeSettings): Slot {
+        const preset = METRICS[metric];
+        const bucket = preset
+            ? preset.keys.map((key) => result.perModel?.[key]).find(Boolean)
+            : result.perModel?.[metric];
+        // A scoped limit the account stopped reporting still has a name in the cache.
+        const cached = settings.availableScopes?.find((scope) => scope.key === metric)?.label;
+        const label = preset?.label ?? (bucket ? scopeLabel(metric, bucket) : cached ?? metric);
 
-        const preset = METRICS[metric] ?? METRICS.session;
-        return this.slot(preset.label, preset.keys.map((key) => result.perModel?.[key]).find(Boolean));
-    }
-
-    private slot(label: string, bucket: ModelUsage | undefined): Slot {
         if (!bucket) {
             return { kind: "stat", label, valueText: "—", caption: "no data", muted: true };
         }
@@ -112,4 +101,9 @@ export class ProgressBars extends BaseMonitoringAction<ClaudeSettings> {
             caption: bucket.resetTime ? formatTimeUntil(bucket.resetTime) : undefined
         };
     }
+}
+
+/** A limit scoped to a surface rather than a model carries no model name. */
+function scopeLabel(key: string, bucket: ModelUsage): string {
+    return bucket.scope?.model ?? bucket.scope?.surface ?? key;
 }
