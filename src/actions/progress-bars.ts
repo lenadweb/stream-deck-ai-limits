@@ -23,7 +23,9 @@ export class ProgressBars extends BaseMonitoringAction<ClaudeSettings> {
 
     protected override async refresh(ev: any): Promise<void> {
         await super.refresh(ev);
-        await this.persistScopesToSettings();
+        if (this.lastResult && !this.lastResult.error) {
+            await this.persistScopesToSettings();
+        }
     }
 
     override async onSendToPlugin(ev: any): Promise<void> {
