@@ -72,6 +72,14 @@
                 <option value="bars">Bars (two metrics)</option>
             </select>
         </sdpi-item>
+        <sdpi-item label="Size">
+            <select id="size" class="sdpi-item-value">
+                <option value="compact">Compact</option>
+                <option value="default">Default</option>
+                <option value="large">Large</option>
+                <option value="xlarge">Extra Large</option>
+            </select>
+        </sdpi-item>
         <sdpi-item id="ringRow" label="Metric">
             <select id="metric" class="sdpi-item-value"></select>
         </sdpi-item>
@@ -344,6 +352,7 @@
             document.getElementById("port").value = _serverConfig.port;
             document.getElementById("autoStart").checked = _serverConfig.autoStart;
             document.getElementById("layout").value = _settings.layout || "bars";
+            document.getElementById("size").value = _settings.size || "default";
             const theme = _settings.theme || "codexbar";
             document.querySelectorAll('input[name="theme"]').forEach((input) => {
                 input.checked = input.value === theme;
@@ -367,6 +376,7 @@
             _settings.providerId = selectedProvider() || undefined;
             _settings.account = document.getElementById("account").value || "";
             _settings.layout = document.getElementById("layout").value || "bars";
+            _settings.size = document.getElementById("size").value || "default";
             _settings.metric = document.getElementById("metric").value || "primary";
             _settings.topMetric = document.getElementById("topMetric").value || "primary";
             _settings.bottomMetric = document.getElementById("bottomMetric").value || "";
@@ -415,7 +425,7 @@
         }
 
         document.addEventListener("DOMContentLoaded", function () {
-            ["providerId", "account", "port", "autoStart", "layout", "metric", "topMetric", "bottomMetric", "showProviderName"].forEach((id) => {
+            ["providerId", "account", "port", "autoStart", "layout", "size", "metric", "topMetric", "bottomMetric", "showProviderName"].forEach((id) => {
                 document.getElementById(id).addEventListener("change", function () {
                     if (id === "port" || id === "autoStart") {
                         _serverConfig = {

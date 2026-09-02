@@ -227,7 +227,7 @@ export class CodexBarProgressBars extends BaseMonitoringAction<CodexBarSettings,
     protected override renderOptions(ev: any): RenderOptions {
         const settings = (ev?.payload?.settings ?? {}) as CodexBarSettings;
         return {
-            showName: settings.showProviderName !== false,
+            ...super.renderOptions(ev),
             serviceName: providerTitle(settings.providerId?.trim() || "codexbar")
         };
     }

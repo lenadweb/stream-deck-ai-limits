@@ -97,6 +97,14 @@
             <option value="bars">Bars (two models)</option>
         </select>
     </sdpi-item>
+    <sdpi-item label="Size">
+        <select id="size" class="sdpi-item-value">
+            <option value="compact">Compact</option>
+            <option value="default">Default</option>
+            <option value="large">Large</option>
+            <option value="xlarge">Extra Large</option>
+        </select>
+    </sdpi-item>
 
     <sdpi-item id="ringRow" label="Model">
         <select id="model" class="sdpi-item-value">
@@ -239,6 +247,7 @@
                 if (_settings[id] !== undefined) document.getElementById(id).value = _settings[id];
             });
             document.getElementById("layout").value = _settings.layout || "bars";
+            document.getElementById("size").value = _settings.size || "default";
             document.getElementById("showProviderName").checked = _settings.showProviderName !== false;
             applyLayoutVisibility();
         }
@@ -255,6 +264,7 @@
                 _settings[id] = document.getElementById(id).value;
             });
             _settings.layout = document.getElementById("layout").value || "bars";
+            _settings.size = document.getElementById("size").value || "default";
             _settings.showProviderName = document.getElementById("showProviderName").checked;
             applyLayoutVisibility();
 
@@ -279,7 +289,7 @@
         }
 
         document.addEventListener("DOMContentLoaded", function () {
-            ["layout", "model", "topModel", "bottomModel", "showProviderName"].forEach(function (id) {
+            ["layout", "size", "model", "topModel", "bottomModel", "showProviderName"].forEach(function (id) {
                 document.getElementById(id).addEventListener("change", saveSettings);
             });
             applySettings();

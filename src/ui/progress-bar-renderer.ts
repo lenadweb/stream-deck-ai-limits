@@ -1,3 +1,4 @@
+import { TileSize } from "../interfaces/settings";
 import { ServiceTheme, ThemeColors } from "../interfaces/theme";
 
 export interface Slot {
@@ -16,7 +17,66 @@ export interface RenderOptions {
     showName?: boolean;
     /** Overrides the theme label, for generic backends such as CodexBar. */
     serviceName?: string;
+    /** Scale preset; every size, gap and offset of the tile derives from it. */
+    size?: TileSize;
 }
+
+/**
+ * A preset is three independent moves, not one zoom: the type grows, the padding
+ * and the gaps between things tighten to pay for it. That is what lets Extra Large
+ * fit a 32px bar into the same 144px key.
+ */
+interface SizePreset {
+    type: number;
+    pad: number;
+    gap: number;
+}
+
+const PRESETS: Record<TileSize, SizePreset> = {
+    compact: { type: 0.88, pad: 1.15, gap: 1.1 },
+    default: { type: 1, pad: 1, gap: 1 },
+    large: { type: 1.16, pad: 0.68, gap: 0.85 },
+    xlarge: { type: 1.32, pad: 0.42, gap: 0.68 }
+};
+
+/**
+ * Every measurement of the default preset, in the two shapes a tile is drawn in.
+ * Sizes are multiplied by `type`, margins by `pad`, the space between elements by
+ * `gap`; positions are derived, never listed, so a preset cannot drift out of the
+ * tile.
+ */
+const BASE = {
+    key: {
+        side: 15, edge: 7, ringEdge: 7, minSide: 8, minEdge: 4,
+        header: 10, headerPad: 4.2, headerTracking: 2.5, nameAxis: 0, nameGap: 0,
+        head: 12.5, headGap: 17, headBarGap: 8, bar: 24, barR: 7, time: 14, slotGap: 17,
+        statLabel: 11, statValue: 23, statPad: 7.4,
+        ringR: 46, ringRBare: 50, ringSw: 10, ringSwBare: 11, ringInnerPad: 5,
+        ringValue: 30, ringValueMin: 10, ringLabel: 11, ringCaption: 11,
+        ringLabelDy: -18, ringValueDy: 9, ringCaptionDy: 26,
+        loaderR: 22, loaderSw: 6,
+        icon: 14, iconStroke: 2, iconGap: 22, errText: 13, errLine: 16,
+        msg: 16, msgLine: 22
+    },
+    dial: {
+        side: 12, edge: 9, ringEdge: 4, minSide: 10, minEdge: 3,
+        header: 10, headerPad: 0, headerTracking: 1.5, nameAxis: 13, nameGap: 6,
+        head: 11, headGap: 13, headBarGap: 6, bar: 19, barR: 6, time: 12, slotGap: 13,
+        statLabel: 12, statValue: 17, statPad: 7,
+        ringR: 40, ringRBare: 40, ringSw: 9, ringSwBare: 9, ringInnerPad: 4,
+        ringValue: 24, ringValueMin: 9, ringLabel: 10, ringCaption: 10,
+        ringLabelDy: -15, ringValueDy: 8, ringCaptionDy: 22,
+        loaderR: 17, loaderSw: 5,
+        icon: 14, iconStroke: 2, iconGap: 16, errText: 12, errLine: 16,
+        msg: 15, msgLine: 19
+    }
+};
+
+/** Cap height as a share of the font size; how far the ink reaches above a baseline. */
+const CAP = 0.72;
+
+/** Font sizes snap to half a pixel, so a preset never lands on a blurry value. */
+const snap = (v: number): number => Math.round(v * 2) / 2;
 
 const STATE_DANGER = "#F2564F";
 const STATE_WARN = "#E5A12E";
@@ -97,6 +157,12 @@ export class ProgressBarRenderer {
     private static readonly SANS = "'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif";
     private static readonly MONO = "'SF Mono', 'JetBrains Mono', 'Roboto Mono', ui-monospace, 'Menlo', monospace";
 
+    /** Characters whose width a per-class estimate would get meaningfully wrong. */
+    private static readonly CHAR_WIDTHS: Record<string, number> = {
+        " ": 0.2, "1": 0.46, "%": 0.84, "$": 0.62, "\u221e": 0.89, "\u2026": 0.62,
+        "-": 0.43, "\"": 0.43, "m": 0.82, "w": 0.74, "M": 0.84, "W": 0.94
+    };
+
     private serviceName(theme: ServiceTheme): string {
         return ProgressBarRenderer.serviceLabels[theme] ?? theme.charAt(0).toUpperCase() + theme.slice(1);
     }
@@ -139,7 +205,7 @@ export class ProgressBarRenderer {
         const isDial = this.isDial(width, height);
         const showName = opts.showName !== false;
         const displayedSlots = slots.slice(0, 2);
-        const geo = this.geometry(width, height, isDial, showName, displayedSlots.length);
+        const geo = this.geometry(width, height, isDial, showName, displayedSlots.length, this.preset(opts));
 
         const chrome = this.background(width, height, colors) + this.header(opts.serviceName ?? this.serviceName(theme), colors, geo, isDial, showName);
         const modules = displayedSlots.map((slot, i) =>
@@ -160,8 +226,9 @@ export class ProgressBarRenderer {
         const colors = this.themes[theme];
         const isDial = this.isDial(width, height);
         const showName = opts.showName !== false;
-        const geo = this.geometry(width, height, isDial, showName, 1);
-        const ring = this.ringGeometry(width, height, isDial, showName);
+        const p = this.preset(opts);
+        const geo = this.geometry(width, height, isDial, showName, 1, p);
+        const ring = this.ringGeometry(width, height, isDial, showName, p);
 
         const isGauge = slot.kind !== "stat";
         const pct = this.clampPct(slot.percent ?? 0);
@@ -185,17 +252,18 @@ export class ProgressBarRenderer {
 
         const labelText = slot.shortLabel ?? slot.label;
         if (labelText) {
-            const max = this.chord(ring.inner, ring.labelDy, ring.labelSize);
             // Model names can be long; shrink before falling back to an ellipsis.
-            const size = this.fitFontSize(labelText, ring.labelSize, ring.labelSize - 2.5, ProgressBarRenderer.SANS, max);
-            const label = this.fitText(labelText, size, ProgressBarRenderer.SANS, max, 600);
+            const size = this.fitInRing(labelText, ring, ring.labelDy, ring.labelSize, ring.labelMin, 600);
+            const label = this.fitText(labelText, size, ProgressBarRenderer.SANS, this.chord(ring.inner, ring.labelDy, size), 600);
             body += this.txt(ring.cx, ring.cy + ring.labelDy, label, size, 600, colors.label, "middle", ProgressBarRenderer.SANS);
         }
 
-        const valueMax = this.chord(ring.inner, ring.valueDy, ring.valueSize);
-        const valueSize = this.fitFontSize(value, ring.valueSize, ring.valueMin, ProgressBarRenderer.SANS, valueMax);
+        const valueSize = this.fitInRing(value, ring, ring.valueDy, ring.valueSize, ring.valueMin, 700);
+        // Shrinking keeps a long amount whole and readable; the ellipsis is only a
+        // guard so nothing can ever spill over the gauge.
+        const valueText = this.fitText(value, valueSize, ProgressBarRenderer.SANS, this.chord(ring.inner, ring.valueDy, valueSize), 700);
         const valueColor = slot.muted ? colors.label : color;
-        body += this.txt(ring.cx, ring.cy + ring.valueDy, this.escape(value), valueSize, 700, valueColor, "middle", ProgressBarRenderer.SANS);
+        body += this.txt(ring.cx, ring.cy + ring.valueDy, valueText, valueSize, 700, valueColor, "middle", ProgressBarRenderer.SANS);
 
         // A clipped caption carries no information, so drop it rather than ellipsise it.
         if (slot.caption) {
@@ -212,29 +280,127 @@ export class ProgressBarRenderer {
         return w === 200 && h === 100;
     }
 
-    private ringGeometry(width: number, height: number, isDial: boolean, showName: boolean) {
-        const margin = isDial ? 12 : 15;
-        const left = isDial && showName ? 26 : margin;
-        const cx = (left + (width - margin)) / 2;
+    private preset(opts: RenderOptions): SizePreset {
+        return PRESETS[opts.size ?? "default"] ?? PRESETS.default;
+    }
 
-        if (isDial) {
-            const r = 40, sw = 9;
-            return {
-                cx, cy: height / 2, r, sw, inner: r - sw / 2 - 2.5,
-                labelSize: 10, labelDy: -15,
-                valueSize: 24, valueMin: 13, valueDy: 8,
-                captionSize: 10, captionDy: 22
-            };
-        }
-
-        const r = showName ? 46 : 50;
-        const sw = showName ? 10 : 11;
+    /** Margins, and the vertical band the tile's content is centred in. */
+    private frame(width: number, height: number, isDial: boolean, showName: boolean, p: SizePreset) {
+        const b = isDial ? BASE.dial : BASE.key;
+        const edge = Math.max(b.minEdge, this.round(b.edge * p.pad));
+        const side = Math.max(b.minSide, this.round(b.side * p.pad));
+        const headerSize = snap(b.header * p.type);
+        const headerY = Math.round(edge + headerSize * CAP);
+        // The rotated name on a dial eats width, not height.
+        // The gap after the name follows the name's own size, not the shrinking gaps.
+        const left = Math.round(isDial && showName ? b.nameAxis + headerSize * CAP + b.nameGap * p.type : side);
         return {
-            cx, cy: showName ? 84 : 72, r, sw, inner: r - sw / 2 - 3,
-            labelSize: 11, labelDy: -18,
-            valueSize: 30, valueMin: 15, valueDy: 9,
-            captionSize: 11, captionDy: 26
+            b, edge, side, headerSize, headerY, left,
+            right: Math.round(width - side),
+            headerTracking: this.round(b.headerTracking * p.type),
+            bandTop: !isDial && showName ? headerY + b.headerPad * p.gap : edge,
+            bandBottom: height - edge
         };
+    }
+
+    private ringGeometry(width: number, height: number, isDial: boolean, showName: boolean, p: SizePreset) {
+        const f = this.frame(width, height, isDial, showName, p);
+        const b = f.b;
+        const cx = (f.left + f.right) / 2;
+
+        // A ring is a circle: it may sit closer to the edges than a block of text.
+        const ringEdge = Math.max(b.minEdge, this.round(b.ringEdge * p.pad));
+        const bandTop = !isDial && showName ? f.headerY + b.headerPad * p.gap : ringEdge;
+        const bandBottom = height - ringEdge;
+        const cy = this.round((bandTop + bandBottom) / 2);
+
+        const sw = snap((showName ? b.ringSw : b.ringSwBare) * p.type);
+        const baseR = showName ? b.ringR : b.ringRBare;
+        // The type takes the whole step even where the ring runs out of room; what
+        // does not fit inside the gauge is shrunk to fit by fitFontSize, never clipped.
+        const r = this.round(Math.min(baseR * p.type, (bandBottom - bandTop) / 2 - sw / 2));
+        const ratio = r / baseR;
+        // Air between the stroke and the text; without it a chord-limited value at a
+        // big preset would sit flush against its own gauge.
+        const inner = r - sw / 2 - b.ringInnerPad * ratio;
+
+        return {
+            cx, cy, r, sw, inner,
+            labelSize: snap(b.ringLabel * p.type),
+            labelMin: snap(b.ringLabel * ratio * 0.77),
+            labelDy: this.round(b.ringLabelDy * ratio),
+            valueSize: snap(b.ringValue * p.type),
+            valueMin: snap(b.ringValueMin * ratio),
+            valueDy: this.round(b.ringValueDy * ratio),
+            captionSize: snap(b.ringCaption * p.type),
+            captionDy: this.round(b.ringCaptionDy * ratio)
+        };
+    }
+
+    private geometry(width: number, height: number, isDial: boolean, showName: boolean, moduleCount = 2, p: SizePreset = PRESETS.default) {
+        const f = this.frame(width, height, isDial, showName, p);
+        const b = f.b;
+
+        const head = snap(b.head * p.type);
+        const labelRow = this.round(head * CAP);
+        const barH = Math.round(b.bar * p.type);
+        const barY = Math.round(labelRow + b.headBarGap * p.gap);
+        const moduleH = barY + barH;
+        const slotGap = Math.round(b.slotGap * p.gap);
+
+        // Modules are stacked by their ink, then the stack is centred in the band —
+        // so every preset ends up with balanced air above and below.
+        const count = Math.min(2, Math.max(1, moduleCount));
+        const blockH = count * moduleH + (count - 1) * slotGap;
+        const top = Math.round(f.bandTop + Math.max(0, f.bandBottom - f.bandTop - blockH) / 2);
+        const moduleTop = Array.from({ length: count }, (_, i) => top + i * (moduleH + slotGap));
+
+        // A stat has no bar, so its label and value are centred in the module instead.
+        const statLabel = snap(b.statLabel * p.type);
+        const statValue = snap(b.statValue * p.type);
+        const statStep = this.round(statValue * CAP + b.statPad * p.gap);
+        const statTop = Math.max(0, (moduleH - (statLabel * CAP + statStep)) / 2);
+
+        return {
+            width,
+            height,
+            nameAxis: b.nameAxis,
+            left: f.left,
+            right: f.right,
+            innerW: f.right - f.left,
+            headerY: f.headerY,
+            headerSize: f.headerSize,
+            headerMin: snap(f.headerSize * 0.65),
+            headerTracking: f.headerTracking,
+            labelRow,
+            percentSize: head,
+            barY,
+            barH,
+            barR: Math.round(b.barR * p.type),
+            headGap: Math.round(b.headGap * p.type),
+            timeSize: snap(b.time * p.type),
+            statLabelSize: statLabel,
+            statLabelRow: this.round(statTop + statLabel * CAP),
+            statValueSize: statValue,
+            statValueRow: this.round(statTop + statLabel * CAP + statStep),
+            statValueMin: snap(13 * p.type),
+            bandTop: f.bandTop,
+            bandBottom: f.bandBottom,
+            moduleTop
+        };
+    }
+
+    /**
+     * Largest size at which a line still fits the ring at its offset. The room a
+     * line has depends on its own size, so the chord is re-measured at every step
+     * rather than taken once at the largest size.
+     */
+    private fitInRing(text: string, ring: { inner: number }, dy: number, max: number, min: number, weight: number): number {
+        let size = max;
+        while (size > min && this.measure(text, size, ProgressBarRenderer.SANS, weight) > this.chord(ring.inner, dy, size)) {
+            size -= 0.5;
+        }
+        return size;
     }
 
     /** Widest line of text that still fits inside the ring at a given vertical offset. */
@@ -242,45 +408,6 @@ export class ProgressBarRenderer {
         const y = Math.max(Math.abs(dy), Math.abs(dy - size * 0.72));
         if (y >= inner) return 0;
         return 2 * Math.sqrt(inner * inner - y * y);
-    }
-
-    private geometry(width: number, height: number, isDial: boolean, showName: boolean, moduleCount = 2) {
-        const margin = isDial ? 12 : 15;
-        const nameAxis = 13;
-        const left = isDial && showName ? 26 : margin;
-        const right = width - margin;
-
-        let moduleTop: number[];
-        if (moduleCount === 1) {
-            moduleTop = [isDial ? 27 : 43];
-        } else if (isDial) {
-            moduleTop = [6, 52];
-        } else {
-            moduleTop = showName ? [24, 82] : [14, 72];
-        }
-
-        return {
-            margin,
-            width,
-            height,
-            nameAxis,
-            left,
-            right,
-            innerW: right - left,
-            headerY: 14,
-            labelRow: isDial ? 11 : 13,
-            percentSize: isDial ? 11 : 12.5,
-            labelSize: isDial ? 10.5 : 12,
-            barY: isDial ? 17 : 21,
-            barH: isDial ? 19 : 24,
-            barR: isDial ? 6 : 7,
-            headGap: isDial ? 13 : 17,
-            timeSize: isDial ? 12 : 14,
-            statLabelSize: isDial ? 12 : 11,
-            statValueRow: isDial ? 31 : 37,
-            statValueSize: isDial ? 17 : 23,
-            moduleTop
-        };
     }
 
     private svg(width: number, height: number, body: string): string {
@@ -298,12 +425,12 @@ export class ProgressBarRenderer {
         if (isDial) {
             const axisX = geo.nameAxis;
             const cy = geo.height / 2;
-            const size = this.fitFontSize(upper, 10, 6.5, ProgressBarRenderer.SANS, geo.height - 22, 1.5);
+            const size = this.fitFontSize(upper, geo.headerSize, geo.headerMin, ProgressBarRenderer.SANS, geo.height - 22, geo.headerTracking);
             const ax = axisX + size * 0.34;
-            return `<text x="${this.round(ax)}" y="${this.round(cy)}" font-family="${ProgressBarRenderer.SANS}" font-size="${size}" font-weight="700" letter-spacing="1.5" fill="${colors.label}" text-anchor="middle" transform="rotate(-90 ${this.round(ax)} ${this.round(cy)})">${text}</text>`;
+            return `<text x="${this.round(ax)}" y="${this.round(cy)}" font-family="${ProgressBarRenderer.SANS}" font-size="${size}" font-weight="700" letter-spacing="${geo.headerTracking}" fill="${colors.label}" text-anchor="middle" transform="rotate(-90 ${this.round(ax)} ${this.round(cy)})">${text}</text>`;
         }
-        const fitted = this.fitText(upper, 10, ProgressBarRenderer.SANS, geo.innerW, 700, 2.5);
-        return this.txt((geo.left + geo.right) / 2, geo.headerY, fitted, 10, 700, colors.label, "middle", ProgressBarRenderer.SANS, 2.5);
+        const fitted = this.fitText(upper, geo.headerSize, ProgressBarRenderer.SANS, geo.innerW, 700, geo.headerTracking);
+        return this.txt((geo.left + geo.right) / 2, geo.headerY, fitted, geo.headerSize, 700, colors.label, "middle", ProgressBarRenderer.SANS, geo.headerTracking);
     }
 
     private gaugeModule(slot: Slot, colors: ThemeColors, theme: ServiceTheme, geo: any, top: number, isDial: boolean): string {
@@ -357,8 +484,8 @@ export class ProgressBarRenderer {
 
         let out = "";
         const label = this.fitText(slot.label, geo.statLabelSize, ProgressBarRenderer.SANS, geo.innerW, 600);
-        out += this.txt(cx, top + geo.labelRow, label, geo.statLabelSize, 600, colors.label, "middle", ProgressBarRenderer.SANS);
-        const font = this.fitFontSize(value, geo.statValueSize, 13, ProgressBarRenderer.SANS, geo.innerW);
+        out += this.txt(cx, top + geo.statLabelRow, label, geo.statLabelSize, 600, colors.label, "middle", ProgressBarRenderer.SANS);
+        const font = this.fitFontSize(value, geo.statValueSize, geo.statValueMin, ProgressBarRenderer.SANS, geo.innerW);
         out += this.txt(cx, top + geo.statValueRow, this.escape(value), font, 700, colors.primary, "middle", ProgressBarRenderer.SANS);
         return out;
     }
@@ -367,11 +494,13 @@ export class ProgressBarRenderer {
         const colors = this.themes[theme];
         const isDial = this.isDial(width, height);
         const showName = opts.showName !== false;
-        const geo = this.geometry(width, height, isDial, showName);
+        const p = this.preset(opts);
+        const b = isDial ? BASE.dial : BASE.key;
+        const geo = this.geometry(width, height, isDial, showName, 2, p);
         const cx = (geo.left + geo.right) / 2;
-        const cy = height / 2;
-        const r = isDial ? 17 : 22;
-        const sw = isDial ? 5 : 6;
+        const cy = this.round((geo.bandTop + geo.bandBottom) / 2);
+        const r = this.round(b.loaderR * p.type);
+        const sw = snap(b.loaderSw * p.type);
         const dash = 2 * Math.PI * r;
 
         const ring = `<circle cx="${cx}" cy="${cy}" r="${r}" stroke="${colors.barBg}" stroke-width="${sw}" fill="none" />`
@@ -388,19 +517,28 @@ export class ProgressBarRenderer {
         const colors = this.themes[theme];
         const isDial = this.isDial(width, height);
         const showName = opts.showName !== false;
-        const geo = this.geometry(width, height, isDial, showName);
+        const p = this.preset(opts);
+        const b = isDial ? BASE.dial : BASE.key;
+        const geo = this.geometry(width, height, isDial, showName, 2, p);
         const cx = (geo.left + geo.right) / 2;
-        const top = isDial ? 26 : 42;
 
-        const r = 14;
-        const cyIcon = top + r;
-        const icon = `<circle cx="${cx}" cy="${cyIcon}" r="${r}" fill="none" stroke="${STATE_DANGER}" stroke-width="2" />`
-            + `<rect x="${cx - 1}" y="${cyIcon - 7}" width="2" height="8" rx="1" fill="${STATE_DANGER}" />`
-            + `<circle cx="${cx}" cy="${cyIcon + 5}" r="1.4" fill="${STATE_DANGER}" />`;
+        const r = this.round(b.icon * p.type);
+        const size = snap(b.errText * p.type);
+        const gap = b.iconGap * p.gap;
+        const lineH = b.errLine * p.type;
+        const lines = this.wrapText(message, size, ProgressBarRenderer.SANS, geo.innerW + 4, 2, 600);
+        // Icon and message are one block, centred in the same band as everything else.
+        const blockH = 2 * r + gap + lineH * lines.length;
+        const top = geo.bandTop + Math.max(0, geo.bandBottom - geo.bandTop - blockH) / 2;
 
-        const lines = this.wrapText(message, isDial ? 12 : 13, ProgressBarRenderer.SANS, geo.innerW + 4, 2, 600);
-        const startY = cyIcon + r + (isDial ? 16 : 22);
-        const text = lines.map((l, i) => this.txt(cx, startY + i * 16, l, isDial ? 12 : 13, 600, colors.text, "middle", ProgressBarRenderer.SANS)).join("");
+        const cyIcon = this.round(top + r);
+        const t = p.type;
+        const icon = `<circle cx="${cx}" cy="${cyIcon}" r="${r}" fill="none" stroke="${STATE_DANGER}" stroke-width="${snap(b.iconStroke * t)}" />`
+            + `<rect x="${this.round(cx - t)}" y="${this.round(cyIcon - 7 * t)}" width="${snap(2 * t)}" height="${this.round(8 * t)}" rx="1" fill="${STATE_DANGER}" />`
+            + `<circle cx="${cx}" cy="${this.round(cyIcon + 5 * t)}" r="${this.round(1.4 * t)}" fill="${STATE_DANGER}" />`;
+
+        const startY = cyIcon + r + gap;
+        const text = lines.map((l, i) => this.txt(cx, startY + i * lineH, l, size, 600, colors.text, "middle", ProgressBarRenderer.SANS)).join("");
 
         const body = this.background(width, height, colors)
             + this.header(opts.serviceName ?? this.serviceName(theme), colors, geo, isDial, showName)
@@ -416,13 +554,17 @@ export class ProgressBarRenderer {
         const colors = this.themes[theme];
         const isDial = this.isDial(width, height);
         const showName = opts.showName !== false;
-        const geo = this.geometry(width, height, isDial, showName);
+        const p = this.preset(opts);
+        const b = isDial ? BASE.dial : BASE.key;
+        const geo = this.geometry(width, height, isDial, showName, 2, p);
         const cx = (geo.left + geo.right) / 2;
-        const cy = height / 2 + (isDial ? 5 : 8);
-        const lineH = isDial ? 19 : 22;
-        const startY = cy - ((lines.length - 1) * lineH) / 2;
+        const size = snap(b.msg * p.type);
+        const lineH = b.msgLine * p.type;
+        const cap = size * CAP;
+        // Centre the ink of the block, not its baselines.
+        const startY = (geo.bandTop + geo.bandBottom) / 2 + cap / 2 - ((lines.length - 1) * lineH) / 2;
         const text = lines.map((line, i) =>
-            this.txt(cx, startY + i * lineH, this.escape(line), isDial ? 15 : 16, 700, colors.text, "middle", ProgressBarRenderer.SANS)
+            this.txt(cx, startY + i * lineH, this.escape(line), size, 700, colors.text, "middle", ProgressBarRenderer.SANS)
         ).join("");
         const body = this.background(width, height, colors)
             + this.header(opts.serviceName ?? this.serviceName(theme), colors, geo, isDial, showName)
@@ -447,15 +589,32 @@ export class ProgressBarRenderer {
         return Math.max(0, Math.min(100, Math.round(v)));
     }
 
-    private factor(family: string, weight: number): number {
+    /**
+     * Advance width of one character, in ems, sampled from SF Pro at weight 500 —
+     * the face the tiles actually render in, and close enough to Segoe UI and Inter
+     * to place text by. Averaging every character to a single factor underestimated
+     * "%" and digits by a quarter, which let a ring value overlap its own gauge.
+     */
+    private charWidth(ch: string, family: string): number {
         if (family === ProgressBarRenderer.MONO) return 0.6;
-        if (weight >= 800) return 0.64;
-        if (weight >= 600) return 0.57;
+        const known = ProgressBarRenderer.CHAR_WIDTHS[ch];
+        if (known !== undefined) return known;
+        if (ch >= "0" && ch <= "9") return 0.61;
+        if ("iIjl.,:;'!|".includes(ch)) return 0.24;
+        if ("frt/()[]".includes(ch)) return 0.33;
+        if (ch >= "A" && ch <= "Z") return 0.65;
+        // CJK and other full-width scripts advance a whole em.
+        if (ch.codePointAt(0)! > 0x2e7f) return 1;
         return 0.53;
     }
 
     private measure(text: string, size: number, family: string, weight: number): number {
-        return text.length * size * this.factor(family, weight);
+        // Heavier cuts of the same face are a few percent wider, uniformly enough
+        // to fold into a single multiplier.
+        const bold = weight >= 700 ? 1.06 : weight >= 600 ? 1.03 : 1;
+        let ems = 0;
+        for (const ch of text) ems += this.charWidth(ch, family);
+        return ems * size * bold;
     }
 
     private fitText(text: string, size: number, family: string, maxWidth: number, weight = 600, tracking = 0): string {

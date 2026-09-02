@@ -61,6 +61,14 @@
             <option value="bars">Bars (two metrics)</option>
         </select>
     </sdpi-item>
+    <sdpi-item label="Size">
+        <select id="size" class="sdpi-item-value">
+            <option value="compact">Compact</option>
+            <option value="default">Default</option>
+            <option value="large">Large</option>
+            <option value="xlarge">Extra Large</option>
+        </select>
+    </sdpi-item>
 
     <sdpi-item id="ringRow" label="Metric">
         <select id="metric" class="sdpi-item-value">
@@ -131,6 +139,7 @@
         function applySettings() {
             document.getElementById("apiKey").value = _settings.apiKey || "";
             document.getElementById("layout").value = _settings.layout || "bars";
+            document.getElementById("size").value = _settings.size || "default";
             document.getElementById("metric").value = _settings.metric || "limit";
             document.getElementById("topMetric").value = _settings.topMetric || "limit";
             document.getElementById("bottomMetric").value = _settings.bottomMetric || "monthly";
@@ -148,6 +157,7 @@
         function saveSettings() {
             _settings.apiKey = document.getElementById("apiKey").value || "";
             _settings.layout = document.getElementById("layout").value || "bars";
+            _settings.size = document.getElementById("size").value || "default";
             _settings.metric = document.getElementById("metric").value || "limit";
             _settings.topMetric = document.getElementById("topMetric").value || "limit";
             _settings.bottomMetric = document.getElementById("bottomMetric").value || "monthly";
@@ -176,7 +186,7 @@
 
         document.addEventListener("DOMContentLoaded", function () {
             document.getElementById("apiKey").addEventListener("input", saveSettings);
-            ["layout", "metric", "topMetric", "bottomMetric", "showProviderName"].forEach(function (id) {
+            ["layout", "size", "metric", "topMetric", "bottomMetric", "showProviderName"].forEach(function (id) {
                 document.getElementById(id).addEventListener("change", saveSettings);
             });
             applySettings();

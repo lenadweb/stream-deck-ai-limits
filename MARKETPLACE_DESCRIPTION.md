@@ -6,6 +6,7 @@ What it does:
 
 - Shows AI usage limits, percentages and reset countdowns on a single key, updated automatically.
 - Two layouts per key: Bars for two metrics at once, or Ring for one large gauge with the value and reset countdown inside it.
+- Four display sizes per key: Compact, Default, Large or Extra Large — the type, progress bars and gauge grow together while the padding tightens, for a read at desk distance.
 - Lets every key pick its own metric, so you can place the same action several times, for example Claude session next to Claude weekly.
 - Includes provider actions for Claude, Codex, Antigravity, Gemini CLI, MiniMax and OpenRouter.
 - Adds an optional CodexBar backend action for advanced users, which displays any provider you have configured in CodexBar.

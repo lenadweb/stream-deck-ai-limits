@@ -4,6 +4,12 @@ export type ProgressBarSettings = Record<string, any>;
 export type TileLayout = "ring" | "bars";
 
 /**
+ * How large a tile draws itself. One preset scales the labels, values, reset
+ * times, progress bars and ring gauge together.
+ */
+export type TileSize = "compact" | "default" | "large" | "xlarge";
+
+/**
  * One of the fixed windows, or the bucket key of a weekly limit scoped to a single
  * model, e.g. `7d_fable_quota`. Anthropic reports the scoped ones per account, so
  * they cannot be enumerated up front.
@@ -18,6 +24,7 @@ export interface ClaudeScope {
 
 export interface ClaudeSettings extends ProgressBarSettings {
     layout?: TileLayout;
+    size?: TileSize;
     /** Metric shown by the ring layout. */
     metric?: ClaudeMetric;
     /** Metrics shown by the bars layout. */
@@ -34,6 +41,7 @@ export type CodexSecondaryMetric = "credits" | "resetCredits" | "none";
 
 export interface CodexSettings extends ProgressBarSettings {
     layout?: TileLayout;
+    size?: TileSize;
     metric?: CodexMetric;
     topMetric?: CodexMetric;
     bottomMetric?: CodexMetric;
@@ -42,6 +50,7 @@ export interface CodexSettings extends ProgressBarSettings {
 
 export interface GeminiSettings {
     layout?: TileLayout;
+    size?: TileSize;
     /** Model shown by the ring layout; empty string means the overall quota. */
     model?: string;
     topModel?: string;
@@ -52,6 +61,7 @@ export interface GeminiSettings {
 
 export interface AntigravitySettings {
     layout?: TileLayout;
+    size?: TileSize;
     model?: string;
     topModel?: string;
     bottomModel?: string;
@@ -66,6 +76,7 @@ export type MiniMaxMetric = "daily" | "weekly";
 export interface MiniMaxSettings {
     apiKey?: string;
     layout?: TileLayout;
+    size?: TileSize;
     metric?: MiniMaxMetric;
     topMetric?: MiniMaxMetric;
     bottomMetric?: MiniMaxMetric;
@@ -77,6 +88,7 @@ export type OpenRouterMetric = "limit" | "daily" | "weekly" | "monthly" | "total
 export interface OpenRouterSettings {
     apiKey?: string;
     layout?: TileLayout;
+    size?: TileSize;
     metric?: OpenRouterMetric;
     topMetric?: OpenRouterMetric;
     bottomMetric?: OpenRouterMetric;
@@ -98,6 +110,7 @@ export interface CodexBarSettings {
     /** Explicit opt-in to start a locally installed CodexBar CLI when its server is unavailable. */
     autoStart?: boolean;
     layout?: TileLayout;
+    size?: TileSize;
     metric?: CodexBarMetric;
     topMetric?: CodexBarMetric;
     bottomMetric?: CodexBarMetric;
