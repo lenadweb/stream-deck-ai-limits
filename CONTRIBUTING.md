@@ -12,7 +12,7 @@ Thank you for your interest in contributing to this project! Here are the guidel
    ```
 
 2. **Install Dependencies:**
-   Make sure you have Node.js v20+ installed. Then run:
+   Make sure you have Node.js v24+ installed. Then run:
    ```bash
    npm install
    ```
