@@ -31,7 +31,8 @@ Configuration:
 
 - Claude: choose the 5-hour session window, the 7-day window or the 7-day Sonnet window for each section.
 - Codex: choose session usage, weekly usage, usage limit resets or credits balance, or hide the bottom section.
-- Gemini CLI and Antigravity: open action settings and choose the models to display (or keep the overall view).
+- Gemini CLI: open action settings and choose the models to display (or keep the overall view).
+- Antigravity: install the Antigravity CLI (agy), run it in a terminal and sign in, then choose a shared quota pool (Gemini or Claude/GPT) or the most used pool overall.
 - MiniMax: enter your API key and choose daily or weekly usage.
 - OpenRouter: enter your API key and choose the key limit or spend by day, week, month or all time.
 - CodexBar backend (optional, for advanced users): start `codexbar serve`, then load enabled providers from the action settings and choose a provider, account, quota windows and tile theme. Extra metrics include credits, pace, identity and data confidence, plus API-key budget, spend and rate limit for OpenRouter.
@@ -47,7 +48,7 @@ Usage controls:
 Notes:
 
 - If local auth data or API access is missing, that provider may not return values until credentials are available.
-- Antigravity usage depends on its local process being accessible.
+- Antigravity reads usage from the signed-in agy CLI, available on PATH or in ~/.local/bin. The settings panel provides setup and troubleshooting hints.
 - The CodexBar backend is an optional extra for advanced users: it connects only to a local 127.0.0.1 CodexBar server and is intended for macOS. Every other provider works without it.
 - OpenAI currently exposes only a weekly window on several Codex plans; a key set to the session limit shows "no data" until the 5-hour window returns.
 - Works on macOS and Windows. On macOS, Claude credentials are read from the Keychain; on Windows they are read from the credential file written by Claude Code.

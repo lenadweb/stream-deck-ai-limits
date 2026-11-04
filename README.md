@@ -79,7 +79,7 @@ Each provider is a separate action. All of them work on **Keypad** (keys) and **
 |---|---|---|
 | **Claude (Native)** | Claude Code session, weekly, Sonnet weekly, or a model-scoped weekly limit | `com.len.limits.progress` |
 | **Codex (Native)** | Codex session or weekly usage, usage limit resets, credits balance | `com.len.limits.codex.progress` |
-| **Antigravity (Native)** | Antigravity (Claude + Gemini) usage, per model | `com.len.limits.antigravity` |
+| **Antigravity (Native)** | Shared quota pools from `agy`: Gemini Models and Claude/GPT | `com.len.limits.antigravity` |
 | **Gemini CLI (Native)** | Gemini CLI quota usage, per model | `com.len.limits.gemini-cli` |
 | **MiniMax (Native)** | MiniMax M-series daily or weekly usage | `com.len.limits.minimax` |
 | **OpenRouter (Native)** | OpenRouter key spend limit & spend by day/week/month | `com.len.limits.openrouter` |
@@ -96,6 +96,8 @@ Place the same action more than once to build a row of tiles, e.g. Claude Sessio
 
 > **Claude note:** besides the session and weekly windows, Anthropic reports weekly limits scoped to a single model, such as Fable. The plugin lists whichever ones your account returns, so they appear in the metric picker as **Fable week (7d)** without any setup. Accounts without scoped limits keep exactly the metrics they had.
 
+> **Antigravity note:** models in each group share a plan-level quota. Choose a pool reported by `agy`, or **Overall** for the most used pool. Saved Gemini and Claude/GPT model selections migrate to their group's weekly pool after a successful refresh. A missing quota shows `no data`.
+
 > **Codex note:** OpenAI currently exposes only a weekly window on Plus, Pro and Business plans ([issue #6](https://github.com/lenadweb/stream-deck-ai-limits/issues/6)). The plugin classifies windows by the duration the API reports, so the weekly usage lands on the **Weekly limit** metric even when the API delivers it in the primary slot. A tile set to **Session limit** shows `no data` until OpenAI brings the 5-hour window back.
 
 ---
@@ -109,7 +111,7 @@ For most providers the plugin simply reads the credentials your CLI already wrot
 | **Claude** | Automatic | macOS: Keychain (`Claude Code-credentials`), falling back to `~/.claude/.credentials.json`. Windows: `%USERPROFILE%\.claude\.credentials.json` |
 | **Codex / ChatGPT** | Automatic | `~/.codex/auth.json` |
 | **Gemini CLI** | Automatic | `~/.gemini/oauth_creds.json` |
-| **Antigravity** | One-time login | Click **Login** in the Property Inspector to start the Google OAuth2 flow; the token is saved to `~/.limits-streamdeck/antigravity_oauth.json` |
+| **Antigravity** | Automatic | Install the Antigravity CLI (`agy`), run it in a terminal and sign in to your Google account. The plugin reads `agy /usage`; no separate plugin login is needed. |
 | **MiniMax** | API key | Paste your key into the Property Inspector |
 | **OpenRouter** | API key | Paste a key from [openrouter.ai/keys](https://openrouter.ai/keys); pick what each bar shows (limit / spend by day, week, month, total) |
 | **CodexBar backend** | Local CodexBar server | Start `codexbar serve`; configured providers load automatically when opening this action's settings |
@@ -176,7 +178,7 @@ The plugin is a thin rendering layer: it asks [`@lenadweb/ai-limits`](https://gi
 ## Troubleshooting
 
 - **A provider shows no data:** confirm the matching CLI is installed and logged in, and that its credential file exists (see the table above).
-- **Antigravity stuck after login:** re-run **Login** from the Property Inspector; the token is cached at `~/.limits-streamdeck/antigravity_oauth.json`.
+- **Antigravity missing or unavailable:** run `agy --print /usage --print-timeout 20s --output-format json` in a terminal to check installation, sign-in and usage access, then press the Stream Deck key to retry. The plugin finds `agy` on `PATH` or at `~/.local/bin/agy` (`agy.exe` on Windows); a custom path can be set through `AGY_BIN` in the Stream Deck process environment. The settings panel reports missing CLI, timeout and usage errors.
 - **MiniMax shows an error:** double-check the API key in the Property Inspector.
 - **Nothing appears after `npm run watch`:** make sure the Stream Deck app is running and on version 6.9+.
 

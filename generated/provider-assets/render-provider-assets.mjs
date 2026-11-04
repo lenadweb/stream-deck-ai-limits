@@ -29,7 +29,7 @@ const stat = (label, valueText) => ({ kind: 'stat', label, valueText });
 const providers = {
     claude: [gauge('Session', 16, '3h 33m'), gauge('Week', 92, '16h 3m')],
     codex: [gauge('Session', 5, '4h'), gauge('Week', 10, '6d')],
-    antigravity: [gauge('Claude', 24, '2h 14m'), gauge('Gemini', 41, '4d 3h')],
+    antigravity: [gauge('Claude / GPT', 24, '2h 14m'), gauge('Gemini', 41, '4d 3h')],
     'gemini-cli': [gauge('Overall', 11, '8h'), gauge('Overall', 37, '2d 5h')],
     minimax: [gauge('Daily', 33, '1h 42m'), gauge('Week', 58, '1d 9h')],
     openrouter: [gauge('Limit', 18, '9d 4h'), stat('Total', '$1,234.56')]

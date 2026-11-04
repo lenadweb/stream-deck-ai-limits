@@ -24,7 +24,7 @@ Codex / ChatGPT plan usage for the current session and week.
 
 ## Antigravity
 
-Per‑model usage (e.g. Claude and Gemini) on a single key.
+Shared Gemini and Claude/GPT quota pools from the Antigravity CLI (`agy`) on a single key.
 
 | Key | Dial |
 |:---:|:---:|
