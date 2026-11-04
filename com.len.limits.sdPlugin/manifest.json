@@ -59,7 +59,7 @@
       "Name": "Antigravity (Native)",
       "UUID": "com.len.limits.antigravity",
       "Icon": "imgs/actions/counter/icon",
-      "Tooltip": "Displays Antigravity usage.",
+      "Tooltip": "Displays Antigravity quota pools from the agy CLI: Gemini and Claude/GPT.",
       "PropertyInspectorPath": "ui/antigravity-settings.html",
       "Controllers": [
         "Keypad",

@@ -35,39 +35,8 @@
         .link:hover {
             color: #357ae8;
         }
-        .auth-row {
-            padding: 8px 16px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .auth-row button {
-            padding: 5px 12px;
-            border-radius: 4px;
-            background: #4285F4;
-            color: white;
-            border: 0;
-            font-size: 12px;
-            cursor: pointer;
-        }
-        .auth-row button.logout {
-            background: #444;
-        }
-        .auth-row button:disabled {
-            opacity: 0.6;
-            cursor: default;
-        }
-        .auth-status {
-            font-size: 11px;
-            color: #9ca3af;
-            flex: 1;
-        }
-        .auth-status.ok {
-            color: #10b981;
-        }
-        .auth-status.err {
-            color: #ef4444;
-        }
+        .status.ok { color: #10b981; }
+        .status.err { color: #ef4444; }
         .checkbox {
             display: flex;
             align-items: center;
@@ -85,16 +54,13 @@
 </head>
 
 <body>
-    <div class="auth-row">
-        <button id="loginBtn" type="button">Sign in with Google</button>
-        <button id="logoutBtn" type="button" class="logout" style="display:none">Sign out</button>
-        <span id="authStatus" class="auth-status">Not signed in</span>
-    </div>
+    <div class="info">Requires the Antigravity CLI (<code>agy</code>). Run <code>agy</code> in a terminal and sign in, then press the Stream Deck key to refresh.</div>
+    <div id="cliStatus" class="info status" role="status">Checking agy usage…</div>
 
     <sdpi-item label="Layout">
         <select id="layout" class="sdpi-item-value">
-            <option value="ring">Ring (one model)</option>
-            <option value="bars">Bars (two models)</option>
+            <option value="ring">Ring (one quota)</option>
+            <option value="bars">Bars (two quotas)</option>
         </select>
     </sdpi-item>
     <sdpi-item label="Size">
@@ -106,19 +72,19 @@
         </select>
     </sdpi-item>
 
-    <sdpi-item id="ringRow" label="Model">
+    <sdpi-item id="ringRow" label="Quota">
         <select id="model" class="sdpi-item-value">
             <option value="">Overall (Most Constrained)</option>
         </select>
     </sdpi-item>
 
-    <sdpi-item id="topRow" label="Top Bar Model">
+    <sdpi-item id="topRow" label="Top Bar Quota">
         <select id="topModel" class="sdpi-item-value">
             <option value="">Overall (Most Constrained)</option>
         </select>
     </sdpi-item>
 
-    <sdpi-item id="bottomRow" label="Bottom Bar Model">
+    <sdpi-item id="bottomRow" label="Bottom Bar Quota">
         <select id="bottomModel" class="sdpi-item-value">
             <option value="">Overall (Most Constrained)</option>
         </select>
@@ -129,7 +95,8 @@
     </sdpi-item>
 
     <div class="info"><span class="link" onclick="openGitHub()">View source on GitHub</span></div>
-    <div class="info">After signing in, press the Stream Deck button once to load the latest quota and refresh the model list.</div>
+    <div class="info">Models in each group share a quota. Overall shows the most used pool. Saved model selections move to their group’s weekly pool after the first successful refresh.</div>
+    <div class="info">If usage is unavailable, check <code>agy --print /usage</code> in a terminal. The plugin looks for <code>agy</code> on PATH or in <code>~/.local/bin</code>.</div>
 
     <script>
         let _websocket = null;
@@ -145,17 +112,14 @@
                 _actionUUID = parsed?.action;
                 _settings = parsed?.payload?.settings || {};
 
-                if (_settings.availableModels && Array.isArray(_settings.availableModels)) {
-                    populateModels(_settings.availableModels, _settings.availableModelLabels || {});
-                }
+                populateQuotas(_settings.availableModels || [], _settings.availableModelLabels || {});
             }
 
             _websocket = new WebSocket("ws://127.0.0.1:" + port);
 
             _websocket.onopen = function () {
                 _websocket.send(JSON.stringify({ event: registerEvent, uuid }));
-                sendToPlugin({ event: "getStatus" });
-                sendToPlugin({ event: "getModels" });
+                sendToPlugin({ event: "getQuotas" });
             };
 
             _websocket.onmessage = function (evt) {
@@ -163,22 +127,17 @@
 
                 if (data.event === "sendToPropertyInspector") {
                     const payload = data.payload || {};
-                    if (payload.event === "status") {
-                        setAuthState(!!payload.loggedIn, payload.email || "");
-                        if (!payload.loggedIn) {
-                            populateModels([], {});
-                        }
-                    } else if (payload.event === "modelList" && Array.isArray(payload.models)) {
-                        populateModels(payload.models, payload.labels || {});
-                    } else if (payload.event === "loginError") {
-                        setAuthError(payload.message || "Login failed");
+                    if (payload.event === "quotaList" && Array.isArray(payload.quotas)) {
+                        setUsageStatus(payload.error, payload.quotas.length);
+                        // Keep the cached picker when agy is temporarily unavailable.
+                        if (!payload.error) populateQuotas(payload.quotas, payload.labels || {});
                     }
                 }
 
                 if (data.event === "didReceiveSettings") {
                     _settings = data.payload?.settings || {};
                     if (_settings.availableModels && Array.isArray(_settings.availableModels)) {
-                        populateModels(_settings.availableModels, _settings.availableModelLabels || {});
+                        populateQuotas(_settings.availableModels, _settings.availableModelLabels || {});
                     }
                     applySettings();
                 }
@@ -195,56 +154,49 @@
             }));
         }
 
-        function setAuthState(loggedIn, email) {
-            const status = document.getElementById("authStatus");
-            const loginBtn = document.getElementById("loginBtn");
-            const logoutBtn = document.getElementById("logoutBtn");
-            loginBtn.disabled = false;
-
-            if (loggedIn) {
-                status.textContent = email ? `Signed in as ${email}` : "Signed in";
-                status.classList.remove("err");
-                status.classList.add("ok");
-                loginBtn.style.display = "none";
-                logoutBtn.style.display = "";
+        function setUsageStatus(error, count) {
+            const status = document.getElementById("cliStatus");
+            status.classList.toggle("err", !!error);
+            status.classList.toggle("ok", !error && count > 0);
+            if (!error) {
+                status.textContent = count ? "Usage loaded from agy." : "agy reported no quotas. Press the key to retry.";
+            } else if (error.message === "agy Not Found") {
+                status.textContent = "agy was not found. Install the Antigravity CLI, then press the key to retry.";
+            } else if (error.code === "CONN") {
+                status.textContent = "agy timed out. Check your connection, then press the key to retry.";
             } else {
-                status.textContent = "Not signed in";
-                status.classList.remove("err", "ok");
-                loginBtn.style.display = "";
-                logoutBtn.style.display = "none";
+                status.textContent = "Could not read agy usage. Run agy in a terminal, check sign-in and /usage, then press the key to retry.";
             }
         }
 
-        function setAuthError(msg) {
-            const status = document.getElementById("authStatus");
-            status.textContent = msg;
-            status.classList.remove("ok");
-            status.classList.add("err");
-            document.getElementById("loginBtn").disabled = false;
-        }
+        const QUOTA_SELECTS = ["model", "topModel", "bottomModel"];
 
-        const MODEL_SELECTS = ["model", "topModel", "bottomModel"];
-
-        function populateModels(models, labels) {
-            MODEL_SELECTS.forEach(function (id) {
+        function populateQuotas(quotas, labels) {
+            QUOTA_SELECTS.forEach(function (id) {
                 const select = document.getElementById(id);
-
                 while (select.options.length > 1) select.remove(1);
 
-                models.forEach(function (modelId) {
+                quotas.forEach(function (quotaId) {
                     const opt = document.createElement("option");
-                    opt.value = modelId;
-                    opt.textContent = labels[modelId] || modelId;
+                    opt.value = quotaId;
+                    opt.textContent = labels[quotaId] || quotaId;
                     select.appendChild(opt);
                 });
-            });
 
+                const selected = _settings[id];
+                if (selected && selected !== "__overall__" && !quotas.includes(selected)) {
+                    const opt = document.createElement("option");
+                    opt.value = selected;
+                    opt.textContent = ((_settings.availableModelLabels || {})[selected] || selected) + " (unavailable)";
+                    select.appendChild(opt);
+                }
+            });
             applySettings();
         }
 
         function applySettings() {
-            MODEL_SELECTS.forEach(function (id) {
-                if (_settings[id] !== undefined) document.getElementById(id).value = _settings[id];
+            QUOTA_SELECTS.forEach(function (id) {
+                document.getElementById(id).value = _settings[id] === "__overall__" ? "" : (_settings[id] || "");
             });
             document.getElementById("layout").value = _settings.layout || "bars";
             document.getElementById("size").value = _settings.size || "default";
@@ -260,7 +212,7 @@
         }
 
         function saveSettings() {
-            MODEL_SELECTS.forEach(function (id) {
+            QUOTA_SELECTS.forEach(function (id) {
                 _settings[id] = document.getElementById(id).value;
             });
             _settings.layout = document.getElementById("layout").value || "bars";
@@ -293,16 +245,6 @@
                 document.getElementById(id).addEventListener("change", saveSettings);
             });
             applySettings();
-            document.getElementById("loginBtn").addEventListener("click", function () {
-                const status = document.getElementById("authStatus");
-                status.textContent = "Opening browser…";
-                status.classList.remove("err", "ok");
-                this.disabled = true;
-                sendToPlugin({ event: "login" });
-            });
-            document.getElementById("logoutBtn").addEventListener("click", function () {
-                sendToPlugin({ event: "logout" });
-            });
         });
     </script>
 </body>

@@ -62,12 +62,12 @@ export interface GeminiSettings {
 export interface AntigravitySettings {
     layout?: TileLayout;
     size?: TileSize;
+    /** Quota bucket ids from agy; the model keys are retained for saved profiles. */
     model?: string;
     topModel?: string;
     bottomModel?: string;
     availableModels?: string[];
     availableModelLabels?: Record<string, string>;
-    loggedInEmail?: string;
     [key: string]: any;
 }
 
