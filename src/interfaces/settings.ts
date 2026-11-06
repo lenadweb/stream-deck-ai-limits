@@ -83,6 +83,18 @@ export interface MiniMaxSettings {
     [key: string]: any;
 }
 
+export type OpenCodeMetric = "auto" | "rolling" | "weekly" | "monthly" | "budget" | "balance" | "overall";
+
+export interface OpenCodeSettings {
+    apiKey?: string;
+    layout?: TileLayout;
+    size?: TileSize;
+    metric?: OpenCodeMetric;
+    topMetric?: OpenCodeMetric;
+    bottomMetric?: OpenCodeMetric;
+    [key: string]: any;
+}
+
 export type OpenRouterMetric = "limit" | "daily" | "weekly" | "monthly" | "total";
 
 export interface OpenRouterSettings {
@@ -99,7 +111,7 @@ export interface OpenRouterSettings {
 export type CodexBarMetric = string;
 
 /** The existing provider palettes available to a generic CodexBar tile. */
-export type CodexBarTheme = "codexbar" | "codex" | "claude" | "gemini-cli" | "antigravity" | "minimax" | "openrouter";
+export type CodexBarTheme = "codexbar" | "codex" | "claude" | "gemini-cli" | "antigravity" | "minimax" | "opencode" | "openrouter";
 
 export interface CodexBarSettings {
     /** Provider identifier as reported by CodexBar; it is selected from the discovered list. */

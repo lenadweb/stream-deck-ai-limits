@@ -1,6 +1,6 @@
 Open source: https://github.com/lenadweb/stream-deck-ai-limits
 
-AI Usage Limits gives you a live view of your AI usage limits directly on your Stream Deck keys and dials. It tracks quotas and rate limits for Claude Code, Codex (ChatGPT), Antigravity, Gemini CLI, MiniMax and OpenRouter, so you can see how much of your session, daily or weekly quota is already used and when it resets — without opening a terminal, a dashboard or a billing page.
+AI Usage Limits gives you a live view of your AI usage limits directly on your Stream Deck keys and dials. It tracks quotas and rate limits for Claude Code, Codex (ChatGPT), Antigravity, Gemini CLI, MiniMax, OpenCode and OpenRouter, so you can see how much of your session, daily or weekly quota is already used and when it resets — without opening a terminal, a dashboard or a billing page.
 
 What it does:
 
@@ -8,7 +8,7 @@ What it does:
 - Two layouts per key: Bars for two metrics at once, or Ring for one large gauge with the value and reset countdown inside it.
 - Four display sizes per key: Compact, Default, Large or Extra Large — the type, progress bars and gauge grow together while the padding tightens, for a read at desk distance.
 - Lets every key pick its own metric, so you can place the same action several times, for example Claude session next to Claude weekly.
-- Includes provider actions for Claude, Codex, Antigravity, Gemini CLI, MiniMax and OpenRouter.
+- Includes provider actions for Claude, Codex, Antigravity, Gemini CLI, MiniMax, OpenCode and OpenRouter.
 - Adds an optional CodexBar backend action for advanced users, which displays any provider you have configured in CodexBar.
 - Supports automatic periodic refresh plus manual refresh on demand.
 - Works with Stream Deck dials (Encoder): push/touch/rotate can trigger refresh.
@@ -34,6 +34,7 @@ Configuration:
 - Gemini CLI: open action settings and choose the models to display (or keep the overall view).
 - Antigravity: install the Antigravity CLI (agy), run it in a terminal and sign in, then choose a shared quota pool (Gemini or Claude/GPT) or the most used pool overall.
 - MiniMax: enter your API key and choose daily or weekly usage.
+- OpenCode: enter a personal API key from OpenCode Console and choose Auto, 5-hour, weekly, monthly, overall, budget or Zen balance. Auto follows the Go allowance when the workspace has Go, otherwise the most-used Console budget or prepaid balance.
 - OpenRouter: enter your API key and choose the key limit or spend by day, week, month or all time.
 - CodexBar backend (optional, for advanced users): start `codexbar serve`, then load enabled providers from the action settings and choose a provider, account, quota windows and tile theme. Extra metrics include credits, pace, identity and data confidence, plus API-key budget, spend and rate limit for OpenRouter.
 - Keys with the same API key share a single request, so extra keys cost no extra API calls.

@@ -4,6 +4,7 @@ import { CodexProgressBars } from "./actions/codex-progress-bars";
 import { AntigravityProgressBars } from "./actions/antigravity-progress-bars";
 import { GeminiCliProgressBars } from "./actions/gemini-cli-progress-bars";
 import { MiniMaxProgressBars } from "./actions/minimax-progress-bars";
+import { OpenCodeProgressBars } from "./actions/opencode-progress-bars";
 import { OpenRouterProgressBars } from "./actions/openrouter-progress-bars";
 import { CodexBarProgressBars } from "./actions/codexbar-progress-bars";
 
@@ -12,6 +13,7 @@ streamDeck.actions.registerAction(new CodexProgressBars());
 streamDeck.actions.registerAction(new AntigravityProgressBars());
 streamDeck.actions.registerAction(new GeminiCliProgressBars());
 streamDeck.actions.registerAction(new MiniMaxProgressBars());
+streamDeck.actions.registerAction(new OpenCodeProgressBars());
 streamDeck.actions.registerAction(new OpenRouterProgressBars());
 streamDeck.actions.registerAction(new CodexBarProgressBars());
 

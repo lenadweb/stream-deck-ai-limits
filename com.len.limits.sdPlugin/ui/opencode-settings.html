@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+
+<head lang="en">
+    <title>OpenCode Settings</title>
+    <meta charset="utf-8" />
+    <script src="https://sdpi-components.dev/releases/v4/sdpi-components.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        select.sdpi-item-value {
+            width: 100%;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: #2d2d2d;
+            color: #ddd;
+            border: 1px solid #444;
+            font-size: 12px;
+        }
+        .hidden {
+            display: none;
+        }
+        .hint {
+            padding: 4px 16px;
+            font-size: 11px;
+            color: #999;
+        }
+        .link {
+            color: #3B82F6;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+        .link:hover {
+            color: #60A5FA;
+        }
+        .checkbox {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: #ddd;
+            cursor: pointer;
+        }
+        .checkbox input {
+            width: 14px;
+            height: 14px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <sdpi-item label="API Key">
+        <sdpi-textfield id="apiKey" type="password" placeholder="OpenCode API key"></sdpi-textfield>
+    </sdpi-item>
+
+    <sdpi-item label="Layout">
+        <select id="layout" class="sdpi-item-value">
+            <option value="ring">Ring (one metric)</option>
+            <option value="bars">Bars (two metrics)</option>
+        </select>
+    </sdpi-item>
+    <sdpi-item label="Size">
+        <select id="size" class="sdpi-item-value">
+            <option value="compact">Compact</option>
+            <option value="default">Default</option>
+            <option value="large">Large</option>
+            <option value="xlarge">Extra Large</option>
+        </select>
+    </sdpi-item>
+
+    <sdpi-item id="ringRow" label="Metric">
+        <select id="metric" class="sdpi-item-value">
+            <option value="auto">Auto (recommended)</option>
+            <option value="rolling">5-Hour quota</option>
+            <option value="weekly">Weekly quota</option>
+            <option value="monthly">Monthly quota</option>
+            <option value="overall">Overall (worst limit)</option>
+            <option value="budget">Budget (most used)</option>
+            <option value="balance">Zen balance</option>
+        </select>
+    </sdpi-item>
+
+    <sdpi-item id="topRow" label="Top Bar">
+        <select id="topMetric" class="sdpi-item-value">
+            <option value="auto">Auto (recommended)</option>
+            <option value="rolling">5-Hour quota</option>
+            <option value="weekly">Weekly quota</option>
+            <option value="monthly">Monthly quota</option>
+            <option value="overall">Overall (worst limit)</option>
+            <option value="budget">Budget (most used)</option>
+            <option value="balance">Zen balance</option>
+        </select>
+    </sdpi-item>
+
+    <sdpi-item id="bottomRow" label="Bottom Bar">
+        <select id="bottomMetric" class="sdpi-item-value">
+            <option value="auto">Auto (recommended)</option>
+            <option value="rolling">5-Hour quota</option>
+            <option value="weekly">Weekly quota</option>
+            <option value="monthly">Monthly quota</option>
+            <option value="overall">Overall (worst limit)</option>
+            <option value="budget">Budget (most used)</option>
+            <option value="balance">Zen balance</option>
+        </select>
+    </sdpi-item>
+
+    <sdpi-item label="Display">
+        <label class="checkbox"><input id="showProviderName" type="checkbox" /> Show provider name</label>
+    </sdpi-item>
+
+    <div class="hint"><span class="link" onclick="openGitHub()">View source on GitHub</span></div>
+    <div class="hint">Create a personal API key in OpenCode Console under Account. Go shows the 5-hour, weekly and monthly allowance; Zen shows budgets and the prepaid balance.</div>
+
+    <script>
+        let _websocket = null;
+        let _uuid = null;
+        let _settings = {};
+
+        function connectElgatoStreamDeckSocket(port, uuid, registerEvent, info, actionInfo) {
+            _uuid = uuid;
+
+            if (actionInfo) {
+                const parsed = JSON.parse(actionInfo);
+                _settings = parsed?.payload?.settings || {};
+            }
+
+            _websocket = new WebSocket("ws://127.0.0.1:" + port);
+
+            _websocket.onopen = function () {
+                _websocket.send(JSON.stringify({ event: registerEvent, uuid: uuid }));
+                applySettings();
+            };
+
+            _websocket.onmessage = function (evt) {
+                const data = JSON.parse(evt.data);
+                if (data.event === "didReceiveSettings") {
+                    _settings = data.payload?.settings || {};
+                    applySettings();
+                }
+            };
+        }
+
+        function applySettings() {
+            document.getElementById("apiKey").value = _settings.apiKey || "";
+            document.getElementById("layout").value = _settings.layout || "bars";
+            document.getElementById("size").value = _settings.size || "default";
+            document.getElementById("metric").value = _settings.metric || "auto";
+            document.getElementById("topMetric").value = _settings.topMetric || "auto";
+            document.getElementById("bottomMetric").value = _settings.bottomMetric || "auto";
+            document.getElementById("showProviderName").checked = _settings.showProviderName !== false;
+            applyLayoutVisibility();
+        }
+
+        function applyLayoutVisibility() {
+            const isRing = document.getElementById("layout").value === "ring";
+            document.getElementById("ringRow").classList.toggle("hidden", !isRing);
+            document.getElementById("topRow").classList.toggle("hidden", isRing);
+            document.getElementById("bottomRow").classList.toggle("hidden", isRing);
+        }
+
+        function saveSettings() {
+            _settings.apiKey = document.getElementById("apiKey").value || "";
+            _settings.layout = document.getElementById("layout").value || "bars";
+            _settings.size = document.getElementById("size").value || "default";
+            _settings.metric = document.getElementById("metric").value || "auto";
+            _settings.topMetric = document.getElementById("topMetric").value || "auto";
+            _settings.bottomMetric = document.getElementById("bottomMetric").value || "auto";
+            _settings.showProviderName = document.getElementById("showProviderName").checked;
+            applyLayoutVisibility();
+
+            if (_websocket && _uuid) {
+                _websocket.send(JSON.stringify({
+                    event: "setSettings",
+                    context: _uuid,
+                    payload: _settings,
+                }));
+            }
+        }
+
+        function openGitHub() {
+            if (_websocket) {
+                _websocket.send(JSON.stringify({
+                    event: "openUrl",
+                    payload: {
+                        url: "https://github.com/lenadweb/stream-deck-ai-limits"
+                    }
+                }));
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            document.getElementById("apiKey").addEventListener("input", saveSettings);
+            ["layout", "size", "metric", "topMetric", "bottomMetric", "showProviderName"].forEach(function (id) {
+                document.getElementById(id).addEventListener("change", saveSettings);
+            });
+            applySettings();
+        });
+    </script>
+</body>
+
+</html>

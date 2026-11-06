@@ -19,7 +19,7 @@ interface CodexBarServerConfig {
 }
 
 const CODEXBAR_THEMES: readonly CodexBarTheme[] = [
-    "codexbar", "codex", "claude", "gemini-cli", "antigravity", "minimax", "openrouter"
+    "codexbar", "codex", "claude", "gemini-cli", "antigravity", "minimax", "opencode", "openrouter"
 ];
 
 @action({ UUID: "com.len.limits.codexbar" })

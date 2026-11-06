@@ -46,6 +46,14 @@ Daily and weekly coding‑plan usage.
 |:---:|:---:|
 | <img src="../generated/provider-assets/minimax/key@2x.png" alt="MiniMax key" width="144" /> | <img src="../generated/provider-assets/minimax/dial@2x.png" alt="MiniMax dial" width="240" /> |
 
+## OpenCode
+
+Go (Go, Go Plus, Go Teams) shows the 5-hour, weekly and monthly allowance. Zen workspaces show the most-used Console budget and the prepaid balance.
+
+| Key | Dial |
+|:---:|:---:|
+| <img src="../generated/provider-assets/opencode/key@2x.png" alt="OpenCode key" width="144" /> | <img src="../generated/provider-assets/opencode/dial@2x.png" alt="OpenCode dial" width="240" /> |
+
 ## OpenRouter
 
 A key **limit** renders as a usage bar, while spend windows (today / week / month / total) render as a **headline dollar value** — so an unlimited key never shows an empty bar.

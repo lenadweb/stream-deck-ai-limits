@@ -128,6 +128,15 @@ export class ProgressBarRenderer {
             barBg: '#2E1320',
             barFill: '#FF1F99'
         },
+        opencode: {
+            primary: '#3B82F6',
+            secondary: '#60A5FA',
+            background: '#0A0F1A',
+            text: '#EFF6FF',
+            label: '#8296B3',
+            barBg: '#182337',
+            barFill: '#3B82F6'
+        },
         openrouter: {
             primary: '#7B7DFF',
             secondary: '#8B8DF6',
@@ -150,6 +159,7 @@ export class ProgressBarRenderer {
 
     private static readonly serviceLabels: Partial<Record<ServiceTheme, string>> = {
         'gemini-cli': 'Gemini',
+        opencode: 'OpenCode',
         openrouter: 'OpenRouter',
         codexbar: 'CodexBar'
     };

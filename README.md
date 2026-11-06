@@ -6,7 +6,7 @@
 
 **See exactly how much of your AI coding quota is left, right on your Stream Deck keys and dials.**
 
-Track usage limits and reset times for **Claude**, **Codex**, **Antigravity**, **Gemini CLI**, **MiniMax**, **OpenRouter**, or any provider configured in **CodexBar** — at a glance, without opening a terminal or a billing page.
+Track usage limits and reset times for **Claude**, **Codex**, **Antigravity**, **Gemini CLI**, **MiniMax**, **OpenCode**, **OpenRouter**, or any provider configured in **CodexBar** — at a glance, without opening a terminal or a billing page.
 
 [![Download on Elgato Marketplace](https://img.shields.io/badge/Elgato%20Marketplace-Download-2c2c2e?style=for-the-badge&logo=elgato&logoColor=white)](https://marketplace.elgato.com/product/ai-usage-limits-b78ef6c4-0165-4bf2-8ba8-889f723e915f)
 
@@ -22,10 +22,10 @@ Track usage limits and reset times for **Claude**, **Codex**, **Antigravity**, *
 
 ## Why you'll like it
 
-- **Native providers plus CodexBar:** use focused native actions for Claude, Codex, Antigravity, Gemini CLI, MiniMax and OpenRouter; the optional CodexBar backend covers its configured providers from one action.
+- **Native providers plus CodexBar:** use focused native actions for Claude, Codex, Antigravity, Gemini CLI, MiniMax, OpenCode and OpenRouter; the optional CodexBar backend covers its configured providers from one action.
 - **Keys *and* dials:** every action renders on standard keys **and** on Stream Deck+ encoders with a full dial layout.
 - **Live progress bars:** color-coded usage (green, amber, red) plus human-friendly reset countdowns like `3h 33m` or `4d 3h`.
-- **Zero key juggling for most providers:** reuses the credentials your existing CLIs already created locally. Only MiniMax and OpenRouter need a key pasted in.
+- **Zero key juggling for most providers:** reuses the credentials your existing CLIs already created locally. Only MiniMax, OpenCode and OpenRouter need a key pasted in.
 - **Always fresh:** usage is polled and cached automatically, so the keys stay current without hammering provider APIs.
 - **Powered by a typed SDK:** all the provider logic lives in the reusable [`@lenadweb/ai-limits`](https://github.com/lenadweb/ai-limits) library.
 
@@ -82,6 +82,7 @@ Each provider is a separate action. All of them work on **Keypad** (keys) and **
 | **Antigravity (Native)** | Shared quota pools from `agy`: Gemini Models and Claude/GPT | `com.len.limits.antigravity` |
 | **Gemini CLI (Native)** | Gemini CLI quota usage, per model | `com.len.limits.gemini-cli` |
 | **MiniMax (Native)** | MiniMax M-series daily or weekly usage | `com.len.limits.minimax` |
+| **OpenCode (Native)** | OpenCode Go 5-hour, weekly and monthly allowance, Zen budgets and balance | `com.len.limits.opencode` |
 | **OpenRouter (Native)** | OpenRouter key spend limit & spend by day/week/month | `com.len.limits.openrouter` |
 | **CodexBar backend** | Any enabled CodexBar provider, account and quota window | `com.len.limits.codexbar` |
 
@@ -92,9 +93,11 @@ Every action has a **Layout** setting:
 - **Bars** (default) — the two-slot view, now with a metric picker for each slot.
 - **Ring** — one large ring gauge showing a single metric, with its reset countdown in the middle.
 
-Place the same action more than once to build a row of tiles, e.g. Claude Session, Claude Week, Codex Session and Codex Week side by side. Each tile keeps its own metric, and all tiles of a provider share a single API call, so extra tiles cost nothing. MiniMax and OpenRouter tiles carry their own API key, so they are fetched once per distinct key — several tiles on the same key still cost one call, and tiles on different keys each show their own account.
+Place the same action more than once to build a row of tiles, e.g. Claude Session, Claude Week, Codex Session and Codex Week side by side. Each tile keeps its own metric, and all tiles of a provider share a single API call, so extra tiles cost nothing. MiniMax, OpenCode and OpenRouter tiles carry their own API key, so they are fetched once per distinct key — several tiles on the same key still cost one call, and tiles on different keys each show their own account.
 
 > **Claude note:** besides the session and weekly windows, Anthropic reports weekly limits scoped to a single model, such as Fable. The plugin lists whichever ones your account returns, so they appear in the metric picker as **Fable week (7d)** without any setup. Accounts without scoped limits keep exactly the metrics they had.
+
+> **OpenCode note:** **Auto** uses the Go 5-hour window for Go, Go Plus and Go Teams keys. On a Zen workspace without Go it falls back to the most-used Console budget, then to the prepaid balance. Pick **5-Hour**, **Weekly**, **Monthly**, **Overall**, **Budget** or **Balance** explicitly to pin a metric.
 
 > **Antigravity note:** models in each group share a plan-level quota. Choose a pool reported by `agy`, or **Overall** for the most used pool. Saved Gemini and Claude/GPT model selections migrate to their group's weekly pool after a successful refresh. A missing quota shows `no data`.
 
@@ -113,6 +116,7 @@ For most providers the plugin simply reads the credentials your CLI already wrot
 | **Gemini CLI** | Automatic | `~/.gemini/oauth_creds.json` |
 | **Antigravity** | Automatic | Install the Antigravity CLI (`agy`), run it in a terminal and sign in to your Google account. The plugin reads `agy /usage`; no separate plugin login is needed. |
 | **MiniMax** | API key | Paste your key into the Property Inspector |
+| **OpenCode** | API key | Paste a personal API key from [OpenCode Console](https://opencode.ai/console) (Account → Personal API keys); Go and Zen workspaces are detected automatically |
 | **OpenRouter** | API key | Paste a key from [openrouter.ai/keys](https://openrouter.ai/keys); pick what each bar shows (limit / spend by day, week, month, total) |
 | **CodexBar backend** | Local CodexBar server | Start `codexbar serve`; configured providers load automatically when opening this action's settings |
 
@@ -145,9 +149,9 @@ Each provider renders on both keys and Stream Deck+ dials, with a brand‑matche
 
 <img src="generated/provider-assets/claude/key@2x.png" alt="Claude" width="120" />&nbsp;<img src="generated/provider-assets/codex/key@2x.png" alt="Codex" width="120" />&nbsp;<img src="generated/provider-assets/antigravity/key@2x.png" alt="Antigravity" width="120" />
 
-<img src="generated/provider-assets/gemini-cli/key@2x.png" alt="Gemini CLI" width="120" />&nbsp;<img src="generated/provider-assets/minimax/key@2x.png" alt="MiniMax" width="120" />&nbsp;<img src="generated/provider-assets/openrouter/key@2x.png" alt="OpenRouter" width="120" />
+<img src="generated/provider-assets/gemini-cli/key@2x.png" alt="Gemini CLI" width="120" />&nbsp;<img src="generated/provider-assets/minimax/key@2x.png" alt="MiniMax" width="120" />&nbsp;<img src="generated/provider-assets/opencode/key@2x.png" alt="OpenCode" width="120" />&nbsp;<img src="generated/provider-assets/openrouter/key@2x.png" alt="OpenRouter" width="120" />
 
-<img src="generated/provider-assets/claude/dial@2x.png" alt="Claude dial" width="220" />&nbsp;<img src="generated/provider-assets/openrouter/dial@2x.png" alt="OpenRouter dial" width="220" />
+<img src="generated/provider-assets/claude/dial@2x.png" alt="Claude dial" width="220" />&nbsp;<img src="generated/provider-assets/opencode/dial@2x.png" alt="OpenCode dial" width="220" />&nbsp;<img src="generated/provider-assets/openrouter/dial@2x.png" alt="OpenRouter dial" width="220" />
 
 **[See the full gallery — keys & dials for every provider →](docs/showcase.md)**
 
@@ -180,6 +184,7 @@ The plugin is a thin rendering layer: it asks [`@lenadweb/ai-limits`](https://gi
 - **A provider shows no data:** confirm the matching CLI is installed and logged in, and that its credential file exists (see the table above).
 - **Antigravity missing or unavailable:** run `agy --print /usage --print-timeout 20s --output-format json` in a terminal to check installation, sign-in and usage access, then press the Stream Deck key to retry. The plugin finds `agy` on `PATH` or at `~/.local/bin/agy` (`agy.exe` on Windows); a custom path can be set through `AGY_BIN` in the Stream Deck process environment. The settings panel reports missing CLI, timeout and usage errors.
 - **MiniMax shows an error:** double-check the API key in the Property Inspector.
+- **OpenCode shows an error:** use a personal API key created in OpenCode Console, not a model-provider key. A key without Go or Console budgets returns `No subscription data`; Go/Go Plus/Go Teams and Zen workspaces are read from the same key.
 - **Nothing appears after `npm run watch`:** make sure the Stream Deck app is running and on version 6.9+.
 
 ---
