@@ -219,7 +219,8 @@ export abstract class BaseMonitoringAction<
 
     protected renderOptions(ev: any): RenderOptions {
         const settings = ev?.payload?.settings ?? {};
-        return { showName: settings.showProviderName !== false, size: settings.size };
+        return { showName: settings.showProviderName !== false, size: settings.size,
+            backgroundMode: settings.backgroundMode, backgroundColor: settings.backgroundColor };
     }
 
     /** Lets actions with per-tile presentation settings choose a theme at draw time. */

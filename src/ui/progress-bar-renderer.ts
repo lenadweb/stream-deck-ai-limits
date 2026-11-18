@@ -15,6 +15,8 @@ export interface Slot {
 
 export interface RenderOptions {
     showName?: boolean;
+    backgroundMode?: "theme" | "color" | "transparent";
+    backgroundColor?: string;
     /** Overrides the theme label, for generic backends such as CodexBar. */
     serviceName?: string;
     /** Scale preset; every size, gap and offset of the tile derives from it. */
@@ -217,7 +219,7 @@ export class ProgressBarRenderer {
         const displayedSlots = slots.slice(0, 2);
         const geo = this.geometry(width, height, isDial, showName, displayedSlots.length, this.preset(opts));
 
-        const chrome = this.background(width, height, colors) + this.header(opts.serviceName ?? this.serviceName(theme), colors, geo, isDial, showName);
+        const chrome = this.background(width, height, colors, opts) + this.header(opts.serviceName ?? this.serviceName(theme), colors, geo, isDial, showName);
         const modules = displayedSlots.map((slot, i) =>
             slot.kind === "stat"
                 ? this.statModule(slot, colors, theme, geo, geo.moduleTop[i], isDial)
@@ -248,7 +250,7 @@ export class ProgressBarRenderer {
         const cx = this.round(ring.cx);
         const cy = this.round(ring.cy);
 
-        let body = this.background(width, height, colors)
+        let body = this.background(width, height, colors, opts)
             + this.header(opts.serviceName ?? this.serviceName(theme), colors, geo, isDial, showName);
 
         body += `<circle cx="${cx}" cy="${cy}" r="${ring.r}" fill="none" stroke="${colors.barBg}" stroke-width="${ring.sw}" />`;
@@ -424,8 +426,11 @@ export class ProgressBarRenderer {
         return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${body}</svg>`;
     }
 
-    private background(width: number, height: number, colors: ThemeColors): string {
-        return `<rect width="${width}" height="${height}" fill="${colors.background}" />`;
+    private background(width: number, height: number, colors: ThemeColors, opts: RenderOptions): string {
+        if (opts.backgroundMode === "transparent") return "";
+        const color = opts.backgroundMode === "color" && typeof opts.backgroundColor === "string" && /^#[0-9a-f]{6}$/i.test(opts.backgroundColor)
+            ? opts.backgroundColor : colors.background;
+        return `<rect width="${width}" height="${height}" fill="${color}" />`;
     }
 
     private header(name: string, colors: ThemeColors, geo: any, isDial: boolean, showName: boolean): string {
@@ -517,7 +522,7 @@ export class ProgressBarRenderer {
             + `<circle cx="${cx}" cy="${cy}" r="${r}" stroke="${colors.primary}" stroke-width="${sw}" fill="none" stroke-linecap="round" `
             + `stroke-dasharray="${this.round(dash * 0.28)} ${this.round(dash)}" transform="rotate(${angle} ${cx} ${cy})" />`;
 
-        const body = this.background(width, height, colors)
+        const body = this.background(width, height, colors, opts)
             + this.header(opts.serviceName ?? this.serviceName(theme), colors, geo, isDial, showName)
             + ring;
         return this.svg(width, height, body);
@@ -550,7 +555,7 @@ export class ProgressBarRenderer {
         const startY = cyIcon + r + gap;
         const text = lines.map((l, i) => this.txt(cx, startY + i * lineH, l, size, 600, colors.text, "middle", ProgressBarRenderer.SANS)).join("");
 
-        const body = this.background(width, height, colors)
+        const body = this.background(width, height, colors, opts)
             + this.header(opts.serviceName ?? this.serviceName(theme), colors, geo, isDial, showName)
             + icon + text;
         return this.svg(width, height, body);
@@ -576,7 +581,7 @@ export class ProgressBarRenderer {
         const text = lines.map((line, i) =>
             this.txt(cx, startY + i * lineH, this.escape(line), size, 700, colors.text, "middle", ProgressBarRenderer.SANS)
         ).join("");
-        const body = this.background(width, height, colors)
+        const body = this.background(width, height, colors, opts)
             + this.header(opts.serviceName ?? this.serviceName(theme), colors, geo, isDial, showName)
             + text;
         return this.svg(width, height, body);

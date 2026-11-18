@@ -54,6 +54,18 @@ function tile(id, settings = {}, controller = "Keypad") {
     };
 }
 
+test("tile background settings reach the rendered key", async () => {
+    const action = new OpenCodeProgressBars();
+    const key = tile("background", { backgroundMode: "color", backgroundColor: "#123456" });
+    let image;
+    key.action.setImage = async (value) => { image = value; };
+    await action.drawPlaceholder(key);
+    assert.match(Buffer.from(image.split(",")[1], "base64").toString(), /fill="#123456"/);
+    key.payload.settings.backgroundMode = "transparent";
+    await action.drawPlaceholder(key);
+    assert.doesNotMatch(Buffer.from(image.split(",")[1], "base64").toString(), /<rect width="144" height="144"/);
+});
+
 const goUsage = mapOpenCodeUsage({
     go: {
         usage: {

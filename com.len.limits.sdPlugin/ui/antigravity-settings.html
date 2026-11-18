@@ -90,6 +90,8 @@
         </select>
     </sdpi-item>
 
+    <sdpi-item label="Background"><select id="backgroundMode" class="sdpi-item-value"><option value="theme">Provider theme</option><option value="color">Custom color</option><option value="transparent">Transparent</option></select></sdpi-item>
+    <sdpi-item label="Background color"><input id="backgroundColor" type="color" value="#000000" /></sdpi-item>
     <sdpi-item label="Display">
         <label class="checkbox"><input id="showProviderName" type="checkbox" /> Show provider name</label>
     </sdpi-item>
@@ -195,6 +197,8 @@
         }
 
         function applySettings() {
+            document.getElementById("backgroundMode").value = _settings.backgroundMode || "theme";
+            document.getElementById("backgroundColor").value = _settings.backgroundColor || "#000000";
             QUOTA_SELECTS.forEach(function (id) {
                 document.getElementById(id).value = _settings[id] === "__overall__" ? "" : (_settings[id] || "");
             });
@@ -212,6 +216,8 @@
         }
 
         function saveSettings() {
+            _settings.backgroundMode = document.getElementById("backgroundMode").value;
+            _settings.backgroundColor = document.getElementById("backgroundColor").value;
             QUOTA_SELECTS.forEach(function (id) {
                 _settings[id] = document.getElementById(id).value;
             });
@@ -241,6 +247,7 @@
         }
 
         document.addEventListener("DOMContentLoaded", function () {
+            ["backgroundMode", "backgroundColor"].forEach(id => document.getElementById(id).addEventListener("change", saveSettings));
             ["layout", "size", "model", "topModel", "bottomModel", "showProviderName"].forEach(function (id) {
                 document.getElementById(id).addEventListener("change", saveSettings);
             });
