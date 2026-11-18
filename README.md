@@ -120,6 +120,8 @@ For most providers the plugin simply reads the credentials your CLI already wrot
 | **OpenRouter** | API key | Paste a key from [openrouter.ai/keys](https://openrouter.ai/keys); pick what each bar shows (limit / spend by day, week, month, total) |
 | **CodexBar backend** | Local CodexBar server | Start `codexbar serve`; configured providers load automatically when opening this action's settings |
 
+Each action's Property Inspector offers a **Background** setting: keep the provider theme, choose a custom color, or select transparent. Transparency depends on Stream Deck's background compositing and may not reveal a custom background on every device or software version.
+
 > **Tip:** Make sure the matching CLI (Claude Code, Codex, Gemini CLI) is installed and logged in first; that is what creates the credential files the plugin reads.
 
 ---
