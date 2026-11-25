@@ -2,6 +2,8 @@
   "Name": "AI Usage Limits",
   "Version": "0.1.30.0",
   "Author": "len",
+  "URL": "https://github.com/lenadweb/stream-deck-ai-limits",
+  "SupportURL": "https://github.com/lenadweb/stream-deck-ai-limits",
   "Actions": [
     {
       "Name": "Claude (Native)",
@@ -9,6 +11,7 @@
       "Icon": "imgs/actions/counter/icon",
       "Tooltip": "Displays Claude usage: session, weekly or Sonnet weekly.",
       "PropertyInspectorPath": "ui/claude-settings.html",
+      "SupportURL": "https://github.com/lenadweb/stream-deck-ai-limits",
       "Controllers": [
         "Keypad",
         "Encoder"
@@ -36,6 +39,7 @@
       "Icon": "imgs/actions/counter/icon",
       "Tooltip": "Displays Codex usage: session, weekly, usage limit resets or credits.",
       "PropertyInspectorPath": "ui/codex-settings.html",
+      "SupportURL": "https://github.com/lenadweb/stream-deck-ai-limits",
       "Controllers": [
         "Keypad",
         "Encoder"
@@ -63,6 +67,7 @@
       "Icon": "imgs/actions/counter/icon",
       "Tooltip": "Displays Antigravity quota pools from the agy CLI: Gemini and Claude/GPT.",
       "PropertyInspectorPath": "ui/antigravity-settings.html",
+      "SupportURL": "https://github.com/lenadweb/stream-deck-ai-limits",
       "Controllers": [
         "Keypad",
         "Encoder"
@@ -90,6 +95,7 @@
       "Icon": "imgs/actions/counter/icon",
       "Tooltip": "Displays Gemini CLI usage.",
       "PropertyInspectorPath": "ui/gemini-settings.html",
+      "SupportURL": "https://github.com/lenadweb/stream-deck-ai-limits",
       "Controllers": [
         "Keypad",
         "Encoder"
@@ -117,6 +123,7 @@
       "Icon": "imgs/actions/counter/icon",
       "Tooltip": "Displays MiniMax M* usage.",
       "PropertyInspectorPath": "ui/minimax-settings.html",
+      "SupportURL": "https://github.com/lenadweb/stream-deck-ai-limits",
       "Controllers": [
         "Keypad",
         "Encoder"
@@ -144,6 +151,7 @@
       "Icon": "imgs/actions/counter/icon",
       "Tooltip": "Displays OpenCode Go usage, Zen budgets and balance.",
       "PropertyInspectorPath": "ui/opencode-settings.html",
+      "SupportURL": "https://github.com/lenadweb/stream-deck-ai-limits",
       "Controllers": [
         "Keypad",
         "Encoder"
@@ -171,6 +179,7 @@
       "Icon": "imgs/actions/counter/icon",
       "Tooltip": "Displays OpenRouter key limit and spend.",
       "PropertyInspectorPath": "ui/openrouter-settings.html",
+      "SupportURL": "https://github.com/lenadweb/stream-deck-ai-limits",
       "Controllers": [
         "Keypad",
         "Encoder"
@@ -198,6 +207,7 @@
       "Icon": "imgs/actions/counter/icon",
       "Tooltip": "Displays any provider configured in a local CodexBar server.",
       "PropertyInspectorPath": "ui/codexbar-settings.html",
+      "SupportURL": "https://github.com/lenadweb/stream-deck-ai-limits",
       "Controllers": [
         "Keypad",
         "Encoder"
