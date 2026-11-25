@@ -5,6 +5,7 @@
     <title>Antigravity Settings</title>
     <meta charset="utf-8" />
     <script src="https://sdpi-components.dev/releases/v4/sdpi-components.js"></script>
+    <script src="launch-settings.js"></script>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -95,6 +96,8 @@
     <sdpi-item label="Display">
         <label class="checkbox"><input id="showProviderName" type="checkbox" /> Show provider name</label>
     </sdpi-item>
+
+    <div id="launchSettings"></div>
 
     <div class="info"><span class="link" onclick="openGitHub()">View source on GitHub</span></div>
     <div class="info">Models in each group share a quota. Overall shows the most used pool. Saved model selections move to their group’s weekly pool after the first successful refresh.</div>
@@ -197,6 +200,7 @@
         }
 
         function applySettings() {
+            if (typeof LaunchSettings !== "undefined") LaunchSettings.apply(_settings);
             document.getElementById("backgroundMode").value = _settings.backgroundMode || "theme";
             document.getElementById("backgroundColor").value = _settings.backgroundColor || "#000000";
             QUOTA_SELECTS.forEach(function (id) {
@@ -216,6 +220,7 @@
         }
 
         function saveSettings() {
+            if (typeof LaunchSettings !== "undefined") LaunchSettings.collect(_settings);
             _settings.backgroundMode = document.getElementById("backgroundMode").value;
             _settings.backgroundColor = document.getElementById("backgroundColor").value;
             QUOTA_SELECTS.forEach(function (id) {
@@ -247,6 +252,7 @@
         }
 
         document.addEventListener("DOMContentLoaded", function () {
+            if (typeof LaunchSettings !== "undefined") LaunchSettings.mount(saveSettings);
             ["backgroundMode", "backgroundColor"].forEach(id => document.getElementById(id).addEventListener("change", saveSettings));
             ["layout", "size", "model", "topModel", "bottomModel", "showProviderName"].forEach(function (id) {
                 document.getElementById(id).addEventListener("change", saveSettings);

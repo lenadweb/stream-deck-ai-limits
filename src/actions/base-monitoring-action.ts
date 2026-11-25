@@ -1,4 +1,5 @@
-import streamDeck, { SingletonAction, KeyDownEvent, WillAppearEvent, WillDisappearEvent } from "@elgato/streamdeck";
+import streamDeck, { SingletonAction, KeyDownEvent, KeyUpEvent, WillAppearEvent, WillDisappearEvent } from "@elgato/streamdeck";
+import { LaunchSettings, buildLaunchPlan, launchTarget, runLaunchPlan } from "../services/launcher";
 import { ProviderName, StandardUsageResult } from "@lenadweb/ai-limits";
 import { ProgressBarRenderer, Slot, RenderOptions } from "../ui/progress-bar-renderer";
 import { ServiceTheme } from "../interfaces/theme";
@@ -32,6 +33,9 @@ export abstract class BaseMonitoringAction<
     protected readonly monitoringIntervalMs: number = 900000;
     protected readonly renderer = new ProgressBarRenderer();
     protected readonly limitsManager = LimitsManager.getInstance();
+    /** How long a key or dial must be held to launch instead of refresh. */
+    protected readonly longPressMs = 500;
+    private pressTimers = new Map<string, NodeJS.Timeout>();
 
     /** Used for logging; external backends may use an id outside ProviderName. */
     protected abstract get providerName(): ProviderName | string;
@@ -70,14 +74,24 @@ export abstract class BaseMonitoringAction<
 
     override async onWillDisappear(ev: WillDisappearEvent<T>): Promise<void> {
         this.instances.delete(ev.action.id);
+        this.cancelPress(ev.action.id);
         if (this.instances.size === 0) {
             this.stopMonitoring();
             this.isMonitoring = false;
         }
     }
 
+    /**
+     * With no long-press target the key refreshes on press, exactly as before. With
+     * one, the refresh waits for release: released early it refreshes, held past
+     * {@link longPressMs} it launches instead and the release is ignored.
+     */
     override async onKeyDown(ev: KeyDownEvent<T>): Promise<void> {
-        await this.refresh(ev);
+        if (!this.beginPress(ev)) await this.refresh(ev);
+    }
+
+    override async onKeyUp(ev: KeyUpEvent<T>): Promise<void> {
+        if (this.endPress(ev)) await this.refresh(ev);
     }
 
     override async onDidReceiveSettings(ev: any): Promise<void> {
@@ -87,8 +101,15 @@ export abstract class BaseMonitoringAction<
         }
     }
 
+    override async onDialDown(ev: any): Promise<void> {
+        this.beginPress(ev);
+    }
+
     override async onDialUp(ev: any): Promise<void> {
-        await this.refresh(ev);
+        // Without a target beginPress tracked nothing, so endPress is false: refresh.
+        if (this.endPress(ev) || launchTarget(ev?.payload?.settings) === "none") {
+            await this.refresh(ev);
+        }
     }
 
     override async onDialRotate(ev: any): Promise<void> {
@@ -96,7 +117,58 @@ export abstract class BaseMonitoringAction<
     }
 
     override async onTouchTap(ev: any): Promise<void> {
+        if (ev?.payload?.hold && launchTarget(ev?.payload?.settings) !== "none") {
+            await this.launch(ev);
+            return;
+        }
         await this.refresh(ev);
+    }
+
+    /**
+     * Arm the long-press timer when the tile has a launch target. Returns false when it
+     * has none, so the caller keeps the immediate refresh.
+     */
+    protected beginPress(ev: any): boolean {
+        const id = ev?.action?.id;
+        if (!id || launchTarget(ev?.payload?.settings) === "none") return false;
+
+        this.cancelPress(id);
+        const timer = setTimeout(() => {
+            this.pressTimers.delete(id);
+            this.launch(ev);
+        }, this.longPressMs);
+        this.pressTimers.set(id, timer);
+        return true;
+    }
+
+    /** True when the press was short (released before the timer fired). */
+    protected endPress(ev: any): boolean {
+        return this.cancelPress(ev?.action?.id);
+    }
+
+    private cancelPress(id: string | undefined): boolean {
+        const timer = id ? this.pressTimers.get(id) : undefined;
+        if (!timer) return false;
+        clearTimeout(timer);
+        this.pressTimers.delete(id!);
+        return true;
+    }
+
+    protected async launch(ev: any): Promise<void> {
+        const settings = (ev?.payload?.settings ?? {}) as LaunchSettings;
+        try {
+            if (launchTarget(settings) === "url") {
+                await streamDeck.system.openUrl(settings.launchUrl!.trim());
+            } else {
+                const plan = buildLaunchPlan(settings);
+                if (!plan) return;
+                await runLaunchPlan(plan);
+            }
+            await ev.action.showOk?.();
+        } catch (err: any) {
+            streamDeck.logger.error(`[${this.providerName}] Launch failed: ${err}`);
+            try { await ev.action.showAlert?.(); } catch {}
+        }
     }
 
     /**

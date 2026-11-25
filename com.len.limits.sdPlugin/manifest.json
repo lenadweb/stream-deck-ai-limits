@@ -19,7 +19,8 @@
         "TriggerDescription": {
           "Rotate": "Refresh",
           "Touch": "Refresh",
-          "Push": "Refresh"
+          "Push": "Refresh (hold to open, if set)",
+          "LongTouch": "Open (if set)"
         }
       },
       "States": [
@@ -45,7 +46,8 @@
         "TriggerDescription": {
           "Rotate": "Refresh",
           "Touch": "Refresh",
-          "Push": "Refresh"
+          "Push": "Refresh (hold to open, if set)",
+          "LongTouch": "Open (if set)"
         }
       },
       "States": [
@@ -71,7 +73,8 @@
         "TriggerDescription": {
           "Rotate": "Refresh",
           "Touch": "Refresh",
-          "Push": "Refresh"
+          "Push": "Refresh (hold to open, if set)",
+          "LongTouch": "Open (if set)"
         }
       },
       "States": [
@@ -97,7 +100,8 @@
         "TriggerDescription": {
           "Rotate": "Refresh",
           "Touch": "Refresh",
-          "Push": "Refresh"
+          "Push": "Refresh (hold to open, if set)",
+          "LongTouch": "Open (if set)"
         }
       },
       "States": [
@@ -123,7 +127,8 @@
         "TriggerDescription": {
           "Rotate": "Refresh",
           "Touch": "Refresh",
-          "Push": "Refresh"
+          "Push": "Refresh (hold to open, if set)",
+          "LongTouch": "Open (if set)"
         }
       },
       "States": [
@@ -149,7 +154,8 @@
         "TriggerDescription": {
           "Rotate": "Refresh",
           "Touch": "Refresh",
-          "Push": "Refresh"
+          "Push": "Refresh (hold to open, if set)",
+          "LongTouch": "Open (if set)"
         }
       },
       "States": [
@@ -175,7 +181,8 @@
         "TriggerDescription": {
           "Rotate": "Refresh",
           "Touch": "Refresh",
-          "Push": "Refresh"
+          "Push": "Refresh (hold to open, if set)",
+          "LongTouch": "Open (if set)"
         }
       },
       "States": [
@@ -201,7 +208,8 @@
         "TriggerDescription": {
           "Rotate": "Refresh",
           "Touch": "Refresh",
-          "Push": "Refresh"
+          "Push": "Refresh (hold to open, if set)",
+          "LongTouch": "Open (if set)"
         }
       },
       "States": [

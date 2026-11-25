@@ -5,6 +5,7 @@
     <title>Codex Settings</title>
     <meta charset="utf-8" />
     <script src="https://sdpi-components.dev/releases/v4/sdpi-components.js"></script>
+    <script src="launch-settings.js"></script>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -101,6 +102,8 @@
         <label class="checkbox"><input id="showProviderName" type="checkbox" /> Show provider name</label>
     </sdpi-item>
 
+    <div id="launchSettings"></div>
+
     <div class="info"><span class="link" onclick="openGitHub()">View source on GitHub</span></div>
     <div class="info">Place this action twice to watch two metrics side by side, e.g. one tile on the weekly limit and one on credits.</div>
     <div class="info">OpenAI currently exposes only a weekly window on Plus, Pro and Business plans. A tile set to the session limit shows "no data" until OpenAI brings the 5-hour window back.</div>
@@ -136,6 +139,7 @@
         }
 
         function applySettings() {
+            if (typeof LaunchSettings !== "undefined") LaunchSettings.apply(_settings);
             document.getElementById("backgroundMode").value = _settings.backgroundMode || "theme";
             document.getElementById("backgroundColor").value = _settings.backgroundColor || "#000000";
             // Mirrors the migration in codex-progress-bars.ts: tiles saved before the
@@ -158,6 +162,7 @@
         }
 
         function saveSettings() {
+            if (typeof LaunchSettings !== "undefined") LaunchSettings.collect(_settings);
             _settings.backgroundMode = document.getElementById("backgroundMode").value;
             _settings.backgroundColor = document.getElementById("backgroundColor").value;
             _settings.showProviderName = document.getElementById("showProviderName").checked;
@@ -189,6 +194,7 @@
         }
 
         document.addEventListener("DOMContentLoaded", function () {
+            if (typeof LaunchSettings !== "undefined") LaunchSettings.mount(saveSettings);
             ["backgroundMode", "backgroundColor"].forEach(id => document.getElementById(id).addEventListener("change", saveSettings));
             ["showProviderName", "layout", "size", "metric", "topMetric", "bottomMetric"].forEach(function (id) {
                 document.getElementById(id).addEventListener("change", saveSettings);

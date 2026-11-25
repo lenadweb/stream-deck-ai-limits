@@ -5,6 +5,7 @@
     <title>Claude Settings</title>
     <meta charset="utf-8" />
     <script src="https://sdpi-components.dev/releases/v4/sdpi-components.js"></script>
+    <script src="launch-settings.js"></script>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -97,6 +98,8 @@
         <label class="checkbox"><input id="showProviderName" type="checkbox" /> Show provider name</label>
     </sdpi-item>
 
+    <div id="launchSettings"></div>
+
     <div class="info"><span class="link" onclick="openGitHub()">View source on GitHub</span></div>
     <div class="info">Place this action twice to watch two windows side by side, e.g. one tile on Session and one on Week.</div>
     <div class="info">Credentials for Claude are automatically loaded from your system (macOS Keychain or ~/.claude/.credentials.json).</div>
@@ -187,6 +190,7 @@
         }
 
         function applySettings() {
+            if (typeof LaunchSettings !== "undefined") LaunchSettings.apply(_settings);
             document.getElementById("backgroundMode").value = _settings.backgroundMode || "theme";
             document.getElementById("backgroundColor").value = _settings.backgroundColor || "#000000";
             document.getElementById("showProviderName").checked = _settings.showProviderName !== false;
@@ -206,6 +210,7 @@
         }
 
         function saveSettings() {
+            if (typeof LaunchSettings !== "undefined") LaunchSettings.collect(_settings);
             _settings.backgroundMode = document.getElementById("backgroundMode").value;
             _settings.backgroundColor = document.getElementById("backgroundColor").value;
             _settings.showProviderName = document.getElementById("showProviderName").checked;
@@ -236,6 +241,7 @@
         }
 
         document.addEventListener("DOMContentLoaded", function () {
+            if (typeof LaunchSettings !== "undefined") LaunchSettings.mount(saveSettings);
             ["backgroundMode", "backgroundColor"].forEach(id => document.getElementById(id).addEventListener("change", saveSettings));
             ["showProviderName", "layout", "size", "metric", "topMetric", "bottomMetric"].forEach(function (id) {
                 document.getElementById(id).addEventListener("change", saveSettings);
