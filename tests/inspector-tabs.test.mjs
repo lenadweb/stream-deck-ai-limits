@@ -21,5 +21,7 @@ for (const provider of ["claude", "codex", "codexbar", "gemini", "antigravity", 
         assert.ok(style.includes('id="backgroundColorRow"'));
         assert.ok(hold.includes('<div id="launchSettings"></div>'));
         assert.ok(html.includes('getElementById("backgroundColorRow").classList.toggle("hidden"'));
+        assert.ok(html.includes("function openGitHub()"), "tab bar GitHub link needs openGitHub");
+        assert.ok(!html.includes("View source on GitHub"), "GitHub link lives in the tab bar");
     });
 }
