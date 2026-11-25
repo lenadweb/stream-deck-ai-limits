@@ -103,6 +103,16 @@ Place the same action more than once to build a row of tiles, e.g. Claude Sessio
 
 > **Codex note:** OpenAI currently exposes only a weekly window on Plus, Pro and Business plans ([issue #6](https://github.com/lenadweb/stream-deck-ai-limits/issues/6)). The plugin classifies windows by the duration the API reports, so the weekly usage lands on the **Weekly limit** metric even when the API delivers it in the primary slot. A tile set to **Session limit** shows `no data` until OpenAI brings the 5-hour window back.
 
+### Hold to open
+
+A press always refreshes the tile. Optionally, every tile can also open something when held (about half a second): set **Hold to open** in its settings to
+
+- **Application** — an app name (`Claude`, `Codex`) or a full path to an `.app` / `.exe`;
+- **Web page** — e.g. your provider's usage or billing page;
+- **Command** — any shell command, run in the folder you choose, so a CLI can start in the right project, e.g. on macOS `osascript -e 'tell app "Terminal" to do script "cd ~/project && claude"'`.
+
+With **Nothing** selected (the default) the key behaves exactly as before and refreshes on press. When a target is set, the refresh happens on release instead, so a hold can be told apart from a tap. On Stream Deck + dials, push-and-hold or a long touch on the strip opens the target.
+
 ---
 
 ## Provider setup
