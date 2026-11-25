@@ -48,6 +48,12 @@ test("Windows opens apps through start", () => {
         { file: "cmd.exe", args: ["/d", "/s", "/c", '"start "" "C:\\Apps\\Claude.exe""'] });
 });
 
+test("an app value with a quote is rejected", () => {
+    const settings = { launchTarget: "app", launchApp: 'x" & calc & "' };
+    assert.equal(launchTarget(settings), "none");
+    assert.equal(buildLaunchPlan(settings, "win32"), null);
+});
+
 test("commands run in a shell in the chosen folder", () => {
     assert.deepEqual(buildLaunchPlan({ launchTarget: "command", launchCommand: "open -a Terminal .", launchCwd: "~/code" }, "darwin"),
         { file: "open -a Terminal .", args: [], shell: true, cwd: homedir() + "/code" });

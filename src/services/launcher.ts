@@ -27,11 +27,16 @@ export interface LaunchPlan {
 export function launchTarget(settings: LaunchSettings | undefined): LaunchTarget {
     const target = settings?.launchTarget ?? "none";
     switch (target) {
-        case "app": return settings?.launchApp?.trim() ? "app" : "none";
+        case "app": return isSafeAppValue(settings?.launchApp) ? "app" : "none";
         case "url": return isWebUrl(settings?.launchUrl) ? "url" : "none";
         case "command": return settings?.launchCommand?.trim() ? "command" : "none";
         default: return "none";
     }
+}
+
+function isSafeAppValue(value: string | undefined): boolean {
+    const app = value?.trim();
+    return !!app && !app.includes('"');
 }
 
 export function isWebUrl(value: string | undefined): boolean {

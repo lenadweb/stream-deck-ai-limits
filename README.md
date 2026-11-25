@@ -113,6 +113,8 @@ A press always refreshes the tile. Optionally, every tile can also open somethin
 
 With **Nothing** selected (the default) the key behaves exactly as before and refreshes on press. When a target is set, the refresh happens on release instead, so a hold can be told apart from a tap. On Stream Deck + dials, push-and-hold or a long touch on the strip opens the target.
 
+> **Security note:** a **Command** target is saved in the tile's settings and travels with exported profiles. Before using a profile from someone else, open each tile's settings and check what **Hold to open** runs.
+
 ---
 
 ## Provider setup
