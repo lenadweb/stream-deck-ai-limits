@@ -70,6 +70,7 @@
         el("launchCwdRow").classList.toggle("hidden", target !== "command");
         el("launchHint").textContent = HINTS[target] || "";
         el("launchHint").classList.toggle("hidden", !HINTS[target]);
+        if (window.InspectorTabs) window.InspectorTabs.mark("hold", target !== "none");
     }
 
     window.LaunchSettings = {

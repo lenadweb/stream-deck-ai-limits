@@ -5,6 +5,7 @@
     <meta charset="utf-8" />
     <script src="https://sdpi-components.dev/releases/v4/sdpi-components.js"></script>
     <script src="launch-settings.js"></script>
+    <script src="inspector-tabs.js"></script>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         select.sdpi-item-value, input.sdpi-item-value { width: 100%; padding: 4px 8px; border-radius: 4px; background: #2d2d2d; color: #ddd; border: 1px solid #444; font-size: 12px; box-sizing: border-box; }
@@ -55,24 +56,58 @@
     </style>
 </head>
 <body>
-    <sdpi-item label="Provider">
-        <div class="provider-control">
-            <select id="providerId" class="sdpi-item-value" disabled><option value="">Loading providers…</option></select>
-            <button id="refreshProviders" class="icon-button loading" type="button" title="Refresh providers" aria-label="Refresh providers" disabled>
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8.1 8.1 0 0 0-14.5-4.8L3 9m0-5v5h5M4 13a8.1 8.1 0 0 0 14.5 4.8L21 15m0 5v-5h-5" /></svg>
-            </button>
-        </div>
-    </sdpi-item>
-    <div id="providerStatus" class="status">Loading configured CodexBar providers…</div>
-    <div id="setupHint" class="setup-hint hidden"></div>
-
-    <div id="configurationPanel" class="hidden">
-        <sdpi-item label="Layout">
-            <select id="layout" class="sdpi-item-value">
-                <option value="ring">Ring (one metric)</option>
-                <option value="bars">Bars (two metrics)</option>
-            </select>
+    <section class="tab-panel" data-tab="data" data-label="Data">
+        <sdpi-item label="Provider">
+            <div class="provider-control">
+                <select id="providerId" class="sdpi-item-value" disabled><option value="">Loading providers…</option></select>
+                <button id="refreshProviders" class="icon-button loading" type="button" title="Refresh providers" aria-label="Refresh providers" disabled>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8.1 8.1 0 0 0-14.5-4.8L3 9m0-5v5h5M4 13a8.1 8.1 0 0 0 14.5 4.8L21 15m0 5v-5h-5" /></svg>
+                </button>
+            </div>
         </sdpi-item>
+        <div id="providerStatus" class="status">Loading configured CodexBar providers…</div>
+        <div id="setupHint" class="setup-hint hidden"></div>
+        <div id="configurationPanel" class="hidden">
+            <sdpi-item label="Layout">
+                <select id="layout" class="sdpi-item-value">
+                    <option value="ring">Ring (one metric)</option>
+                    <option value="bars">Bars (two metrics)</option>
+                </select>
+            </sdpi-item>
+            <sdpi-item id="ringRow" label="Metric">
+                <select id="metric" class="sdpi-item-value"></select>
+            </sdpi-item>
+            <sdpi-item id="topRow" label="Top metric">
+                <select id="topMetric" class="sdpi-item-value"></select>
+            </sdpi-item>
+            <sdpi-item id="bottomRow" label="Bottom metric">
+                <select id="bottomMetric" class="sdpi-item-value"></select>
+            </sdpi-item>
+        </div>
+        <details class="advanced">
+            <summary>Advanced</summary>
+            <div class="advanced-content">
+                <sdpi-item id="accountRow" class="hidden" label="Account">
+                    <select id="account" class="sdpi-item-value" disabled><option value="">Loading providers…</option></select>
+                </sdpi-item>
+                <div class="advanced-section">
+                    <p class="advanced-section-title">Server</p>
+                    <sdpi-item label="Port">
+                        <input id="port" class="sdpi-item-value" type="number" min="1024" max="65535" step="1" />
+                    </sdpi-item>
+                    <div class="server-row">
+                        <span id="serverStatus" class="server-status">Checking status</span>
+                        <button id="startServer" class="server-button" type="button" disabled>Start</button>
+                        <button id="stopServer" class="server-button" type="button" disabled>Stop</button>
+                    </div>
+                    <label class="checkbox"><input id="autoStart" type="checkbox" /> Start CodexBar automatically if it isn't running</label>
+                    <p id="serverNote" class="server-note">Start runs <code>codexbar serve</code> on the selected port.</p>
+                </div>
+            </div>
+        </details>
+    </section>
+
+    <section class="tab-panel" data-tab="style" data-label="Style">
         <sdpi-item label="Size">
             <select id="size" class="sdpi-item-value">
                 <option value="compact">Compact</option>
@@ -81,17 +116,8 @@
                 <option value="xlarge">Extra Large</option>
             </select>
         </sdpi-item>
-        <sdpi-item id="ringRow" label="Metric">
-            <select id="metric" class="sdpi-item-value"></select>
-        </sdpi-item>
-        <sdpi-item id="topRow" label="Top metric">
-            <select id="topMetric" class="sdpi-item-value"></select>
-        </sdpi-item>
-        <sdpi-item id="bottomRow" label="Bottom metric">
-            <select id="bottomMetric" class="sdpi-item-value"></select>
-        </sdpi-item>
         <sdpi-item label="Background"><select id="backgroundMode" class="sdpi-item-value"><option value="theme">Provider theme</option><option value="color">Custom color</option><option value="transparent">Transparent</option></select></sdpi-item>
-        <sdpi-item label="Background color"><input id="backgroundColor" type="color" value="#000000" /></sdpi-item>
+        <sdpi-item id="backgroundColorRow" label="Background color"><input id="backgroundColor" type="color" value="#000000" /></sdpi-item>
         <sdpi-item label="Display">
             <label class="checkbox"><input id="showProviderName" type="checkbox" /> Show provider name</label>
         </sdpi-item>
@@ -107,29 +133,11 @@
                 <label class="theme-option" title="OpenRouter" aria-label="OpenRouter"><input type="radio" name="theme" value="openrouter" /><span class="theme-swatch" style="--swatch: #7B7DFF"></span></label>
             </div>
         </sdpi-item>
-    </div>
-    <details class="advanced">
-        <summary>Advanced</summary>
-        <div class="advanced-content">
-            <sdpi-item id="accountRow" class="hidden" label="Account">
-                <select id="account" class="sdpi-item-value" disabled><option value="">Loading providers…</option></select>
-            </sdpi-item>
-            <div class="advanced-section">
-                <p class="advanced-section-title">Server</p>
-                <sdpi-item label="Port">
-                    <input id="port" class="sdpi-item-value" type="number" min="1024" max="65535" step="1" />
-                </sdpi-item>
-                <div class="server-row">
-                    <span id="serverStatus" class="server-status">Checking status</span>
-                    <button id="startServer" class="server-button" type="button" disabled>Start</button>
-                    <button id="stopServer" class="server-button" type="button" disabled>Stop</button>
-                </div>
-                <label class="checkbox"><input id="autoStart" type="checkbox" /> Start CodexBar automatically if it isn't running</label>
-                <p id="serverNote" class="server-note">Start runs <code>codexbar serve</code> on the selected port.</p>
-            </div>
-        </div>
-    </details>
-    <div id="launchSettings"></div>
+    </section>
+
+    <section class="tab-panel" data-tab="hold" data-label="Hold">
+        <div id="launchSettings"></div>
+    </section>
 
     <div class="info"><span class="link" onclick="openGitHub()">View source on GitHub</span></div>
 
@@ -377,6 +385,7 @@
             document.getElementById("ringRow").classList.toggle("hidden", !isRing);
             document.getElementById("topRow").classList.toggle("hidden", isRing);
             document.getElementById("bottomRow").classList.toggle("hidden", isRing);
+            document.getElementById("backgroundColorRow").classList.toggle("hidden", document.getElementById("backgroundMode").value !== "color");
         }
 
         function saveSettings() {

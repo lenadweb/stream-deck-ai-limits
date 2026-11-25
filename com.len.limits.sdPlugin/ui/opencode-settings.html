@@ -6,6 +6,7 @@
     <meta charset="utf-8" />
     <script src="https://sdpi-components.dev/releases/v4/sdpi-components.js"></script>
     <script src="launch-settings.js"></script>
+    <script src="inspector-tabs.js"></script>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -52,71 +53,73 @@
 </head>
 
 <body>
-    <sdpi-item label="API Key">
-        <sdpi-textfield id="apiKey" type="password" placeholder="OpenCode API key"></sdpi-textfield>
-    </sdpi-item>
+    <section class="tab-panel" data-tab="data" data-label="Data">
+        <sdpi-item label="API Key">
+            <sdpi-textfield id="apiKey" type="password" placeholder="OpenCode API key"></sdpi-textfield>
+        </sdpi-item>
+        <sdpi-item label="Layout">
+            <select id="layout" class="sdpi-item-value">
+                <option value="ring">Ring (one metric)</option>
+                <option value="bars">Bars (two metrics)</option>
+            </select>
+        </sdpi-item>
+        <sdpi-item id="ringRow" label="Metric">
+            <select id="metric" class="sdpi-item-value">
+                <option value="auto">Auto (recommended)</option>
+                <option value="rolling">5-Hour quota</option>
+                <option value="weekly">Weekly quota</option>
+                <option value="monthly">Monthly quota</option>
+                <option value="overall">Overall (worst limit)</option>
+                <option value="budget">Budget (most used)</option>
+                <option value="balance">Zen balance</option>
+            </select>
+        </sdpi-item>
+        <sdpi-item id="topRow" label="Top Bar">
+            <select id="topMetric" class="sdpi-item-value">
+                <option value="auto">Auto (recommended)</option>
+                <option value="rolling">5-Hour quota</option>
+                <option value="weekly">Weekly quota</option>
+                <option value="monthly">Monthly quota</option>
+                <option value="overall">Overall (worst limit)</option>
+                <option value="budget">Budget (most used)</option>
+                <option value="balance">Zen balance</option>
+            </select>
+        </sdpi-item>
+        <sdpi-item id="bottomRow" label="Bottom Bar">
+            <select id="bottomMetric" class="sdpi-item-value">
+                <option value="auto">Auto (recommended)</option>
+                <option value="rolling">5-Hour quota</option>
+                <option value="weekly">Weekly quota</option>
+                <option value="monthly">Monthly quota</option>
+                <option value="overall">Overall (worst limit)</option>
+                <option value="budget">Budget (most used)</option>
+                <option value="balance">Zen balance</option>
+            </select>
+        </sdpi-item>
+        <div class="hint">Create a personal API key in OpenCode Console under Account. Go shows the 5-hour, weekly and monthly allowance; Zen shows budgets and the prepaid balance.</div>
+    </section>
 
-    <sdpi-item label="Layout">
-        <select id="layout" class="sdpi-item-value">
-            <option value="ring">Ring (one metric)</option>
-            <option value="bars">Bars (two metrics)</option>
-        </select>
-    </sdpi-item>
-    <sdpi-item label="Size">
-        <select id="size" class="sdpi-item-value">
-            <option value="compact">Compact</option>
-            <option value="default">Default</option>
-            <option value="large">Large</option>
-            <option value="xlarge">Extra Large</option>
-        </select>
-    </sdpi-item>
+    <section class="tab-panel" data-tab="style" data-label="Style">
+        <sdpi-item label="Size">
+            <select id="size" class="sdpi-item-value">
+                <option value="compact">Compact</option>
+                <option value="default">Default</option>
+                <option value="large">Large</option>
+                <option value="xlarge">Extra Large</option>
+            </select>
+        </sdpi-item>
+        <sdpi-item label="Background"><select id="backgroundMode" class="sdpi-item-value"><option value="theme">Provider theme</option><option value="color">Custom color</option><option value="transparent">Transparent</option></select></sdpi-item>
+        <sdpi-item id="backgroundColorRow" label="Background color"><input id="backgroundColor" type="color" value="#000000" /></sdpi-item>
+        <sdpi-item label="Display">
+            <label class="checkbox"><input id="showProviderName" type="checkbox" /> Show provider name</label>
+        </sdpi-item>
+    </section>
 
-    <sdpi-item id="ringRow" label="Metric">
-        <select id="metric" class="sdpi-item-value">
-            <option value="auto">Auto (recommended)</option>
-            <option value="rolling">5-Hour quota</option>
-            <option value="weekly">Weekly quota</option>
-            <option value="monthly">Monthly quota</option>
-            <option value="overall">Overall (worst limit)</option>
-            <option value="budget">Budget (most used)</option>
-            <option value="balance">Zen balance</option>
-        </select>
-    </sdpi-item>
-
-    <sdpi-item id="topRow" label="Top Bar">
-        <select id="topMetric" class="sdpi-item-value">
-            <option value="auto">Auto (recommended)</option>
-            <option value="rolling">5-Hour quota</option>
-            <option value="weekly">Weekly quota</option>
-            <option value="monthly">Monthly quota</option>
-            <option value="overall">Overall (worst limit)</option>
-            <option value="budget">Budget (most used)</option>
-            <option value="balance">Zen balance</option>
-        </select>
-    </sdpi-item>
-
-    <sdpi-item id="bottomRow" label="Bottom Bar">
-        <select id="bottomMetric" class="sdpi-item-value">
-            <option value="auto">Auto (recommended)</option>
-            <option value="rolling">5-Hour quota</option>
-            <option value="weekly">Weekly quota</option>
-            <option value="monthly">Monthly quota</option>
-            <option value="overall">Overall (worst limit)</option>
-            <option value="budget">Budget (most used)</option>
-            <option value="balance">Zen balance</option>
-        </select>
-    </sdpi-item>
-
-    <sdpi-item label="Background"><select id="backgroundMode" class="sdpi-item-value"><option value="theme">Provider theme</option><option value="color">Custom color</option><option value="transparent">Transparent</option></select></sdpi-item>
-    <sdpi-item label="Background color"><input id="backgroundColor" type="color" value="#000000" /></sdpi-item>
-    <sdpi-item label="Display">
-        <label class="checkbox"><input id="showProviderName" type="checkbox" /> Show provider name</label>
-    </sdpi-item>
-
-    <div id="launchSettings"></div>
+    <section class="tab-panel" data-tab="hold" data-label="Hold">
+        <div id="launchSettings"></div>
+    </section>
 
     <div class="hint"><span class="link" onclick="openGitHub()">View source on GitHub</span></div>
-    <div class="hint">Create a personal API key in OpenCode Console under Account. Go shows the 5-hour, weekly and monthly allowance; Zen shows budgets and the prepaid balance.</div>
 
     <script>
         let _websocket = null;
@@ -166,6 +169,7 @@
             document.getElementById("ringRow").classList.toggle("hidden", !isRing);
             document.getElementById("topRow").classList.toggle("hidden", isRing);
             document.getElementById("bottomRow").classList.toggle("hidden", isRing);
+            document.getElementById("backgroundColorRow").classList.toggle("hidden", document.getElementById("backgroundMode").value !== "color");
         }
 
         function saveSettings() {
